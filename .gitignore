@@ -1,0 +1,30 @@
+# Secrets & user config
+config.json
+.claude/
+
+# User data
+quest_log.html
+quest_log.html.bak
+journal.html
+journal.html.bak
+sessions/
+
+# Browser profile (cookies, cache)
+browser_data/
+
+# Build artifacts
+build/
+dist/
+installer_output/
+*.spec
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+*.log
+
+# Windows artifacts
+nul

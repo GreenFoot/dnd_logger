@@ -77,7 +77,13 @@ class IcewindDaleApp(QMainWindow):
         self._tts_shortcut.activated.connect(self._stop_tts)
 
     def _stop_tts(self):
-        """Stop TTS playback on Escape key."""
+        """Stop TTS playback on Escape key, unless a search bar is open."""
+        from PyQt6.QtWidgets import QApplication
+        from .rich_editor import _SearchLineEdit
+        focused = QApplication.focusWidget()
+        if isinstance(focused, _SearchLineEdit):
+            focused._editor_widget._close_search()
+            return
         if self._tts_engine:
             self._tts_engine.stop()
 

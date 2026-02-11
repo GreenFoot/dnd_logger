@@ -5,10 +5,13 @@ import re
 import shutil
 
 from PyQt6.QtCore import QSize, Qt, QTimer
-from PyQt6.QtGui import QColor, QFont, QIcon, QPainter, QPen, QPixmap, QTextCharFormat, QTextCursor
+from PyQt6.QtGui import (
+    QColor, QFont, QIcon, QKeySequence, QPainter, QPen, QPixmap,
+    QShortcut, QTextCharFormat, QTextCursor,
+)
 from PyQt6.QtWidgets import (
-    QComboBox, QHBoxLayout, QPushButton, QTextEdit, QVBoxLayout,
-    QWidget,
+    QComboBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTextEdit,
+    QVBoxLayout, QWidget,
 )
 
 
@@ -52,6 +55,22 @@ def _make_save_icon(size: int = 18) -> QIcon:
     p.drawRect(m + 2, size // 2 + 1, size - 2 * m - 4, size - 2 * m - size // 2)
     p.end()
     return QIcon(pix)
+
+
+class _SearchLineEdit(QLineEdit):
+    """QLineEdit that forwards Escape and Shift+Enter to the owner editor."""
+
+    def set_editor_widget(self, editor_widget):
+        self._editor_widget = editor_widget
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape:
+            self._editor_widget._close_search()
+            return
+        if event.key() == Qt.Key.Key_Return and event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+            self._editor_widget._search_find_prev()
+            return
+        super().keyPressEvent(event)
 
 
 class RichTextEditorWidget(QWidget):
@@ -130,6 +149,44 @@ class RichTextEditorWidget(QWidget):
         self.editor.document().setDefaultFont(doc_font)
         layout.addWidget(self.editor)
 
+        # Search bar (hidden by default)
+        self._search_bar = QWidget()
+        self._search_bar.setObjectName("search_bar")
+        self._search_bar.setVisible(False)
+        sb_layout = QHBoxLayout(self._search_bar)
+        sb_layout.setContentsMargins(6, 4, 6, 4)
+        sb_layout.setSpacing(4)
+
+        self._search_input = _SearchLineEdit()
+        self._search_input.set_editor_widget(self)
+        self._search_input.setPlaceholderText("Rechercher…")
+        self._search_input.setClearButtonEnabled(True)
+
+        self._search_prev = QPushButton("▲")
+        self._search_prev.setFixedSize(28, 28)
+        self._search_prev.setToolTip("Précédent (Shift+Enter)")
+
+        self._search_next = QPushButton("▼")
+        self._search_next.setFixedSize(28, 28)
+        self._search_next.setToolTip("Suivant (Enter)")
+
+        self._search_count = QLabel()
+        self._search_count.setObjectName("status_label")
+        self._search_count.setMinimumWidth(70)
+
+        self._search_close = QPushButton("✕")
+        self._search_close.setFixedSize(28, 28)
+        self._search_close.setToolTip("Fermer (Échap)")
+
+        for w in (self._search_input, self._search_prev, self._search_next,
+                  self._search_count, self._search_close):
+            sb_layout.addWidget(w)
+
+        layout.addWidget(self._search_bar)
+
+        self._search_matches: list[QTextCursor] = []
+        self._search_index = -1
+
         # Signals
         self.btn_bold.clicked.connect(self._toggle_bold)
         self.btn_italic.clicked.connect(self._toggle_italic)
@@ -137,6 +194,91 @@ class RichTextEditorWidget(QWidget):
         self.heading_combo.currentIndexChanged.connect(self._set_heading)
         self.btn_save.clicked.connect(self.save)
         self.editor.textChanged.connect(self._schedule_autosave)
+
+        # Search signals
+        self._search_input.textChanged.connect(self._on_search_changed)
+        self._search_input.returnPressed.connect(self._search_find_next)
+        self._search_next.clicked.connect(self._search_find_next)
+        self._search_prev.clicked.connect(self._search_find_prev)
+        self._search_close.clicked.connect(self._close_search)
+
+        # Shortcuts
+        QShortcut(QKeySequence("Ctrl+F"), self, activated=self._open_search)
+
+    # ── Search ────────────────────────────────────────────
+
+    def _open_search(self):
+        self._search_bar.setVisible(True)
+        self._search_input.setFocus()
+        self._search_input.selectAll()
+
+    def _close_search(self):
+        self._search_bar.setVisible(False)
+        self._search_matches.clear()
+        self._search_index = -1
+        self._search_count.setText("")
+        self.editor.setExtraSelections([])
+        self.editor.setFocus()
+
+    def _on_search_changed(self, text: str):
+        self._search_matches.clear()
+        self._search_index = -1
+        if not text:
+            self._search_count.setText("")
+            self.editor.setExtraSelections([])
+            return
+        doc = self.editor.document()
+        cursor = QTextCursor(doc)
+        while True:
+            cursor = doc.find(text, cursor)
+            if cursor.isNull():
+                break
+            self._search_matches.append(QTextCursor(cursor))
+        self._highlight_matches()
+        if self._search_matches:
+            self._search_index = 0
+            self._goto_match()
+        else:
+            self._search_count.setText("0 résultat")
+
+    def _highlight_matches(self):
+        selections = []
+        highlight_bg = QColor("#3a3018")
+        current_bg = QColor("#6ab4d4")
+        for i, cur in enumerate(self._search_matches):
+            sel = QTextEdit.ExtraSelection()
+            sel.cursor = cur
+            if i == self._search_index:
+                sel.format.setBackground(current_bg)
+                sel.format.setForeground(QColor("#0d0d1e"))
+            else:
+                sel.format.setBackground(highlight_bg)
+            selections.append(sel)
+        self.editor.setExtraSelections(selections)
+
+    def _goto_match(self):
+        if not self._search_matches:
+            return
+        self._highlight_matches()
+        cur = self._search_matches[self._search_index]
+        self.editor.setTextCursor(cur)
+        self.editor.ensureCursorVisible()
+        total = len(self._search_matches)
+        self._search_count.setText(f"{self._search_index + 1}/{total}")
+
+    def _search_find_next(self):
+        if not self._search_matches:
+            return
+        self._search_index = (self._search_index + 1) % len(self._search_matches)
+        self._goto_match()
+
+    def _search_find_prev(self):
+        if not self._search_matches:
+            return
+        self._search_index = (self._search_index - 1) % len(self._search_matches)
+        self._goto_match()
+
+    # ── Formatting ────────────────────────────────────────
 
     def _toggle_bold(self):
         fmt = QTextCharFormat()

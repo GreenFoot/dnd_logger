@@ -563,6 +563,23 @@ QCheckBox::indicator:hover {
     border-color: #6ab4d4;
 }
 
+/* --- Search Bar --- */
+QWidget#search_bar {
+    background-color: #141428;
+    border-top: 1px solid #252545;
+}
+
+QWidget#search_bar QLineEdit {
+    min-height: 22px;
+    font-size: 13px;
+}
+
+QWidget#search_bar QPushButton {
+    min-height: 20px;
+    padding: 2px 6px;
+    font-size: 12px;
+}
+
 /* --- Dialog Buttons --- */
 QDialogButtonBox QPushButton {
     min-width: 100px;

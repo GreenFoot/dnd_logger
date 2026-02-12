@@ -3,6 +3,7 @@
 import glob
 import os
 import shutil
+import time
 from datetime import datetime
 
 import soundfile as sf
@@ -30,7 +31,7 @@ from .audio_recorder import AudioRecorder
 from .quest_extractor import QuestProposalDialog, start_quest_extraction
 from .snow_particles import AuroraShimmerOverlay, SnowParticleOverlay
 from .summarizer import SummarizerWorker, start_summarization
-from .transcriber import TranscriptionWorker, start_transcription
+from .transcriber import TranscriptionWorker, start_live_transcription, start_transcription
 from .utils import ensure_dir, format_duration, format_file_size, sessions_dir
 
 
@@ -173,6 +174,16 @@ class SessionTab(QWidget):
         self._elapsed = 0
         self._pulse_timer = None
         self._pulse_state = 0
+
+        # Live transcription state
+        self._live_transcript_parts = []
+        self._last_live_transcription = 0.0
+        self._live_tx_thread = None
+        self._live_tx_worker = None
+        self._live_tx_pending = False
+        self._stop_after_current = False
+        self._is_final_live_chunk = False
+
         self._build_ui()
         self._connect_signals()
         self._init_tts()
@@ -317,6 +328,7 @@ class SessionTab(QWidget):
         self._recorder.level_update.connect(self._on_level_update)
         self._recorder.duration_update.connect(self._on_duration_update)
         self._recorder.error_occurred.connect(self._on_error)
+        self._recorder.silence_detected.connect(self._on_silence_detected)
 
     def _init_tts(self):
         """Wire up the shared TTS engine signals."""
@@ -359,8 +371,16 @@ class SessionTab(QWidget):
         self.btn_record.setEnabled(False)
         self.btn_stop.setEnabled(True)
         self.btn_transcribe.setEnabled(False)
+        self.transcript_display.clear()
         self.status_label.setText("Enregistrement en cours...")
         self.status_label.setStyleSheet("color: #ff6b6b;")
+
+        # Reset live transcription state
+        self._live_transcript_parts = []
+        self._last_live_transcription = 0.0
+        self._live_tx_pending = False
+        self._stop_after_current = False
+        self._is_final_live_chunk = False
 
         # Start recording atmosphere
         self._pulse_state = 0
@@ -373,8 +393,6 @@ class SessionTab(QWidget):
         self.btn_stop.setEnabled(False)
         self.vu_meter.setValue(0)
         self._current_wav_path = wav_path
-        self.status_label.setText("Enregistrement terminé")
-        self.status_label.setStyleSheet("color: #7ec8e3;")
 
         # Stop recording atmosphere
         self._pulse_timer.stop()
@@ -382,19 +400,33 @@ class SessionTab(QWidget):
         self._snow_overlay.stop()
         self._aurora_overlay.stop()
 
-        # Show post-recording dialog
-        dlg = PostRecordingDialog(wav_path, self._elapsed, self)
-        dlg.exec()
+        if self._live_transcript_parts or self._live_tx_pending:
+            # Live transcription was active — finalize automatically
+            self.status_label.setText("Finalisation de la transcription...")
+            self.status_label.setStyleSheet("color: #d4af37;")
 
-        if dlg.result_action == PostRecordingDialog.TRANSCRIBE:
-            self._start_transcription()
-        elif dlg.result_action == PostRecordingDialog.RE_RECORD:
-            self.status_label.setText("Prêt à re-enregistrer")
-            self.duration_label.setText("00:00:00")
+            if self._live_tx_pending:
+                # A chunk is still being transcribed — queue finalization
+                self._stop_after_current = True
+            else:
+                self._do_final_live_transcription()
         else:
-            self.btn_transcribe.setEnabled(True)
-            self._act_save_audio.setEnabled(True)
-            self.status_label.setText("Enregistrement sauvegardé")
+            # No live transcription happened — original dialog flow
+            self.status_label.setText("Enregistrement terminé")
+            self.status_label.setStyleSheet("color: #7ec8e3;")
+
+            dlg = PostRecordingDialog(wav_path, self._elapsed, self)
+            dlg.exec()
+
+            if dlg.result_action == PostRecordingDialog.TRANSCRIBE:
+                self._start_transcription()
+            elif dlg.result_action == PostRecordingDialog.RE_RECORD:
+                self.status_label.setText("Prêt à re-enregistrer")
+                self.duration_label.setText("00:00:00")
+            else:
+                self.btn_transcribe.setEnabled(True)
+                self._act_save_audio.setEnabled(True)
+                self.status_label.setText("Enregistrement sauvegardé")
 
     def _pulse_record_button(self):
         """Cycle the record button border through 3 states (slow breathing)."""
@@ -497,6 +529,113 @@ class SessionTab(QWidget):
         self._transcription_worker.completed.connect(self._on_transcription_done)
         self._transcription_worker.error.connect(self._on_error)
         self._transcription_thread.start()
+
+    # --- Live transcription (during recording) ---
+
+    def _on_silence_detected(self):
+        """Trigger live transcription when silence is detected during recording."""
+        if not self._recorder.is_recording:
+            return
+        if self._live_tx_pending:
+            return  # already transcribing a chunk
+        now = time.time()
+        if now - self._last_live_transcription < 60:
+            return  # respect 60s cooldown
+
+        flac_path = self._recorder.flush_pending_audio()
+        if not flac_path:
+            return
+
+        self._last_live_transcription = now
+        self._live_tx_pending = True
+        self._is_final_live_chunk = False
+
+        self._live_tx_thread, self._live_tx_worker = start_live_transcription(
+            flac_path, self._config
+        )
+        self._live_tx_worker.completed.connect(self._on_live_tx_done)
+        self._live_tx_worker.error.connect(self._on_live_tx_error)
+        self._live_tx_thread.start()
+
+        count = len(self._live_transcript_parts) + 1
+        self.status_label.setText(f"Transcription du segment {count}...")
+        self.status_label.setStyleSheet("color: #d4af37;")
+
+    def _do_final_live_transcription(self):
+        """Transcribe remaining audio after recording stopped."""
+        remaining = self._recorder.flush_pending_audio()
+        if remaining:
+            self._is_final_live_chunk = True
+            self._live_tx_pending = True
+
+            self._live_tx_thread, self._live_tx_worker = start_live_transcription(
+                remaining, self._config
+            )
+            self._live_tx_worker.completed.connect(self._on_live_tx_done)
+            self._live_tx_worker.error.connect(self._on_live_tx_error)
+            self._live_tx_thread.start()
+        else:
+            self._finalize_live_transcription()
+
+    def _on_live_tx_done(self, text: str):
+        """Handle a completed live transcription chunk."""
+        self._live_tx_pending = False
+        if text.strip():
+            self._live_transcript_parts.append(text)
+            self.transcript_display.append(text)
+
+        if self._is_final_live_chunk:
+            self._is_final_live_chunk = False
+            self._finalize_live_transcription()
+        elif self._stop_after_current:
+            # Recording stopped while we were transcribing — now do the final flush
+            self._stop_after_current = False
+            self._do_final_live_transcription()
+        else:
+            count = len(self._live_transcript_parts)
+            self.status_label.setText(
+                f"Enregistrement... ({count} segment{'s' if count > 1 else ''} transcrit{'s' if count > 1 else ''})"
+            )
+            self.status_label.setStyleSheet("color: #ff6b6b;")
+
+    def _on_live_tx_error(self, msg: str):
+        """Handle live transcription error — continue recording."""
+        self._live_tx_pending = False
+        self.status_label.setText(f"Erreur transcription: {msg}")
+        self.status_label.setStyleSheet("color: #ff6b6b;")
+
+        if self._is_final_live_chunk:
+            self._is_final_live_chunk = False
+            self._finalize_live_transcription()
+        elif self._stop_after_current:
+            self._stop_after_current = False
+            self._do_final_live_transcription()
+
+    def _finalize_live_transcription(self):
+        """Combine all live transcript parts and proceed to summarization."""
+        full_text = "\n\n".join(self._live_transcript_parts)
+        self._current_transcript = full_text
+        self.transcript_display.setPlainText(full_text)
+
+        # Save transcript to session directory
+        if self._current_wav_path:
+            session_dir = os.path.dirname(self._current_wav_path)
+            transcript_path = os.path.join(session_dir, "transcript.txt")
+            with open(transcript_path, "w", encoding="utf-8") as f:
+                f.write(full_text)
+
+        self._act_save_audio.setEnabled(True)
+        self.btn_transcribe.setEnabled(True)
+
+        if full_text.strip():
+            self.status_label.setText("Transcription terminée. Génération du résumé...")
+            self.status_label.setStyleSheet("color: #d4af37;")
+            self._start_summarization()
+        else:
+            self.status_label.setText("Aucun texte transcrit.")
+            self.status_label.setStyleSheet("color: #7ec8e3;")
+
+    # --- Batch transcription (post-recording) ---
 
     def _on_transcription_progress(self, current: int, total: int):
         self.status_label.setText(f"Transcription: chunk {current}/{total}...")
@@ -644,6 +783,9 @@ class SessionTab(QWidget):
             self._aurora_overlay.stop()
 
         # TTS engine is shared and cleaned up by IcewindDaleApp
+        if self._live_tx_thread and self._live_tx_thread.isRunning():
+            self._live_tx_thread.quit()
+            self._live_tx_thread.wait(2000)
         if self._transcription_thread and self._transcription_thread.isRunning():
             self._transcription_thread.quit()
             self._transcription_thread.wait(2000)

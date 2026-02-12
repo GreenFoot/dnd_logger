@@ -33,6 +33,8 @@ class QuestLogWidget(RichTextEditorWidget):
             file_path=quest_log_path(config),
             default_html=_DEFAULT_QUEST_LOG,
             editor_object_name="quest_log_editor",
+            foldable_heading_levels=set(),
+            fold_by_default=True,
             parent=parent,
         )
 

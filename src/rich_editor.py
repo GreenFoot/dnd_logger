@@ -6,13 +6,17 @@ import shutil
 
 from PyQt6.QtCore import QSize, Qt, QTimer
 from PyQt6.QtGui import (
-    QColor, QFont, QIcon, QKeySequence, QPainter, QPen, QPixmap,
-    QShortcut, QTextCharFormat, QTextCursor,
+    QBrush, QColor, QFont, QIcon, QKeySequence, QPainter, QPen, QPixmap,
+    QPolygon, QShortcut, QTextCharFormat, QTextCursor, QTextBlock,
 )
+from PyQt6.QtCore import QPoint
 from PyQt6.QtWidgets import (
     QComboBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTextEdit,
     QVBoxLayout, QWidget,
 )
+
+from .fold_manager import FoldManager
+from .fold_gutter import FoldGutterWidget, GUTTER_WIDTH
 
 
 def _make_format_icon(letter: str, style: str = "", size: int = 20) -> QIcon:
@@ -57,6 +61,55 @@ def _make_save_icon(size: int = 18) -> QIcon:
     return QIcon(pix)
 
 
+def _make_fold_icon(size: int = 18) -> QIcon:
+    """Draw a fold-all icon: right-pointing triangle with horizontal lines."""
+    pix = QPixmap(size, size)
+    pix.fill(QColor(0, 0, 0, 0))
+    p = QPainter(pix)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    gold = QColor("#c9a832")
+    p.setPen(QPen(gold))
+    p.setBrush(QBrush(gold))
+    # Right-pointing triangle (folded)
+    cx, cy = 7, size // 2
+    p.drawPolygon(QPolygon([
+        QPoint(cx - 3, cy - 4),
+        QPoint(cx - 3, cy + 4),
+        QPoint(cx + 4, cy),
+    ]))
+    # Two short lines to the right (collapsed content)
+    p.setPen(QPen(gold, 1.2))
+    p.drawLine(cx + 6, cy - 2, size - 2, cy - 2)
+    p.drawLine(cx + 6, cy + 2, size - 2, cy + 2)
+    p.end()
+    return QIcon(pix)
+
+
+def _make_unfold_icon(size: int = 18) -> QIcon:
+    """Draw an unfold-all icon: down-pointing triangle with horizontal lines."""
+    pix = QPixmap(size, size)
+    pix.fill(QColor(0, 0, 0, 0))
+    p = QPainter(pix)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    gold = QColor("#c9a832")
+    p.setPen(QPen(gold))
+    p.setBrush(QBrush(gold))
+    # Down-pointing triangle (expanded)
+    cx, cy = 7, size // 2
+    p.drawPolygon(QPolygon([
+        QPoint(cx - 4, cy - 3),
+        QPoint(cx + 4, cy - 3),
+        QPoint(cx, cy + 4),
+    ]))
+    # Three short lines to the right (expanded content)
+    p.setPen(QPen(gold, 1.2))
+    p.drawLine(cx + 6, cy - 4, size - 2, cy - 4)
+    p.drawLine(cx + 6, cy, size - 2, cy)
+    p.drawLine(cx + 6, cy + 4, size - 2, cy + 4)
+    p.end()
+    return QIcon(pix)
+
+
 class _SearchLineEdit(QLineEdit):
     """QLineEdit that forwards Escape and Shift+Enter to the owner editor."""
 
@@ -81,15 +134,48 @@ class RichTextEditorWidget(QWidget):
     """
 
     def __init__(self, file_path: str, default_html: str,
-                 editor_object_name: str = "rich_editor", parent=None):
+                 editor_object_name: str = "rich_editor",
+                 foldable_heading_levels: set[int] | None = None,
+                 fold_by_default: bool = False, parent=None):
         super().__init__(parent)
         self._path = file_path
         self._default_html = default_html
         self._editor_object_name = editor_object_name
+        self._foldable_heading_levels = foldable_heading_levels
+        self._fold_by_default = fold_by_default
         self._save_timer = None
         self._tts_engine = None
         self._build_ui()
         self._load()
+
+    @staticmethod
+    def _detect_heading_level(block: QTextBlock) -> int:
+        """Return heading level (1-3) for a block, or 0 for non-headings.
+
+        Detection uses headingLevel() on the block format first (fast path),
+        then falls back to char format heuristics (font size + bold).
+        """
+        # Fast path: explicit heading level on block format
+        bf = block.blockFormat()
+        hl = bf.headingLevel()
+        if hl in (1, 2, 3):
+            return hl
+
+        # Fallback: check char format of the first fragment
+        it = block.begin()
+        if it.atEnd():
+            return 0
+        fmt = it.fragment().charFormat()
+        if fmt.fontWeight() < QFont.Weight.Bold.value:
+            return 0
+        size = fmt.fontPointSize()
+        if size >= 21:
+            return 1
+        if size >= 17:
+            return 2
+        if size >= 14.5:
+            return 3
+        return 0
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
@@ -126,13 +212,26 @@ class RichTextEditorWidget(QWidget):
         self.heading_combo.addItems(["Normal", "Titre 1", "Titre 2", "Titre 3"])
         self.heading_combo.setFixedWidth(110)
 
+        self.btn_fold_all = QPushButton()
+        self.btn_fold_all.setIcon(_make_fold_icon())
+        self.btn_fold_all.setIconSize(QSize(18, 18))
+        self.btn_fold_all.setToolTip("Replier tout (Ctrl+Shift+-)")
+        self.btn_fold_all.setFixedSize(32, 28)
+
+        self.btn_unfold_all = QPushButton()
+        self.btn_unfold_all.setIcon(_make_unfold_icon())
+        self.btn_unfold_all.setIconSize(QSize(18, 18))
+        self.btn_unfold_all.setToolTip("Déplier tout (Ctrl+Shift+=)")
+        self.btn_unfold_all.setFixedSize(32, 28)
+
         self.btn_save = QPushButton(" Sauvegarder")
         self.btn_save.setIcon(_make_save_icon())
         self.btn_save.setIconSize(QSize(16, 16))
         self.btn_save.setObjectName("btn_primary")
 
         for w in (self.btn_bold, self.btn_italic, self.btn_underline,
-                  self.heading_combo, self.btn_save):
+                  self.heading_combo, self.btn_fold_all, self.btn_unfold_all,
+                  self.btn_save):
             tb_layout.addWidget(w)
         tb_layout.addStretch()
 
@@ -147,7 +246,16 @@ class RichTextEditorWidget(QWidget):
         doc_font = QFont("Cinzel", 12)
         doc_font.setStyleHint(QFont.StyleHint.Serif)
         self.editor.document().setDefaultFont(doc_font)
+        self.editor.setViewportMargins(GUTTER_WIDTH, 0, 0, 0)
         layout.addWidget(self.editor)
+
+        # Fold manager + gutter
+        self._fold_mgr = FoldManager(
+            self.editor.document(), self._detect_heading_level,
+            foldable_heading_levels=self._foldable_heading_levels,
+            fold_by_default=self._fold_by_default, parent=self,
+        )
+        self._fold_gutter = FoldGutterWidget(self.editor, self._fold_mgr)
 
         # Search bar (hidden by default)
         self._search_bar = QWidget()
@@ -202,8 +310,16 @@ class RichTextEditorWidget(QWidget):
         self._search_prev.clicked.connect(self._search_find_prev)
         self._search_close.clicked.connect(self._close_search)
 
+        # Fold signals
+        self.btn_fold_all.clicked.connect(self._fold_all)
+        self.btn_unfold_all.clicked.connect(self._unfold_all)
+
         # Shortcuts
         QShortcut(QKeySequence("Ctrl+F"), self, activated=self._open_search)
+        QShortcut(QKeySequence("Ctrl+Shift+["), self, activated=self._fold_current)
+        QShortcut(QKeySequence("Ctrl+Shift+]"), self, activated=self._unfold_current)
+        QShortcut(QKeySequence("Ctrl+Shift+-"), self, activated=self._fold_all)
+        QShortcut(QKeySequence("Ctrl+Shift+="), self, activated=self._unfold_all)
 
     # ── Search ────────────────────────────────────────────
 
@@ -261,6 +377,10 @@ class RichTextEditorWidget(QWidget):
             return
         self._highlight_matches()
         cur = self._search_matches[self._search_index]
+        # Auto-unfold if the match is inside a folded region
+        match_block = cur.block().blockNumber()
+        self._fold_mgr.ensure_visible(match_block)
+        self._fold_gutter.update()
         self.editor.setTextCursor(cur)
         self.editor.ensureCursorVisible()
         total = len(self._search_matches)
@@ -277,6 +397,45 @@ class RichTextEditorWidget(QWidget):
             return
         self._search_index = (self._search_index - 1) % len(self._search_matches)
         self._goto_match()
+
+    # ── Folding ─────────────────────────────────────────────
+
+    def _fold_all(self):
+        self._fold_mgr.fold_all()
+        self._fold_gutter.update()
+        self.editor.viewport().update()
+
+    def _unfold_all(self):
+        self._fold_mgr.unfold_all()
+        self._fold_gutter.update()
+        self.editor.viewport().update()
+
+    def _fold_current(self):
+        block_num = self.editor.textCursor().block().blockNumber()
+        regions = self._fold_mgr.regions()
+        # Fold the region that starts at or contains the cursor
+        if block_num in regions:
+            self._fold_mgr.fold_at(block_num)
+        else:
+            for start, r in regions.items():
+                if start <= block_num <= r.end:
+                    self._fold_mgr.fold_at(start)
+                    break
+        self._fold_gutter.update()
+        self.editor.viewport().update()
+
+    def _unfold_current(self):
+        block_num = self.editor.textCursor().block().blockNumber()
+        regions = self._fold_mgr.regions()
+        if block_num in regions:
+            self._fold_mgr.unfold_at(block_num)
+        else:
+            for start, r in regions.items():
+                if start <= block_num <= r.end:
+                    self._fold_mgr.unfold_at(start)
+                    break
+        self._fold_gutter.update()
+        self.editor.viewport().update()
 
     # ── Formatting ────────────────────────────────────────
 
@@ -312,6 +471,11 @@ class RichTextEditorWidget(QWidget):
             fmt.setFontPointSize(15)
             fmt.setFontWeight(QFont.Weight.Bold)
         cursor.mergeCharFormat(fmt)
+        # Set heading level on block format for fast detection
+        from PyQt6.QtGui import QTextBlockFormat
+        block_fmt = QTextBlockFormat()
+        block_fmt.setHeadingLevel(index)
+        cursor.mergeBlockFormat(block_fmt)
 
     def _schedule_autosave(self):
         if self._save_timer is not None:
@@ -339,8 +503,21 @@ class RichTextEditorWidget(QWidget):
             self.editor.setHtml(self._default_html)
 
     def save(self):
-        """Save content to disk with .bak backup."""
+        """Save content to disk with .bak backup.
+
+        Temporarily unfolds all blocks before toHtml() to ensure no
+        content is lost, then restores fold state.
+        """
+        # Save fold state and unfold everything for a clean export
+        fold_state = self._fold_mgr.save_fold_state()
+        self._fold_mgr.unfold_all()
+
         html = self.editor.toHtml()
+
+        # Restore folds
+        self._fold_mgr.restore_fold_state(fold_state)
+        self._fold_gutter.update()
+
         if os.path.exists(self._path):
             try:
                 shutil.copy2(self._path, self._path + ".bak")

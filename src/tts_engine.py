@@ -12,6 +12,7 @@ import os
 import re
 import tempfile
 import threading
+import time
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 
@@ -25,6 +26,8 @@ class TTSEngine(QObject):
 
     started = pyqtSignal()
     finished = pyqtSignal()
+    paused = pyqtSignal()
+    resumed = pyqtSignal()
     error = pyqtSignal(str)
     available = pyqtSignal(bool)
     speak_requested = pyqtSignal(str)
@@ -38,6 +41,7 @@ class TTSEngine(QObject):
         super().__init__(parent)
         self._is_available = False
         self._playing = False
+        self._paused = False
         self._stop_requested = False
         self._winmm = None
         self.speak_requested.connect(self._on_speak)
@@ -60,6 +64,10 @@ class TTSEngine(QObject):
     @property
     def is_speaking(self) -> bool:
         return self._playing
+
+    @property
+    def is_paused(self) -> bool:
+        return self._paused
 
     def _clean_text(self, text: str) -> str:
         """Strip HTML tags and normalize whitespace."""
@@ -126,6 +134,7 @@ class TTSEngine(QObject):
                 return
 
             self._stop_requested = False
+            self._paused = False
             self.started.emit()
 
             sentences = self._split_sentences(clean)
@@ -142,6 +151,14 @@ class TTSEngine(QObject):
                     self._safe_unlink(current_path)
                     break
 
+                # Respect pause between sentences
+                while self._paused and not self._stop_requested:
+                    time.sleep(0.05)
+
+                if self._stop_requested:
+                    self._safe_unlink(current_path)
+                    break
+
                 # Pipeline: start generating next sentence in background
                 bg_thread = None
                 next_result = [None, None]  # [path, error]
@@ -154,10 +171,28 @@ class TTSEngine(QObject):
                     )
                     bg_thread.start()
 
-                # Play current sentence
+                # Play current sentence (non-blocking + poll)
                 self._playing = True
                 self._mci(f'open "{current_path}" type mpegvideo alias tts_clip')
-                self._mci("play tts_clip wait")
+                self._mci("play tts_clip")
+
+                _was_paused = False
+                while not self._stop_requested:
+                    # Handle pause/resume from the worker thread
+                    # (MCI aliases are thread-local on Windows)
+                    if self._paused and not _was_paused:
+                        self._mci("pause tts_clip")
+                        _was_paused = True
+                    elif not self._paused and _was_paused:
+                        self._mci("resume tts_clip")
+                        _was_paused = False
+
+                    mode = self._mci_query("status tts_clip mode")
+                    if mode in ("stopped", ""):
+                        break
+                    time.sleep(0.02)
+
+                self._mci("stop tts_clip")
                 self._mci("close tts_clip")
                 self._playing = False
                 self._safe_unlink(current_path)
@@ -192,16 +227,30 @@ class TTSEngine(QObject):
         if self._winmm:
             self._winmm.mciSendStringW(command, None, 0, None)
 
+    def _mci_query(self, command: str) -> str:
+        """Send an MCI query and return the result string."""
+        if self._winmm:
+            buf = ctypes.create_unicode_buffer(256)
+            self._winmm.mciSendStringW(command, buf, 256, None)
+            return buf.value
+        return ""
+
+    def pause(self):
+        """Request pause. The worker thread applies the MCI command."""
+        if self._playing and not self._paused:
+            self._paused = True
+            self.paused.emit()
+
+    def resume(self):
+        """Request resume. The worker thread applies the MCI command."""
+        if self._paused:
+            self._paused = False
+            self.resumed.emit()
+
     def stop(self):
-        """Stop current speech immediately. Safe to call from any thread."""
+        """Request stop. The worker thread closes the clip."""
         self._stop_requested = True
-        if self._playing and self._winmm:
-            try:
-                self._mci("stop tts_clip")
-                self._mci("close tts_clip")
-            except Exception:
-                pass
-            self._playing = False
+        self._paused = False
 
 
 def create_tts_thread() -> tuple[QThread, TTSEngine]:

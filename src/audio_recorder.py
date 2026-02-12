@@ -21,8 +21,11 @@ class AudioRecorder(QObject):
     level_update = pyqtSignal(float)  # 0.0-1.0 RMS level
     duration_update = pyqtSignal(int)  # seconds elapsed
     error_occurred = pyqtSignal(str)
+    silence_detected = pyqtSignal()  # emitted once per silence period
 
     _SENTINEL = None  # signals writer thread to stop
+    _SILENCE_THRESHOLD = 0.01  # RMS below this counts as silence
+    _SILENCE_BLOCKS = 30  # consecutive silent blocks needed (~1.5s at 50ms/block)
 
     def __init__(self, config: dict, parent=None):
         super().__init__(parent)
@@ -36,6 +39,15 @@ class AudioRecorder(QObject):
         self._timer = QTimer(self)
         self._timer.setInterval(1000)
         self._timer.timeout.connect(self._tick)
+
+        # Silence detection state
+        self._silence_frames = 0
+        self._silence_emitted = False
+
+        # Pending audio buffer for live transcription
+        self._pending_audio = []
+        self._pending_samples = 0
+        self._pending_lock = threading.Lock()
 
     @property
     def is_recording(self) -> bool:
@@ -70,6 +82,15 @@ class AudioRecorder(QObject):
                     self._queue.get_nowait()
                 except queue.Empty:
                     break
+
+            # Reset silence detection
+            self._silence_frames = 0
+            self._silence_emitted = False
+
+            # Reset pending audio buffer
+            with self._pending_lock:
+                self._pending_audio.clear()
+                self._pending_samples = 0
 
             # Start writer thread
             self._writer_thread = threading.Thread(
@@ -135,6 +156,25 @@ class AudioRecorder(QObject):
         self.recording_stopped.emit(path)
         return path
 
+    def flush_pending_audio(self) -> str | None:
+        """Write accumulated pending audio to a temp FLAC file.
+
+        Returns the FLAC file path, or None if no pending audio.
+        """
+        with self._pending_lock:
+            if not self._pending_audio:
+                return None
+            audio_data = np.concatenate(self._pending_audio)
+            self._pending_audio.clear()
+            self._pending_samples = 0
+
+        sr = self._config.get("sample_rate", 16000)
+        session_dir = os.path.dirname(self._wav_path)
+        ts = datetime.now().strftime("%H%M%S_%f")
+        flac_path = os.path.join(session_dir, f"live_chunk_{ts}.flac")
+        sf.write(flac_path, audio_data, sr, format="FLAC")
+        return flac_path
+
     def _audio_callback(self, indata, frames, time_info, status):
         """Called by PortAudio in its own thread — just enqueue data."""
         if status:
@@ -144,6 +184,16 @@ class AudioRecorder(QObject):
         rms = np.sqrt(np.mean(indata.astype(np.float32) ** 2)) / 32768.0
         self.level_update.emit(min(rms * 5, 1.0))  # Scale up for visibility
 
+        # Silence detection
+        if rms < self._SILENCE_THRESHOLD:
+            self._silence_frames += 1
+            if self._silence_frames >= self._SILENCE_BLOCKS and not self._silence_emitted:
+                self._silence_emitted = True
+                self.silence_detected.emit()
+        else:
+            self._silence_frames = 0
+            self._silence_emitted = False
+
     def _writer_loop(self):
         """Writer thread: pulls data from queue and writes to disk."""
         while True:
@@ -152,6 +202,9 @@ class AudioRecorder(QObject):
                 break
             try:
                 self._sf.write(data)
+                with self._pending_lock:
+                    self._pending_audio.append(data)
+                    self._pending_samples += len(data)
             except Exception:
                 break
 

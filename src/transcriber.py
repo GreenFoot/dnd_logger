@@ -56,6 +56,42 @@ class AudioChunker:
         return chunks
 
 
+def _transcribe_file(client, chunk_path: str, config: dict, retries: int = 3) -> str:
+    """Transcribe a single audio file using Mistral Voxtral API with retry logic."""
+    _BIAS_VALID = re.compile(r"^[a-zA-Z0-9_-]+$")
+    raw_bias = config.get("context_bias", [])
+    context_bias = []
+    for b in raw_bias:
+        entry = b.replace(" ", "_").replace("&", "")
+        if entry and _BIAS_VALID.match(entry):
+            context_bias.append(entry)
+    language = config.get("language", "fr")
+
+    for attempt in range(retries):
+        try:
+            with open(chunk_path, "rb") as f:
+                result = client.audio.transcriptions.complete(
+                    model="voxtral-mini-latest",
+                    file={"file_name": os.path.basename(chunk_path), "content": f},
+                    language=language,
+                    context_bias=context_bias or None,
+                )
+
+            return result.text if hasattr(result, "text") else str(result)
+
+        except Exception as e:
+            err_str = str(e)
+            if "401" in err_str:
+                raise RuntimeError("Clé API invalide. Verifiez votre clé dans les Paramètres.")
+            if "429" in err_str and attempt < retries - 1:
+                wait = 2 ** (attempt + 1)
+                time.sleep(wait)
+                continue
+            if attempt == retries - 1:
+                raise
+    return ""
+
+
 class TranscriptionWorker(QObject):
     """Runs transcription in a QThread via Mistral Voxtral API."""
 
@@ -87,7 +123,7 @@ class TranscriptionWorker(QObject):
 
             for i, chunk_path in enumerate(chunks):
                 self.progress.emit(i + 1, total)
-                text = self._transcribe_chunk(client, chunk_path)
+                text = _transcribe_file(client, chunk_path, self._config)
                 full_text_parts.append(text)
                 self.chunk_completed.emit(i, text)
 
@@ -104,47 +140,57 @@ class TranscriptionWorker(QObject):
         except Exception as e:
             self.error.emit(f"Erreur de transcription: {e}")
 
-    def _transcribe_chunk(self, client, chunk_path: str, retries: int = 3) -> str:
-        """Transcribe a single chunk with retry logic."""
-        # API expects underscores for multi-word phrases, alphanumeric/hyphens/underscores only
-        _BIAS_VALID = re.compile(r"^[a-zA-Z0-9_-]+$")
-        raw_bias = self._config.get("context_bias", [])
-        context_bias = []
-        for b in raw_bias:
-            entry = b.replace(" ", "_").replace("&", "")
-            if entry and _BIAS_VALID.match(entry):
-                context_bias.append(entry)
-        language = self._config.get("language", "fr")
 
-        for attempt in range(retries):
+class LiveTranscriptionWorker(QObject):
+    """Transcribes a single audio chunk for live/incremental transcription."""
+
+    completed = pyqtSignal(str)  # transcribed text
+    error = pyqtSignal(str)
+
+    def __init__(self, flac_path: str, config: dict):
+        super().__init__()
+        self._flac_path = flac_path
+        self._config = config
+
+    def run(self):
+        try:
+            from mistralai import Mistral
+
+            api_key = self._config.get("api_key", "")
+            if not api_key:
+                self.error.emit("Clé API Mistral non configurée.")
+                return
+
+            client = Mistral(api_key=api_key)
+            text = _transcribe_file(client, self._flac_path, self._config)
+
+            # Clean up temp FLAC file
             try:
-                with open(chunk_path, "rb") as f:
-                    result = client.audio.transcriptions.complete(
-                        model="voxtral-mini-latest",
-                        file={"file_name": os.path.basename(chunk_path), "content": f},
-                        language=language,
-                        context_bias=context_bias or None,
-                    )
+                os.remove(self._flac_path)
+            except OSError:
+                pass
 
-                return result.text if hasattr(result, "text") else str(result)
+            self.completed.emit(text)
 
-            except Exception as e:
-                err_str = str(e)
-                if "401" in err_str:
-                    raise RuntimeError("Clé API invalide. Verifiez votre clé dans les Paramètres.")
-                if "429" in err_str and attempt < retries - 1:
-                    wait = 2 ** (attempt + 1)
-                    time.sleep(wait)
-                    continue
-                if attempt == retries - 1:
-                    raise
-        return ""
+        except Exception as e:
+            self.error.emit(f"Erreur de transcription live: {e}")
 
 
 def start_transcription(wav_path: str, config: dict) -> tuple[QThread, TranscriptionWorker]:
     """Create and start a transcription worker in a new thread."""
     thread = QThread()
     worker = TranscriptionWorker(wav_path, config)
+    worker.moveToThread(thread)
+    thread.started.connect(worker.run)
+    worker.completed.connect(thread.quit)
+    worker.error.connect(thread.quit)
+    return thread, worker
+
+
+def start_live_transcription(flac_path: str, config: dict) -> tuple[QThread, LiveTranscriptionWorker]:
+    """Create a live transcription worker in a new thread."""
+    thread = QThread()
+    worker = LiveTranscriptionWorker(flac_path, config)
     worker.moveToThread(thread)
     thread.started.connect(worker.run)
     worker.completed.connect(thread.quit)

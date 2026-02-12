@@ -26,6 +26,8 @@ class JournalWidget(RichTextEditorWidget):
             file_path=journal_path(config),
             default_html=_DEFAULT_JOURNAL,
             editor_object_name="journal_editor",
+            foldable_heading_levels={2},
+            fold_by_default=True,
             parent=parent,
         )
 

@@ -580,6 +580,11 @@ QWidget#search_bar QPushButton {
     font-size: 12px;
 }
 
+/* --- Fold Gutter --- */
+FoldGutterWidget {
+    background-color: #0d0d1e;
+}
+
 /* --- Dialog Buttons --- */
 QDialogButtonBox QPushButton {
     min-width: 100px;

@@ -22,6 +22,7 @@ from .quest_log import QuestLogWidget
 from .session_tab import SessionTab
 from .settings import FirstRunWizard, SettingsDialog
 from .tts_engine import create_tts_thread
+from .tts_overlay import TTSOverlay
 from .utils import journal_path, load_config, quest_log_path, resource_path, save_config
 from .web_panel import DndBeyondBrowser
 
@@ -38,6 +39,7 @@ class IcewindDaleApp(QMainWindow):
         self._migrate_journal()
         self._init_tts()
         self._build_ui()
+        self._init_tts_overlay()
         self._apply_backgrounds()
         self._add_decorative_overlays()
         self._build_menu()
@@ -72,9 +74,29 @@ class IcewindDaleApp(QMainWindow):
         self._tts_thread, self._tts_engine = create_tts_thread()
         self._tts_engine.error.connect(self._on_tts_error)
         self._tts_thread.start()
+        self._tts_overlay = None  # created after UI is built
         # Escape key stops TTS playback
         self._tts_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Escape), self)
         self._tts_shortcut.activated.connect(self._stop_tts)
+
+    def _init_tts_overlay(self):
+        """Create the TTS overlay and wire it to engine signals."""
+        self._tts_overlay = TTSOverlay(self.right_tabs)
+        self._tts_engine.started.connect(self._tts_overlay.show_overlay)
+        self._tts_engine.finished.connect(self._tts_overlay.hide_overlay)
+        self._tts_engine.paused.connect(lambda: self._tts_overlay.set_paused(True))
+        self._tts_engine.resumed.connect(lambda: self._tts_overlay.set_paused(False))
+        self._tts_overlay.pause_toggled.connect(self._toggle_tts_pause)
+        self._tts_overlay.stop_requested.connect(self._stop_tts)
+
+    def _toggle_tts_pause(self):
+        """Toggle TTS pause / resume."""
+        if not self._tts_engine:
+            return
+        if self._tts_engine.is_paused:
+            self._tts_engine.resume()
+        else:
+            self._tts_engine.pause()
 
     def _stop_tts(self):
         """Stop TTS playback on Escape key, unless a search bar is open."""
@@ -86,6 +108,8 @@ class IcewindDaleApp(QMainWindow):
             return
         if self._tts_engine:
             self._tts_engine.stop()
+        if self._tts_overlay:
+            self._tts_overlay.hide_overlay()
 
     def _on_tts_error(self, msg: str):
         """Show TTS errors in the status bar."""

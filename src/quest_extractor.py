@@ -7,17 +7,23 @@ _EXTRACTION_PROMPT = """\
 Tu es un assistant spécialisé dans le suivi de quêtes pour une campagne \
 Dungeons & Dragons dans Icewind Dale (Royaumes Oubliés).
 
-À partir du resumé de session ci-dessous et de l'état actuel du quest log, \
-génère le quest log COMPLET recompile et enrichi avec les nouvelles \
-informations de la session. Le quest log doit etre un document vivant qui \
+À partir du résumé de session ci-dessous et de l'état actuel du quest log, \
+génère le quest log COMPLET recompilé et enrichi avec les nouvelles \
+informations de la session. Le quest log doit être un document vivant qui \
 reflète l'état actuel de TOUTES les quêtes.
 
-Structure HTML exacte a produire (conserve les 3 sections, même si vides):
+RÈGLE ABSOLUE — RETOURNE UNIQUEMENT LE HTML:
+- Retourne UNIQUEMENT le HTML brut du quest log, RIEN d'autre.
+- INTERDIT: pas d'introduction ("Voici le quest log..."), pas de conclusion, \
+  pas de notes, pas de commentaires, pas de ```, pas de ---.
+- Le document commence par <h1> et finit par </ul>.
+
+Structure HTML exacte à produire (les 3 sections DOIVENT être présentes):
 
 <h1 style="color:#d4af37; text-align:center;">Quest Log &mdash; Icewind Dale</h1>
 <hr>
 <p><em>Ce registre recense les quêtes actives, indices découverts
-et mystères a élucider dans les terres glaciales d'Icewind Dale.</em></p>
+et mystères à élucider dans les terres glaciales d'Icewind Dale.</em></p>
 <hr>
 <h2 style="color:#6ab4d4;">Quêtes Actives</h2>
 <ul>
@@ -27,13 +33,13 @@ et mystères a élucider dans les terres glaciales d'Icewind Dale.</em></p>
   <li><em>Objectif:</em> Ce qui doit être accompli.</li>
   <li><em>Progression:</em> Ce qui a été fait jusqu'ici.</li>
   <li><em>Prochaine étape:</em> Ce qu'il reste à faire.</li>
-  <li><em>PNJ impliqués:</em> Personnages liés a cette quête.</li>
+  <li><em>PNJ impliqués:</em> Personnages liés à cette quête.</li>
   </ul>
 </li>
 </ul>
 <h2 style="color:#6ab4d4;">Indices et Mystères</h2>
 <ul>
-<li><strong>Mystère</strong> — Ce qu'on sait, ce qui reste a découvrir.
+<li><strong>Mystère</strong> — Ce qu'on sait, ce qui reste à découvrir.
   <ul>
   <li>Détail ou indice découvert...</li>
   </ul>
@@ -43,27 +49,26 @@ et mystères a élucider dans les terres glaciales d'Icewind Dale.</em></p>
 <ul>
 <li><strong>Nom de la quête</strong> — Résolution et conséquences.
   <ul>
+  <li><em>Mandataire:</em> Qui a donné la quête et récompense.</li>
   <li><em>Résolution:</em> Comment la quête a été résolue.</li>
-  <li><em>Conséquences:</em> Impact sur la campagne.</li>
   </ul>
 </li>
 </ul>
 
 Règles:
-- Ecris en français, style concis et factuel.
+- Écris en français, style concis et FACTUEL. Pas de spéculation (pas de \
+  "pourrait", "semble", "suggère"). Écris uniquement ce qui est connu.
 - Conserve les termes D&D en anglais (Hit Points, Saving Throw, etc.).
 - Les noms propres restent tels quels.
 - Utilise des listes à puces imbriquées pour les détails.
-- Déplace les quêtes resolues de "Quêtes Actives" vers "Quêtes Terminées".
-- Enrichis les quêtes existantes avec les nouvelles informations (progression, \
-indices, etc.) sans perdre les informations précédentes.
+- Déplace les quêtes résolues de "Quêtes Actives" vers "Quêtes Terminées".
+- PRÉSERVE TOUTES les informations existantes du quest log. Ne perds AUCUN \
+  détail (mandataire, récompense, PNJ, progression) des quêtes existantes. \
+  Enrichis avec les nouvelles informations SANS supprimer les anciennes.
 - Ajoute les nouvelles quêtes découvertes dans "Quêtes Actives".
 - Ajoute les nouveaux indices dans "Indices et Mystères". Retire un indice \
-quand le mystère est resolu (mentionne la resolution dans la quête concernée).
-- Utilise des sous-listes imbriquées pour donner du detail sur chaque quête \
-(origine, objectif, progression, prochaine étape, PNJ impliqués, etc.). \
-Le quest log doit être un outil de référence détaillé, pas juste une liste.
-- Génère le document HTML COMPLET du quest log, sans balise <html> ou <body>.
+  quand le mystère est résolu (mentionne la résolution dans la quête concernée).
+- Le quest log doit être un outil de référence détaillé, pas juste une liste.
 
 État actuel du quest log:
 ---
@@ -95,29 +100,29 @@ class QuestExtractorWorker(QObject):
 
             api_key = self._config.get("api_key", "")
             if not api_key:
-                self.error.emit("Cle API Mistral non configuree.")
+                self.error.emit("Clé API Mistral non configurée.")
                 return
 
             client = Mistral(api_key=api_key)
-            model = self._config.get("summary_model", "mistral-small-latest")
+            model = self._config.get("summary_model", "mistral-large-latest")
 
             prompt = _EXTRACTION_PROMPT.format(
-                current_quests=self._current_quests or "(Aucune quete enregistree)",
+                current_quests=self._current_quests or "(Aucune quête enregistrée)",
                 summary=self._summary,
             )
 
             response = client.chat.complete(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.4,
-                max_tokens=3000,
+                temperature=0.1,
+                max_tokens=16000,
             )
 
             result = response.choices[0].message.content
             self.completed.emit(result)
 
         except Exception as e:
-            self.error.emit(f"Erreur d'extraction de quetes: {e}")
+            self.error.emit(f"Erreur d'extraction de quêtes: {e}")
 
 
 class QuestProposalDialog(QDialog):

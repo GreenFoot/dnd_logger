@@ -67,15 +67,33 @@ def _transcribe_file(client, chunk_path: str, config: dict, retries: int = 3) ->
             context_bias.append(entry)
     language = config.get("language", "fr")
 
+    model = config.get("transcription_model", "voxtral-mini-latest")
+    diarize = config.get("diarize", False)
+
     for attempt in range(retries):
         try:
             with open(chunk_path, "rb") as f:
-                result = client.audio.transcriptions.complete(
-                    model="voxtral-mini-latest",
+                kwargs = dict(
+                    model=model,
                     file={"file_name": os.path.basename(chunk_path), "content": f},
                     language=language,
                     context_bias=context_bias or None,
+                    diarize=diarize,
                 )
+                if diarize:
+                    kwargs["timestamp_granularities"] = ["segment"]
+                result = client.audio.transcriptions.complete(**kwargs)
+
+            if diarize and hasattr(result, "segments") and result.segments:
+                parts = []
+                for seg in result.segments:
+                    speaker = getattr(seg, "speaker", None)
+                    text = getattr(seg, "text", str(seg))
+                    if speaker is not None:
+                        parts.append(f"[{speaker}]: {text}")
+                    else:
+                        parts.append(text)
+                return "\n".join(parts)
 
             return result.text if hasattr(result, "text") else str(result)
 

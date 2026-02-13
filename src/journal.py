@@ -33,7 +33,7 @@ class JournalWidget(RichTextEditorWidget):
 
     def append_summary(self, summary_html: str):
         """Append a dated summary section at the end of the journal."""
-        now = datetime.now().strftime("%d/%m/%Y %H:%M")
+        now = datetime.now().strftime("%d/%m/%Y")
         section = f'<hr><h2 style="color:#d4af37;">Session du {now}</h2>' f"{summary_html}<hr>"
         cursor = self.editor.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)

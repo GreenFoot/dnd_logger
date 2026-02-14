@@ -191,9 +191,12 @@ class FoldManager(QObject):
         while block.isValid() and block.blockNumber() <= last:
             block.setVisible(visible)
             block = block.next()
-        # Force layout recalculation
-        self._doc.markContentsDirty(
-            self._doc.findBlockByNumber(first).position(),
-            self._doc.findBlockByNumber(last).position()
-            + self._doc.findBlockByNumber(last).length(),
-        )
+        # Force layout recalculation.
+        # Disconnect contentsChanged temporarily so markContentsDirty
+        # does not re-dirty the fold state (causing needless re-scans).
+        self._doc.contentsChanged.disconnect(self._mark_dirty)
+        first_pos = self._doc.findBlockByNumber(first).position()
+        last_block = self._doc.findBlockByNumber(last)
+        dirty_len = last_block.position() + last_block.length() - first_pos
+        self._doc.markContentsDirty(first_pos, dirty_len)
+        self._doc.contentsChanged.connect(self._mark_dirty)

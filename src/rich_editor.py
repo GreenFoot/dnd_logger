@@ -4,12 +4,11 @@ import os
 import re
 import shutil
 
-from PyQt6.QtCore import QSize, Qt, QTimer
+from PyQt6.QtCore import QPoint, QSize, Qt, QTimer
 from PyQt6.QtGui import (
     QBrush, QColor, QFont, QIcon, QKeySequence, QPainter, QPen, QPixmap,
     QPolygon, QShortcut, QTextCharFormat, QTextCursor, QTextBlock,
 )
-from PyQt6.QtCore import QPoint
 from PyQt6.QtWidgets import (
     QComboBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTextEdit,
     QVBoxLayout, QWidget,
@@ -108,6 +107,132 @@ def _make_unfold_icon(size: int = 18) -> QIcon:
     p.drawLine(cx + 6, cy + 4, size - 2, cy + 4)
     p.end()
     return QIcon(pix)
+
+
+class _FoldableTextEdit(QTextEdit):
+    """QTextEdit with mouse handling that works correctly with invisible (folded) blocks.
+
+    Qt's built-in cursorForPosition uses hitTest on the document layout, which
+    can return -1 when invisible blocks confuse the coordinate mapping.  Qt then
+    clamps -1 to position 0, making the cursor jump to the beginning of the
+    document.  This subclass replaces the mouse-selection logic with a custom
+    visible-block-aware hit test whenever hidden blocks are present.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._fold_selecting = False
+        self._fold_anchor = -1
+
+    # -- helpers -------------------------------------------------------
+
+    def _any_hidden(self) -> bool:
+        block = self.document().begin()
+        while block.isValid():
+            if not block.isVisible():
+                return True
+            block = block.next()
+        return False
+
+    def _visible_hit_test(self, viewport_pos) -> QTextCursor:
+        """Map *viewport_pos* to a QTextCursor, correctly skipping hidden blocks."""
+        doc = self.document()
+        layout = doc.documentLayout()
+
+        doc_x = float(viewport_pos.x()) + self.horizontalScrollBar().value()
+        doc_y = float(viewport_pos.y()) + self.verticalScrollBar().value()
+
+        target_block = None
+        last_visible = None
+        block = doc.begin()
+
+        while block.isValid():
+            if not block.isVisible():
+                block = block.next()
+                continue
+            rect = layout.blockBoundingRect(block)
+            if doc_y < rect.top():
+                target_block = last_visible if last_visible else block
+                break
+            if doc_y < rect.top() + rect.height():
+                target_block = block
+                break
+            last_visible = block
+            block = block.next()
+
+        if target_block is None:
+            target_block = last_visible
+        if target_block is None:
+            return QTextCursor(doc)
+
+        rect = layout.blockBoundingRect(target_block)
+        bl = target_block.layout()
+
+        if bl and bl.lineCount() > 0:
+            rel_x = doc_x - rect.left()
+            rel_y = doc_y - rect.top()
+            line = bl.lineAt(bl.lineCount() - 1)          # fallback: last line
+            for i in range(bl.lineCount()):
+                candidate = bl.lineAt(i)
+                if rel_y < candidate.y() + candidate.height():
+                    line = candidate
+                    break
+            col = line.xToCursor(float(rel_x))
+            cursor = QTextCursor(doc)
+            cursor.setPosition(target_block.position() + col)
+            return cursor
+
+        cursor = QTextCursor(doc)
+        cursor.setPosition(target_block.position())
+        return cursor
+
+    # -- mouse overrides ------------------------------------------------
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self._any_hidden():
+            cursor = self._visible_hit_test(event.pos())
+            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                tc = self.textCursor()
+                tc.setPosition(cursor.position(), QTextCursor.MoveMode.KeepAnchor)
+                self.setTextCursor(tc)
+            else:
+                self.setTextCursor(cursor)
+            self._fold_anchor = cursor.position()
+            self._fold_selecting = True
+            event.accept()
+            return
+        self._fold_selecting = False
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._fold_selecting and (event.buttons() & Qt.MouseButton.LeftButton):
+            cursor = self._visible_hit_test(event.pos())
+            tc = QTextCursor(self.document())
+            tc.setPosition(self._fold_anchor)
+            tc.setPosition(cursor.position(), QTextCursor.MoveMode.KeepAnchor)
+            self.setTextCursor(tc)
+            self.ensureCursorVisible()
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if self._fold_selecting and event.button() == Qt.MouseButton.LeftButton:
+            self._fold_selecting = False
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self._any_hidden():
+            cursor = self._visible_hit_test(event.pos())
+            cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+            self.setTextCursor(cursor)
+            self._fold_anchor = cursor.anchor()
+            self._fold_selecting = True
+            event.accept()
+            return
+        super().mouseDoubleClickEvent(event)
 
 
 class _SearchLineEdit(QLineEdit):
@@ -238,7 +363,7 @@ class RichTextEditorWidget(QWidget):
         layout.addLayout(tb_layout)
 
         # Editor
-        self.editor = QTextEdit()
+        self.editor = _FoldableTextEdit()
         self.editor.setObjectName(self._editor_object_name)
         self.editor.setAcceptRichText(True)
         self.editor.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)

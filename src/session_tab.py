@@ -311,7 +311,7 @@ class SessionTab(QWidget):
         layout.addLayout(action_layout)
 
     def _connect_signals(self):
-        self.btn_record.clicked.connect(self._start_recording)
+        self.btn_record.clicked.connect(self._on_record_btn_clicked)
         self.btn_stop.clicked.connect(self._stop_recording)
         self.btn_transcribe.clicked.connect(self._start_transcription)
         self.btn_add_journal.clicked.connect(self._add_to_journal)
@@ -325,6 +325,8 @@ class SessionTab(QWidget):
 
         self._recorder.recording_started.connect(self._on_recording_started)
         self._recorder.recording_stopped.connect(self._on_recording_stopped)
+        self._recorder.recording_paused.connect(self._on_recording_paused)
+        self._recorder.recording_resumed.connect(self._on_recording_resumed)
         self._recorder.level_update.connect(self._on_level_update)
         self._recorder.duration_update.connect(self._on_duration_update)
         self._recorder.error_occurred.connect(self._on_error)
@@ -361,14 +363,25 @@ class SessionTab(QWidget):
 
     # --- Recording ---
 
-    def _start_recording(self):
-        self._recorder.start_recording()
+    def _on_record_btn_clicked(self):
+        """Handle the record/pause/resume button click based on current state."""
+        if not self._recorder.is_recording:
+            self._recorder.start_recording()
+        elif self._recorder.is_paused:
+            self._recorder.resume_recording()
+        else:
+            self._recorder.pause_recording()
 
     def _stop_recording(self):
         self._recorder.stop_recording()
 
     def _on_recording_started(self):
-        self.btn_record.setEnabled(False)
+        # Switch button to Pause mode
+        self.btn_record.setText("Pause")
+        self.btn_record.setObjectName("btn_pause")
+        self.btn_record.style().unpolish(self.btn_record)
+        self.btn_record.style().polish(self.btn_record)
+        self.btn_record.setEnabled(True)
         self.btn_stop.setEnabled(True)
         self.btn_transcribe.setEnabled(False)
         self.transcript_display.clear()
@@ -388,7 +401,42 @@ class SessionTab(QWidget):
         self._snow_overlay.start()
         self._aurora_overlay.start()
 
+    def _on_recording_paused(self):
+        """Switch button to Resume mode."""
+        self.btn_record.setText("Reprendre")
+        self.btn_record.setObjectName("btn_resume")
+        self.btn_record.style().unpolish(self.btn_record)
+        self.btn_record.style().polish(self.btn_record)
+        self.status_label.setText("Enregistrement en pause")
+        self.status_label.setStyleSheet("color: #e8a824;")
+
+        # Pause atmosphere effects
+        self._pulse_timer.stop()
+        self.btn_record.setStyleSheet("")
+        self._snow_overlay.stop()
+        self._aurora_overlay.stop()
+
+    def _on_recording_resumed(self):
+        """Switch button back to Pause mode."""
+        self.btn_record.setText("Pause")
+        self.btn_record.setObjectName("btn_pause")
+        self.btn_record.style().unpolish(self.btn_record)
+        self.btn_record.style().polish(self.btn_record)
+        self.status_label.setText("Enregistrement en cours...")
+        self.status_label.setStyleSheet("color: #ff6b6b;")
+
+        # Resume atmosphere effects
+        self._pulse_state = 0
+        self._pulse_timer.start()
+        self._snow_overlay.start()
+        self._aurora_overlay.start()
+
     def _on_recording_stopped(self, wav_path: str):
+        # Restore button to Record mode
+        self.btn_record.setText("Enregistrer")
+        self.btn_record.setObjectName("btn_record")
+        self.btn_record.style().unpolish(self.btn_record)
+        self.btn_record.style().polish(self.btn_record)
         self.btn_record.setEnabled(True)
         self.btn_stop.setEnabled(False)
         self.vu_meter.setValue(0)
@@ -396,7 +444,7 @@ class SessionTab(QWidget):
 
         # Stop recording atmosphere
         self._pulse_timer.stop()
-        self.btn_record.setStyleSheet("")  # Reset to QSS default
+        self.btn_record.setStyleSheet("")
         self._snow_overlay.stop()
         self._aurora_overlay.stop()
 
@@ -429,11 +477,12 @@ class SessionTab(QWidget):
                 self.status_label.setText("Enregistrement sauvegardé")
 
     def _pulse_record_button(self):
-        """Cycle the record button border through 3 states (slow breathing)."""
-        colors = ["#6b2a2a", "#a03030", "#cc3535"]
+        """Cycle the pause button border through 3 states (slow breathing)."""
+        colors = ["#8a5a10", "#c48820", "#e8a824"]
         self._pulse_state = (self._pulse_state + 1) % 3
         color = colors[self._pulse_state]
-        self.btn_record.setStyleSheet(f"QPushButton#btn_record {{ border: 2px solid {color}; }}")
+        obj = self.btn_record.objectName()
+        self.btn_record.setStyleSheet(f"QPushButton#{obj} {{ border: 2px solid {color}; }}")
 
     def _import_audio(self):
         """Import an existing audio file for transcription."""
@@ -762,6 +811,12 @@ class SessionTab(QWidget):
     def _on_error(self, msg: str):
         self.status_label.setText(msg)
         self.status_label.setStyleSheet("color: #ff6b6b;")
+        # Restore record button to initial state
+        self.btn_record.setText("Enregistrer")
+        self.btn_record.setObjectName("btn_record")
+        self.btn_record.style().unpolish(self.btn_record)
+        self.btn_record.style().polish(self.btn_record)
+        self.btn_record.setStyleSheet("")
         self.btn_record.setEnabled(True)
         self.btn_stop.setEnabled(False)
         has_audio = bool(self._current_wav_path or self._recorder.wav_path)

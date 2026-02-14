@@ -18,6 +18,8 @@ class AudioRecorder(QObject):
 
     recording_started = pyqtSignal()
     recording_stopped = pyqtSignal(str)  # path to WAV
+    recording_paused = pyqtSignal()
+    recording_resumed = pyqtSignal()
     level_update = pyqtSignal(float)  # 0.0-1.0 RMS level
     duration_update = pyqtSignal(int)  # seconds elapsed
     error_occurred = pyqtSignal(str)
@@ -35,6 +37,7 @@ class AudioRecorder(QObject):
         self._writer_thread = None
         self._wav_path = None
         self._is_recording = False
+        self._is_paused = False
         self._elapsed = 0
         self._timer = QTimer(self)
         self._timer.setInterval(1000)
@@ -52,6 +55,10 @@ class AudioRecorder(QObject):
     @property
     def is_recording(self) -> bool:
         return self._is_recording
+
+    @property
+    def is_paused(self) -> bool:
+        return self._is_paused
 
     @property
     def wav_path(self) -> str | None:
@@ -114,6 +121,7 @@ class AudioRecorder(QObject):
             )
             self._stream.start()
             self._is_recording = True
+            self._is_paused = False
             self._elapsed = 0
             self._timer.start()
             self.recording_started.emit()
@@ -122,11 +130,38 @@ class AudioRecorder(QObject):
             self.error_occurred.emit(f"Erreur d'enregistrement: {e}")
             self._cleanup_on_error()
 
+    def pause_recording(self):
+        """Pause recording — stop the stream but keep the file open."""
+        if not self._is_recording or self._is_paused:
+            return
+        try:
+            if self._stream:
+                self._stream.stop()
+            self._is_paused = True
+            self._timer.stop()
+            self.recording_paused.emit()
+        except Exception as e:
+            self.error_occurred.emit(f"Erreur de pause: {e}")
+
+    def resume_recording(self):
+        """Resume a paused recording — restart the stream."""
+        if not self._is_recording or not self._is_paused:
+            return
+        try:
+            if self._stream:
+                self._stream.start()
+            self._is_paused = False
+            self._timer.start()
+            self.recording_resumed.emit()
+        except Exception as e:
+            self.error_occurred.emit(f"Erreur de reprise: {e}")
+
     def stop_recording(self) -> str | None:
         """Stop recording and return path to WAV file."""
         if not self._is_recording:
             return None
         self._is_recording = False
+        self._is_paused = False
         self._timer.stop()
 
         # Stop input stream
@@ -228,6 +263,7 @@ class AudioRecorder(QObject):
                 pass
             self._sf = None
         self._is_recording = False
+        self._is_paused = False
 
     @staticmethod
     def list_devices() -> list[dict]:

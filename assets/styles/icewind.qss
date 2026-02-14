@@ -197,6 +197,52 @@ QPushButton#btn_record:pressed {
     border-color: #cc3535;
 }
 
+/* --- Buttons: Pause (amber accent) --- */
+QPushButton#btn_pause {
+    background-color: #141428;
+    border: 2px solid #8a5a10;
+    color: #e8a824;
+    font-size: 13px;
+    font-weight: bold;
+    padding: 6px 14px;
+    border-radius: 6px;
+    min-height: 24px;
+}
+
+QPushButton#btn_pause:hover {
+    background-color: #1c1c3a;
+    border-color: #e8a824;
+    color: #f0be40;
+}
+
+QPushButton#btn_pause:pressed {
+    background-color: #0d0d1e;
+    border-color: #e8a824;
+}
+
+/* --- Buttons: Resume (green accent) --- */
+QPushButton#btn_resume {
+    background-color: #141428;
+    border: 2px solid #1e6b3a;
+    color: #4caf50;
+    font-size: 13px;
+    font-weight: bold;
+    padding: 6px 14px;
+    border-radius: 6px;
+    min-height: 24px;
+}
+
+QPushButton#btn_resume:hover {
+    background-color: #1c1c3a;
+    border-color: #4caf50;
+    color: #66cc6a;
+}
+
+QPushButton#btn_resume:pressed {
+    background-color: #0d0d1e;
+    border-color: #4caf50;
+}
+
 /* --- Buttons: Stop --- */
 QPushButton#btn_stop {
     background-color: #141428;

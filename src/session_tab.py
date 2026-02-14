@@ -776,7 +776,8 @@ class SessionTab(QWidget):
         self.status_label.setText("Propositions de quêtes prêtes.")
         self.status_label.setStyleSheet("color: #7ec83a;")
 
-        dlg = QuestProposalDialog(proposed_html, self)
+        current_html = self._quest_log.get_full_html() if self._quest_log else ""
+        dlg = QuestProposalDialog(proposed_html, current_html, self)
         if dlg.exec() == QDialog.DialogCode.Accepted:
             edited_html = dlg.get_html()
             if self._quest_log:

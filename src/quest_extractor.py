@@ -1,7 +1,17 @@
 """AI quest extraction from session summaries via Mistral API."""
 
+import difflib
+import re
+
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
-from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QTextEdit, QVBoxLayout
+from PyQt6.QtGui import QColor, QTextBlockFormat, QTextCharFormat, QTextCursor
+from PyQt6.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
+    QLabel,
+    QTextEdit,
+    QVBoxLayout,
+)
 
 _EXTRACTION_PROMPT = """\
 Tu es un assistant spécialisé dans le suivi de quêtes pour une campagne \
@@ -82,6 +92,19 @@ Résumé de la session:
 """
 
 
+def _strip_model_artifacts(text: str) -> str:
+    """Remove code fences and markdown formatting the model sometimes adds."""
+    text = text.strip()
+    text = re.sub(r"^```html\s*\n?", "", text)
+    text = re.sub(r"\n?```\s*$", "", text)
+    text = re.sub(r"\n---\n", "\n", text)
+    text = re.sub(r"\n---$", "", text)
+    text = re.sub(r"^---\n", "", text)
+    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+    text = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"<em>\1</em>", text)
+    return text.strip()
+
+
 class QuestExtractorWorker(QObject):
     """Extracts quest updates from a session summary via Mistral API."""
 
@@ -118,40 +141,220 @@ class QuestExtractorWorker(QObject):
                 max_tokens=16000,
             )
 
-            result = response.choices[0].message.content
+            result = _strip_model_artifacts(response.choices[0].message.content)
             self.completed.emit(result)
 
         except Exception as e:
             self.error.emit(f"Erreur d'extraction de quêtes: {e}")
 
 
-class QuestProposalDialog(QDialog):
-    """Editable preview of AI-proposed quest updates."""
+_COLOR_ADDED = QColor("#1a3d1a")
+_COLOR_DELETED_BG = QColor("#3d1a1a")
+_COLOR_DELETED_TEXT = QColor("#ff8888")
+_DELETED_STATE = 1
 
-    def __init__(self, proposed_html: str, parent=None):
+
+class QuestProposalDialog(QDialog):
+    """Editable unified-diff preview of AI-proposed quest updates.
+
+    Shows a single view with deleted lines inline (red + strikethrough) and
+    added/changed lines highlighted green.  The user can edit freely; on
+    accept the deleted-marked lines are stripped and the remaining rich-text
+    HTML is returned.
+    """
+
+    def __init__(self, proposed_html: str, current_html: str, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Mise a jour des quetes")
-        self.setMinimumSize(500, 400)
+        self.setWindowTitle("Mise à jour des quêtes")
+        self.setMinimumSize(700, 500)
+
+        # Render current HTML through the same Qt pipeline used for proposed,
+        # so line splitting is consistent for diffing.
+        self._current_lines: list[str] = []
+        if current_html:
+            tmp = QTextEdit()
+            tmp.setHtml(current_html)
+            self._current_lines = tmp.toPlainText().split("\n")
 
         layout = QVBoxLayout(self)
 
-        label = QLabel("Propositions de l'IA — modifiez si necessaire:")
+        label = QLabel("Changements proposés — modifiez si nécessaire:")
         label.setObjectName("subheading")
         layout.addWidget(label)
 
         self.editor = QTextEdit()
         self.editor.setHtml(proposed_html)
         self.editor.setAcceptRichText(True)
-        layout.addWidget(self.editor)
+        layout.addWidget(self.editor, stretch=1)
 
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
+        self._apply_diff_highlights()
+
+    # ------------------------------------------------------------------
+    # Diff highlighting
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _filtered(lines: list[str]) -> tuple[list[str], list[int]]:
+        """Normalize lines for comparison and return (filtered, index_map).
+
+        Collapses whitespace, replaces non-breaking spaces, and drops blank
+        lines so that insignificant rendering differences between the
+        Qt-round-tripped current HTML and the raw Mistral-proposed HTML do
+        not produce false diff noise.  ``index_map[k]`` gives the original
+        line index for each kept line.
+        """
+        out: list[str] = []
+        idx_map: list[int] = []
+        for i, raw in enumerate(lines):
+            norm = " ".join(raw.replace("\xa0", " ").split())
+            if norm:
+                out.append(norm)
+                idx_map.append(i)
+        return out, idx_map
+
+    def _apply_diff_highlights(self):
+        """Compute diff and insert inline highlights (green=added, red=deleted)."""
+        doc = self.editor.document()
+        proposed_lines = self.editor.toPlainText().split("\n")
+        current_lines = self._current_lines
+
+        self.editor.blockSignals(True)
+
+        if not current_lines:
+            # First-ever quest log — everything is new.
+            for idx in range(doc.blockCount()):
+                block = doc.findBlockByNumber(idx)
+                if block.isValid():
+                    cursor = QTextCursor(block)
+                    fmt = block.blockFormat()
+                    fmt.setBackground(_COLOR_ADDED)
+                    cursor.setBlockFormat(fmt)
+            self.editor.moveCursor(QTextCursor.MoveOperation.Start)
+            self.editor.blockSignals(False)
+            return
+
+        # Compare *normalized, non-blank* lines so whitespace / nbsp
+        # differences between the two HTML renderings don't cause the
+        # entire document to show as replaced.
+        cur_filt, cur_map = self._filtered(current_lines)
+        pro_filt, pro_map = self._filtered(proposed_lines)
+
+        matcher = difflib.SequenceMatcher(
+            None, cur_filt, pro_filt, autojunk=False
+        )
+        opcodes = matcher.get_opcodes()
+
+        # Pass 1 — green background on added / changed proposed blocks.
+        for tag, _i1, _i2, j1, j2 in opcodes:
+            if tag in ("insert", "replace"):
+                for k in range(j1, j2):
+                    block = doc.findBlockByNumber(pro_map[k])
+                    if block.isValid():
+                        cursor = QTextCursor(block)
+                        fmt = block.blockFormat()
+                        fmt.setBackground(_COLOR_ADDED)
+                        cursor.setBlockFormat(fmt)
+
+        # Pass 2 — collect where deleted lines should be inserted.
+        # Each entry is (proposed_block_number, [original_line_texts]).
+        insertions: list[tuple[int, list[str]]] = []
+        for tag, i1, i2, j1, _j2 in opcodes:
+            if tag in ("delete", "replace"):
+                del_texts = [current_lines[cur_map[k]] for k in range(i1, i2)]
+                if j1 < len(pro_map):
+                    insert_before = pro_map[j1]
+                else:
+                    insert_before = len(proposed_lines)  # append at end
+                insertions.append((insert_before, del_texts))
+
+        # Pass 3 — insert deleted lines inline, processing bottom-to-top so
+        # that earlier block numbers remain stable.
+        original_block_count = doc.blockCount()
+        del_blk_fmt = QTextBlockFormat()
+        del_blk_fmt.setBackground(_COLOR_DELETED_BG)
+        del_chr_fmt = QTextCharFormat()
+        del_chr_fmt.setForeground(_COLOR_DELETED_TEXT)
+        del_chr_fmt.setFontStrikeOut(True)
+
+        for proposed_idx, del_lines in reversed(insertions):
+            if proposed_idx < original_block_count:
+                # Insert each deleted line *before* the target block.
+                block = doc.findBlockByNumber(proposed_idx)
+                # Save the original block format so insertBlock() can
+                # hand it to the displaced content block, preserving
+                # heading level, list membership, alignment, etc.
+                target_blk_fmt = block.blockFormat()
+                cursor = QTextCursor(block)
+                cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+                for line in del_lines:
+                    # insertBlock(fmt) at start-of-block pushes existing
+                    # content to the next block with *fmt*, keeping its
+                    # structural formatting intact.
+                    cursor.insertBlock(target_blk_fmt)
+                    cursor.movePosition(
+                        QTextCursor.MoveOperation.PreviousBlock
+                    )
+                    cursor.setBlockFormat(del_blk_fmt)
+                    cursor.setCharFormat(del_chr_fmt)
+                    cursor.insertText(line)
+                    cursor.block().setUserState(_DELETED_STATE)
+                    # Return to the (shifted) target block for the next line.
+                    cursor.movePosition(QTextCursor.MoveOperation.NextBlock)
+                    cursor.movePosition(
+                        QTextCursor.MoveOperation.StartOfBlock
+                    )
+            else:
+                # Deletion at the very end — append after last block.
+                cursor = QTextCursor(doc)
+                cursor.movePosition(QTextCursor.MoveOperation.End)
+                for line in del_lines:
+                    cursor.insertBlock(del_blk_fmt, del_chr_fmt)
+                    cursor.insertText(line)
+                    cursor.block().setUserState(_DELETED_STATE)
+
+        self.editor.moveCursor(QTextCursor.MoveOperation.Start)
+        self.editor.blockSignals(False)
+
+    # ------------------------------------------------------------------
+    # HTML extraction
+    # ------------------------------------------------------------------
+
     def get_html(self) -> str:
-        """Return the (possibly edited) quest update HTML."""
-        return self.editor.toHtml()
+        """Return quest HTML with deleted-marked lines stripped and highlights cleared."""
+        doc = self.editor.document()
+        clean = QTextEdit()
+        clean_cursor = clean.textCursor()
+        first = True
+
+        block = doc.begin()
+        while block.isValid():
+            if block.userState() != _DELETED_STATE:
+                blk_fmt = QTextBlockFormat(block.blockFormat())
+                blk_fmt.clearBackground()
+                if first:
+                    clean_cursor.setBlockFormat(blk_fmt)
+                    first = False
+                else:
+                    clean_cursor.insertBlock(blk_fmt)
+                # Copy block content preserving character formatting.
+                src = QTextCursor(block)
+                src.movePosition(
+                    QTextCursor.MoveOperation.EndOfBlock,
+                    QTextCursor.MoveMode.KeepAnchor,
+                )
+                if src.hasSelection():
+                    clean_cursor.insertFragment(src.selection())
+            block = block.next()
+
+        return clean.toHtml()
 
 
 def start_quest_extraction(

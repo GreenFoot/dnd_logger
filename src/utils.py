@@ -8,7 +8,7 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-_APP_NAME = "DnDLogger"
+_APP_NAME = "DnD Logger"
 
 # Keys that belong in shared_config.json (synced between players)
 SHARED_CONFIG_KEYS = {
@@ -83,17 +83,12 @@ def resource_path(relative_path: str) -> str:
 def _data_dir() -> str:
     """Return the user-writable data directory for the app.
 
-    - PyInstaller exe: %APPDATA%/DnDLogger (migrates from DnDLogger)
+    - PyInstaller exe: %APPDATA%/DnD Logger
     - Dev mode: repo root (where main.py lives)
     """
     if hasattr(sys, "_MEIPASS"):
         appdata = os.environ.get("APPDATA", os.path.expanduser("~"))
-        new_dir = os.path.join(appdata, _APP_NAME)
-        old_dir = os.path.join(appdata, "DnDLogger")
-        if not os.path.exists(new_dir) and os.path.exists(old_dir):
-            os.rename(old_dir, new_dir)
-            log.info("Migrated data dir %s -> %s", old_dir, new_dir)
-        return new_dir
+        return os.path.join(appdata, _APP_NAME)
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 

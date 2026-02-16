@@ -1149,7 +1149,7 @@ class DndLoggerApp(QMainWindow):
 
     def _restore_geometry(self):
         """Restore window size/position from QSettings."""
-        settings = QSettings("DnDLogger", "DnDLogger")
+        settings = QSettings("DnD Logger", "DnD Logger")
         geo = settings.value("geometry")
         if geo:
             self.restoreGeometry(geo)
@@ -1159,7 +1159,7 @@ class DndLoggerApp(QMainWindow):
 
     def _save_geometry(self):
         """Save window size/position."""
-        settings = QSettings("DnDLogger", "DnDLogger")
+        settings = QSettings("DnD Logger", "DnD Logger")
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("windowState", self.saveState())
 

@@ -31,6 +31,7 @@ _DEFAULT_CONFIG = {
     "language": "fr",
     "diarize": False,
     "last_browser_url": "https://www.dndbeyond.com",
+    "auto_update_check": True,
     "active_campaign": "",
     "campaigns": {},
     "context_bias": [

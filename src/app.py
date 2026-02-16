@@ -1,11 +1,13 @@
 """DndLoggerApp — main window."""
 
+import logging
 import os
 import shutil
+import subprocess
 
 from src import __version__
 
-from PyQt6.QtCore import QSettings, Qt
+from PyQt6.QtCore import QSettings, QTimer, Qt
 from PyQt6.QtGui import (
     QAction,
     QBrush,
@@ -27,6 +29,7 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QMenuBar,
     QMessageBox,
+    QProgressDialog,
     QPushButton,
     QSplitter,
     QTabWidget,
@@ -40,12 +43,14 @@ from .session_tab import SessionTab
 from .settings import FirstRunWizard, SettingsDialog
 from .tts_engine import create_tts_thread
 from .tts_overlay import TTSOverlay
+from .updater import start_update_check, start_update_download
 from .utils import (
     SHARED_CONFIG_KEYS,
     active_campaign_dir,
     active_campaign_name,
     campaign_dir,
     campaign_drive_config,
+    format_file_size,
     journal_path,
     list_campaigns,
     load_config,
@@ -241,6 +246,12 @@ class DndLoggerApp(QMainWindow):
         self._build_menu()
         self._restore_geometry()
         self._check_first_run()
+        self._update_thread = None
+        self._update_worker = None
+        self._download_thread = None
+        self._download_worker = None
+        if self._config.get("auto_update_check", True):
+            QTimer.singleShot(3000, self._check_for_updates)
 
     # ── Migration: flat layout → campaigns/ ─────────────────
 
@@ -686,6 +697,10 @@ class DndLoggerApp(QMainWindow):
         settings_action.triggered.connect(self._open_settings)
         file_menu.addAction(settings_action)
 
+        update_action = QAction("Vérifier les mises à jour...", self)
+        update_action.triggered.connect(self._manual_update_check)
+        file_menu.addAction(update_action)
+
         file_menu.addSeparator()
 
         save_action = QAction("Sauvegarder", self)
@@ -937,6 +952,138 @@ class DndLoggerApp(QMainWindow):
         # Switch to Session tab
         self.right_tabs.setCurrentWidget(self.session_tab)
 
+    # ── Auto-update ────────────────────────────────────────
+
+    def _check_for_updates(self):
+        """Start a background update check (silent on error)."""
+        self._cleanup_update_thread()
+        self._update_thread, self._update_worker = start_update_check()
+        self._update_worker.update_available.connect(self._on_update_available)
+        self._update_worker.no_update.connect(self._on_update_thread_done)
+        self._update_worker.error.connect(self._on_update_check_error)
+        self._update_thread.start()
+
+    def _manual_update_check(self):
+        """Manual update check — shows dialogs for all outcomes."""
+        self._cleanup_update_thread()
+        self._update_thread, self._update_worker = start_update_check()
+        self._update_worker.update_available.connect(self._on_update_available)
+        self._update_worker.no_update.connect(self._on_no_update)
+        self._update_worker.error.connect(
+            lambda msg: QMessageBox.warning(
+                self, "Mise à jour",
+                f"Impossible de vérifier les mises à jour.\n{msg}",
+            )
+        )
+        self._update_worker.no_update.connect(self._on_update_thread_done)
+        self._update_worker.error.connect(self._on_update_thread_done)
+        self._update_thread.start()
+
+    def _on_update_available(self, tag, name, url, body):
+        self._on_update_thread_done()
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle("Mise à jour disponible")
+        box.setText(f"Version {tag} disponible !\n{name}")
+        box.setDetailedText(body)
+        btn_download = box.addButton("Télécharger et installer", QMessageBox.ButtonRole.AcceptRole)
+        box.addButton("Plus tard", QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() == btn_download:
+            self._start_update_download(url)
+
+    def _on_no_update(self):
+        QMessageBox.information(
+            self, "Mise à jour",
+            f"Vous utilisez la dernière version (v{__version__}).",
+        )
+
+    def _on_update_check_error(self, msg):
+        log = logging.getLogger(__name__)
+        log.warning("Update check failed: %s", msg)
+        self._on_update_thread_done()
+
+    def _on_update_thread_done(self):
+        if self._update_thread and self._update_thread.isRunning():
+            self._update_thread.quit()
+            self._update_thread.wait(2000)
+        self._update_thread = None
+        self._update_worker = None
+
+    def _start_update_download(self, url):
+        self._cleanup_download_thread()
+        self._download_thread, self._download_worker = start_update_download(url)
+
+        self._progress_dlg = QProgressDialog(
+            "Téléchargement de la mise à jour...", "Annuler", 0, 100, self
+        )
+        self._progress_dlg.setWindowTitle("Mise à jour")
+        self._progress_dlg.setWindowModality(Qt.WindowModality.WindowModal)
+        self._progress_dlg.setMinimumDuration(0)
+        self._progress_dlg.canceled.connect(self._download_worker.cancel)
+
+        self._download_worker.progress.connect(self._on_download_progress)
+        self._download_worker.completed.connect(self._on_download_completed)
+        self._download_worker.error.connect(self._on_download_error)
+        self._download_thread.start()
+
+    def _on_download_progress(self, downloaded, total):
+        if total > 0:
+            self._progress_dlg.setMaximum(total)
+            self._progress_dlg.setValue(downloaded)
+            self._progress_dlg.setLabelText(
+                f"Téléchargement... {format_file_size(downloaded)} / {format_file_size(total)}"
+            )
+        else:
+            self._progress_dlg.setMaximum(0)
+            self._progress_dlg.setLabelText(
+                f"Téléchargement... {format_file_size(downloaded)}"
+            )
+
+    def _on_download_completed(self, path):
+        self._progress_dlg.close()
+        self._cleanup_download_thread()
+        confirm = QMessageBox.question(
+            self, "Mise à jour",
+            "Téléchargement terminé.\n"
+            "L'application va se fermer pour installer la mise à jour.\n\n"
+            "Continuer ?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if confirm == QMessageBox.StandardButton.Yes:
+            CREATE_NEW_PROCESS_GROUP = 0x00000200
+            DETACHED_PROCESS = 0x00000008
+            subprocess.Popen(
+                [path, "/SILENT", "/RESTARTAPPLICATIONS"],
+                creationflags=DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
+                close_fds=True,
+            )
+            self.close()
+
+    def _on_download_error(self, msg):
+        self._progress_dlg.close()
+        self._cleanup_download_thread()
+        QMessageBox.warning(
+            self, "Mise à jour",
+            f"Erreur lors du téléchargement.\n{msg}",
+        )
+
+    def _cleanup_update_thread(self):
+        if self._update_thread and self._update_thread.isRunning():
+            self._update_thread.quit()
+            self._update_thread.wait(2000)
+        self._update_thread = None
+        self._update_worker = None
+
+    def _cleanup_download_thread(self):
+        if self._download_worker:
+            self._download_worker.cancel()
+        if self._download_thread and self._download_thread.isRunning():
+            self._download_thread.quit()
+            self._download_thread.wait(2000)
+        self._download_thread = None
+        self._download_worker = None
+
     def _restore_geometry(self):
         """Restore window size/position from QSettings."""
         settings = QSettings("DnDLogger", "DnDLogger")
@@ -960,6 +1107,9 @@ class DndLoggerApp(QMainWindow):
         self.quest_log.save()
         self.session_tab.cleanup()
         self.browser.cleanup()
+        # Shut down update threads
+        self._cleanup_update_thread()
+        self._cleanup_download_thread()
         # Shut down sync engine
         if self._sync_engine:
             self._sync_engine.cleanup()

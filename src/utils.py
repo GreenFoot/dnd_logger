@@ -8,31 +8,64 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-_APP_NAME = "IcewindDaleLogger"
+_APP_NAME = "DnDLogger"
+
+# Keys that belong in shared_config.json (synced between players)
+SHARED_CONFIG_KEYS = {
+    "context_bias",
+    "language",
+    "transcription_model",
+    "summary_model",
+    "chunk_duration_minutes",
+    "diarize",
+}
 
 _DEFAULT_CONFIG = {
     "api_key": "",
     "audio_device": None,
     "sample_rate": 16000,
     "channels": 1,
-    "sessions_dir": "sessions",
-    "quest_log_path": "quest_log.html",
-    "journal_path": "journal.html",
-    "chunk_duration_minutes": 150,
-    "transcription_model": "mistral-small-latest",
-    "summary_model": "mistral-small-latest",
+    "chunk_duration_minutes": 60,
+    "transcription_model": "voxtral-mini-latest",
+    "summary_model": "mistral-large-latest",
     "language": "fr",
+    "diarize": False,
+    "last_browser_url": "https://www.dndbeyond.com",
+    "active_campaign": "",
+    "campaigns": {},
     "context_bias": [
-        "Icewind Dale", "Faerun", "Dungeons & Dragons", "D&D",
-        "Dungeon Master", "DM", "NPC", "PC",
-        "Initiative", "Armor Class", "AC", "HP", "Hit Points",
-        "Saving Throw", "Ability Check", "Skill Check",
-        "Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma",
-        "Spell Slot", "Cantrip", "Multiclass", "Proficiency",
-        "Ten-Towns", "Bryn Shander", "Targos", "Lonelywood", "Easthaven",
-        "Auril", "Chardalyn", "Duergar", "Reghed",
-        "Short Rest", "Long Rest", "Concentration", "Advantage", "Disadvantage",
-        "Natural 20", "Critical Hit", "Nat 20"
+        "Dungeons & Dragons",
+        "D&D",
+        "Dungeon Master",
+        "DM",
+        "NPC",
+        "PC",
+        "Initiative",
+        "Armor Class",
+        "AC",
+        "HP",
+        "Hit Points",
+        "Saving Throw",
+        "Ability Check",
+        "Skill Check",
+        "Strength",
+        "Dexterity",
+        "Constitution",
+        "Intelligence",
+        "Wisdom",
+        "Charisma",
+        "Spell Slot",
+        "Cantrip",
+        "Multiclass",
+        "Proficiency",
+        "Short Rest",
+        "Long Rest",
+        "Concentration",
+        "Advantage",
+        "Disadvantage",
+        "Natural 20",
+        "Critical Hit",
+        "Nat 20",
     ],
 }
 
@@ -49,13 +82,18 @@ def resource_path(relative_path: str) -> str:
 def _data_dir() -> str:
     """Return the user-writable data directory for the app.
 
-    - PyInstaller exe: %APPDATA%/IcewindDaleLogger
+    - PyInstaller exe: %APPDATA%/DnDLogger (migrates from IcewindDaleLogger)
     - Dev mode: repo root (where main.py lives)
     """
     if hasattr(sys, "_MEIPASS"):
-        return os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), _APP_NAME)
+        appdata = os.environ.get("APPDATA", os.path.expanduser("~"))
+        new_dir = os.path.join(appdata, _APP_NAME)
+        old_dir = os.path.join(appdata, "IcewindDaleLogger")
+        if not os.path.exists(new_dir) and os.path.exists(old_dir):
+            os.rename(old_dir, new_dir)
+            log.info("Migrated data dir %s -> %s", old_dir, new_dir)
+        return new_dir
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 
 
 def project_root() -> str:
@@ -68,9 +106,89 @@ def config_path() -> str:
     return os.path.join(project_root(), "config.json")
 
 
+# ── Campaign helpers ──────────────────────────────────────
+
+def campaign_dir(name: str) -> str:
+    """Return the directory for a given campaign name, creating it if needed."""
+    return ensure_dir(os.path.join(project_root(), "campaigns", name))
+
+
+def active_campaign_name(cfg: dict) -> str:
+    """Return the active campaign name from config."""
+    return cfg.get("active_campaign", "")
+
+
+def active_campaign_dir(cfg: dict) -> str:
+    """Return the directory for the active campaign."""
+    return campaign_dir(active_campaign_name(cfg))
+
+
+def campaign_drive_config(cfg: dict, name: str | None = None) -> dict:
+    """Return the Drive config dict for a campaign (default: active campaign)."""
+    if name is None:
+        name = active_campaign_name(cfg)
+    return cfg.get("campaigns", {}).get(name, {})
+
+
+def list_campaigns(cfg: dict) -> list[str]:
+    """Return sorted list of campaign names from the campaigns/ directory."""
+    campaigns_root = os.path.join(project_root(), "campaigns")
+    if not os.path.isdir(campaigns_root):
+        return []
+    return sorted(
+        d for d in os.listdir(campaigns_root)
+        if os.path.isdir(os.path.join(campaigns_root, d)) and not d.startswith("_")
+    )
+
+
+# ── Path functions (campaign-aware) ───────────────────────
+
+def quest_log_path(cfg: dict) -> str:
+    """Return the absolute path to the quest log file."""
+    return os.path.join(active_campaign_dir(cfg), "quest_log.html")
+
+
+def journal_path(cfg: dict) -> str:
+    """Return the absolute path to the journal file."""
+    return os.path.join(active_campaign_dir(cfg), "journal.html")
+
+
+def sessions_dir(cfg: dict) -> str:
+    """Return the absolute path to the sessions directory."""
+    return ensure_dir(os.path.join(active_campaign_dir(cfg), "sessions"))
+
+
+def shared_config_path(cfg: dict) -> str:
+    """Return the path to shared_config.json in the active campaign dir."""
+    return os.path.join(active_campaign_dir(cfg), "shared_config.json")
+
+
+# ── Config I/O ────────────────────────────────────────────
+
+def load_shared_config(cfg: dict) -> dict:
+    """Load shared config from the active campaign's shared_config.json."""
+    path = shared_config_path(cfg)
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            pass
+    return {}
+
+
+def save_shared_config(data: dict, cfg: dict) -> None:
+    """Save shared config dict to the active campaign's shared_config.json."""
+    path = shared_config_path(cfg)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+
 def load_config() -> dict:
-    """Load config from disk, merging with defaults for missing keys."""
+    """Load config from disk with layered merge: defaults -> shared -> personal."""
     cfg = dict(_DEFAULT_CONFIG)
+    # Layer 1: personal config (to get active_campaign)
     path = config_path()
     if os.path.exists(path):
         try:
@@ -79,44 +197,35 @@ def load_config() -> dict:
             cfg.update(user_cfg)
         except (json.JSONDecodeError, OSError):
             pass
+    # Layer 2: campaign shared config (only SHARED_CONFIG_KEYS)
+    shared = load_shared_config(cfg)
+    for k in SHARED_CONFIG_KEYS:
+        if k in shared:
+            cfg[k] = shared[k]
     return cfg
 
 
 def save_config(cfg: dict) -> None:
-    """Save config dict to disk."""
+    """Save config dict, splitting shared keys into campaign's shared_config.json."""
+    shared = {}
+    personal = {}
+    for k, v in cfg.items():
+        if k in SHARED_CONFIG_KEYS:
+            shared[k] = v
+        else:
+            personal[k] = v
+    # Write personal config
     path = config_path()
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, indent=2, ensure_ascii=False)
+        json.dump(personal, f, indent=2, ensure_ascii=False)
+    # Write shared config to campaign dir
+    save_shared_config(shared, cfg)
 
 
 def ensure_dir(path: str) -> str:
     """Create directory if it doesn't exist, return the path."""
     os.makedirs(path, exist_ok=True)
     return path
-
-
-def sessions_dir(cfg: dict) -> str:
-    """Return the absolute path to the sessions directory."""
-    sd = cfg.get("sessions_dir", "sessions")
-    if not os.path.isabs(sd):
-        sd = os.path.join(project_root(), sd)
-    return ensure_dir(sd)
-
-
-def quest_log_path(cfg: dict) -> str:
-    """Return the absolute path to the quest log file."""
-    ql = cfg.get("quest_log_path", "quest_log.html")
-    if not os.path.isabs(ql):
-        ql = os.path.join(project_root(), ql)
-    return ql
-
-
-def journal_path(cfg: dict) -> str:
-    """Return the absolute path to the journal file."""
-    jp = cfg.get("journal_path", "journal.html")
-    if not os.path.isabs(jp):
-        jp = os.path.join(project_root(), jp)
-    return jp
 
 
 def browser_data_dir() -> str:

@@ -2,12 +2,12 @@
 config.json
 .claude/
 
-# User data
-quest_log.html
-quest_log.html.bak
-journal.html
-journal.html.bak
-sessions/
+# Google Drive sync
+drive_token.json
+src/drive_credentials.py
+
+# User data — campaign files
+campaigns/
 
 # Browser profile (cookies, cache)
 browser_data/

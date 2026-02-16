@@ -6,13 +6,15 @@ The UI is in French. D&D-specific terms remain in English.
 
 ## Features
 
-- **Audio recording** of game sessions (WAV, converted to FLAC for transcription)
-- **AI transcription** via Mistral Voxtral with D&D-specific context bias
+- **Audio recording** of game sessions with pause/resume (WAV, converted to FLAC for transcription)
+- **AI transcription** via Mistral Voxtral with D&D-specific context bias and speaker diarization
 - **AI summarization** in epic French fantasy style, with context chaining for long sessions
+- **AI quest extraction** from session summaries with inline diff preview for review
 - **Embedded D&D Beyond browser** with persistent login (cookies saved across sessions)
-- **Quest log** -- rich text editor with auto-save
-- **Journal** -- separate rich text editor for campaign notes
-- **Text-to-speech** readback of summaries (French voice, pyttsx3)
+- **Quest log** -- rich text editor with auto-save, section folding, and search (Ctrl+F)
+- **Journal** -- separate rich text editor for campaign notes with section folding and search
+- **Google Drive sync** -- share quest log, journal, and campaign settings across players via a shared Google Drive folder
+- **Text-to-speech** readback of summaries with animated overlay controls (play/pause/stop)
 - **Audio import** -- import existing audio files (FLAC, WAV, MP3, OGG, M4A) for transcription
 - **Dark fantasy theme** (Icewind Dale aesthetic, Cinzel font, frost/aurora overlays)
 
@@ -23,23 +25,32 @@ dnd_logger/
 ├── main.py                    # Entry point
 ├── requirements.txt           # Python dependencies
 ├── icewind_dale.spec          # PyInstaller build spec
+├── installer.iss              # Inno Setup installer script
 ├── setup_appdata.py           # One-time script to migrate data to %APPDATA%
 ├── src/
-│   ├── app.py                 # QMainWindow -- splitter layout, menus, settings
+│   ├── app.py                 # QMainWindow -- splitter layout, menus, sync engine init
 │   ├── audio_recorder.py      # sounddevice InputStream -> queue -> writer thread -> WAV
 │   ├── transcriber.py         # Audio chunking (FLAC) + Mistral Voxtral API pipeline
 │   ├── summarizer.py          # Mistral chat summarization (epic French fantasy style)
 │   ├── session_tab.py         # Record -> transcribe -> summarize UI tab
 │   ├── quest_log.py           # Rich text quest log with auto-save
 │   ├── journal.py             # Rich text journal editor
-│   ├── quest_extractor.py     # AI extraction of quests from summaries
-│   ├── rich_editor.py         # Shared rich text editor base widget
+│   ├── quest_extractor.py     # AI quest extraction from summaries with diff preview
+│   ├── rich_editor.py         # Shared rich text editor base (toolbar, search, folding)
+│   ├── fold_manager.py        # Heading/bullet fold region detection and state
+│   ├── fold_gutter.py         # Fold toggle gutter widget for editors
+│   ├── diff_utils.py          # Shared inline diff highlighting utilities
 │   ├── web_panel.py           # QWebEngineView with persistent D&D Beyond profile
-│   ├── settings.py            # SettingsDialog + FirstRunWizard
+│   ├── settings.py            # SettingsDialog + FirstRunWizard (API, Audio, Advanced, Drive)
+│   ├── drive_credentials.py   # OAuth2 client config (gitignored, user-provided)
+│   ├── drive_auth.py          # Google OAuth2 flow, token persistence
+│   ├── drive_sync.py          # Google Drive sync engine (poll, upload, conflict detection)
+│   ├── sync_conflict_dialog.py # Conflict resolution UI (local vs remote vs merge)
 │   ├── tts_engine.py          # pyttsx3 French voice TTS
+│   ├── tts_overlay.py         # Animated TTS playback overlay (play/pause/stop)
 │   ├── snow_particles.py      # Snow particle overlay effect
 │   ├── frost_overlay.py       # Gold filigree / frost overlay
-│   └── utils.py               # Paths, config I/O, helpers
+│   └── utils.py               # Paths, config I/O (personal + shared split), helpers
 └── assets/
     ├── fonts/                 # Cinzel font family (.ttf)
     ├── images/                # Icons, backgrounds, banners
@@ -62,7 +73,12 @@ soundfile >= 0.12.1
 mistralai >= 1.0.0
 pyttsx3 >= 2.90
 numpy
+google-api-python-client >= 2.100.0   # optional, for Google Drive sync
+google-auth-httplib2 >= 0.1.1         # optional, for Google Drive sync
+google-auth-oauthlib >= 1.1.0         # optional, for Google Drive sync
 ```
+
+> **Note:** The Google API packages are only required if you want to use the Google Drive sync feature. The app works without them -- the Drive tab in settings will show a "dependencies missing" message.
 
 ## Development Setup
 
@@ -94,9 +110,12 @@ All user data is stored in the project root directory:
 
 ```
 dnd_logger/
-├── config.json          # API key, audio settings, preferences
-├── quest_log.html       # Quest log content (auto-saved)
-├── journal.html         # Journal content (auto-saved)
+├── config.json          # Personal settings (API key, audio, paths, Drive config)
+├── shared_config.json   # Shared settings (context bias, models, language -- synced via Drive)
+├── quest_log.html       # Quest log content (auto-saved, synced via Drive)
+├── journal.html         # Journal content (auto-saved, synced via Drive)
+├── drive_token.json     # Google OAuth2 refresh token (gitignored)
+├── drive_sync_state.json # Sync state tracking (gitignored)
 ├── icewind_dale.log     # Application log (rotating, 2 MB max, 3 backups)
 ├── sessions/            # Recorded audio and transcripts
 │   └── session_YYYYMMDD_HHMMSS/
@@ -118,7 +137,7 @@ python setup_appdata.py            # skip files that already exist
 python setup_appdata.py --force    # overwrite all files
 ```
 
-This copies `config.json`, `quest_log.html`, `journal.html`, and `sessions/` to `%APPDATA%\IcewindDaleLogger\`.
+This copies `config.json`, `shared_config.json`, `quest_log.html`, `journal.html`, and `sessions/` to `%APPDATA%\IcewindDaleLogger\`.
 
 ## Building the Executable
 
@@ -188,7 +207,9 @@ To distribute the app, share **one** of the following:
 
 ## Configuration
 
-Settings are stored in `config.json`:
+Settings are split across two files:
+
+### `config.json` -- Personal settings (not synced)
 
 | Key | Default | Description |
 |-----|---------|-------------|
@@ -196,9 +217,51 @@ Settings are stored in `config.json`:
 | `audio_device` | `null` | Audio input device index |
 | `sample_rate` | `16000` | Recording sample rate (Hz) |
 | `channels` | `1` | Recording channels (mono) |
-| `chunk_duration_minutes` | `150` | Max chunk duration before splitting |
-| `language` | `"fr"` | Transcription language |
-| `context_bias` | *(D&D terms)* | Terms to bias transcription toward |
 | `sessions_dir` | `"sessions"` | Sessions directory (relative or absolute) |
 | `quest_log_path` | `"quest_log.html"` | Quest log file path |
 | `journal_path` | `"journal.html"` | Journal file path |
+| `last_browser_url` | `"https://www.dndbeyond.com"` | Last visited URL in embedded browser |
+| `drive_sync_enabled` | `false` | Enable Google Drive sync |
+| `drive_campaign_name` | `"Icewind Dale"` | Campaign name (used as Drive folder name) |
+| `drive_campaign_folder_id` | `""` | Google Drive folder ID for the campaign |
+
+### `shared_config.json` -- Shared settings (synced via Drive)
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `chunk_duration_minutes` | `60` | Max chunk duration before splitting |
+| `transcription_model` | `"voxtral-mini-latest"` | Mistral transcription model |
+| `summary_model` | `"mistral-large-latest"` | Mistral summarization model |
+| `language` | `"fr"` | Transcription language |
+| `diarize` | `false` | Enable speaker diarization |
+| `context_bias` | *(D&D terms)* | Terms to bias transcription toward |
+
+> On first run, shared keys are automatically migrated from `config.json` to `shared_config.json`. If `shared_config.json` is missing, all settings are read from `config.json` as a fallback.
+
+## Google Drive Sync
+
+The app can sync the quest log, journal, and shared campaign settings across multiple players via a shared Google Drive folder.
+
+### Setup (one-time, for the developer)
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com) and create a project
+2. Enable the **Google Drive API**
+3. Create **OAuth 2.0 credentials** with application type "Desktop app"
+4. Paste the `client_id` and `client_secret` into `src/drive_credentials.py`
+5. Add test users (< 100) or publish to production
+
+### Usage
+
+1. Open **Settings > Google Drive** and click "Se connecter" -- a browser window opens for Google login
+2. Enter a **campaign name** (default: "Icewind Dale") -- this creates a folder on Drive
+3. Check **"Activer la synchronisation"** and save
+4. Share the campaign folder ID (shown in settings, copyable) with other players
+5. Other players paste the folder ID in the "Rejoindre" field to join the campaign
+
+### How it works
+
+- **Upload**: After a local save, the file is uploaded to Drive after a 10-second debounce
+- **Download**: Every 30 seconds, the app polls Drive for changes and downloads updated files
+- **Conflicts**: If both local and remote changed since the last sync, a conflict resolution dialog appears with side-by-side comparison and a merged editor
+- **Files synced**: `quest_log.html`, `journal.html`, `shared_config.json`
+- **Status**: A status label in the bottom-right shows the current sync state (idle/syncing/conflict/error/offline)

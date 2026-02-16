@@ -1,10 +1,10 @@
-; Inno Setup script for Icewind Dale - D&D Session Logger
+; Inno Setup script for DnD Logger
 ; Installs to %LOCALAPPDATA% — no admin rights required.
 
-#define MyAppName "Icewind Dale"
+#define MyAppName "DnD Logger"
 #define MyAppVersion "1.0.0"
-#define MyAppPublisher "IcewindDale"
-#define MyAppExeName "Icewind Dale.exe"
+#define MyAppPublisher "DnDLogger"
+#define MyAppExeName "DnD Logger.exe"
 
 [Setup]
 AppId={{8F2C4A6D-1B3E-4D5F-9A7C-2E8B6D0F3A1C}
@@ -16,7 +16,7 @@ DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputDir=installer_output
-OutputBaseFilename=IcewindDale_Setup
+OutputBaseFilename=DnDLogger_Setup
 SetupIconFile=assets\images\icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2/ultra64
@@ -30,7 +30,7 @@ Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 Name: "desktopicon"; Description: "Creer un raccourci sur le Bureau"; GroupDescription: "Raccourcis:"; Flags: unchecked
 
 [Files]
-Source: "dist\Icewind Dale\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\DnD Logger\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
 )
 from .utils import browser_data_dir, load_config, save_config
 
-log = logging.getLogger("icewind.web")
+log = logging.getLogger("dndlogger.web")
 
 _CHROME_UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

@@ -32,7 +32,7 @@ from .quest_extractor import QuestProposalDialog, start_quest_extraction
 from .snow_particles import AuroraShimmerOverlay, SnowParticleOverlay
 from .summarizer import SummarizerWorker, start_summarization
 from .transcriber import TranscriptionWorker, start_live_transcription, start_transcription
-from .utils import ensure_dir, format_duration, format_file_size, sessions_dir
+from .utils import active_campaign_name, ensure_dir, format_duration, format_file_size, sessions_dir
 
 
 class _ThinDivider(QWidget):
@@ -766,7 +766,8 @@ class SessionTab(QWidget):
         self.btn_update_quests.setEnabled(False)
 
         self._quest_thread, self._quest_worker = start_quest_extraction(
-            self._current_summary, current_quests, self._config
+            self._current_summary, current_quests, self._config,
+            campaign_name=active_campaign_name(self._config),
         )
         self._quest_worker.completed.connect(self._on_quest_extraction_done)
         self._quest_worker.error.connect(self._on_error)
@@ -838,7 +839,7 @@ class SessionTab(QWidget):
         if self._aurora_overlay:
             self._aurora_overlay.stop()
 
-        # TTS engine is shared and cleaned up by IcewindDaleApp
+        # TTS engine is shared and cleaned up by DndLoggerApp
         if self._live_tx_thread and self._live_tx_thread.isRunning():
             self._live_tx_thread.quit()
             self._live_tx_thread.wait(2000)

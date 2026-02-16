@@ -36,12 +36,21 @@ jobs:
         shell: bash
         run: echo '__version__ = "${{ steps.version.outputs.version }}"' > src/__init__.py
 
-      - name: Create drive_credentials stub
+      - name: Inject drive credentials
         shell: bash
         run: |
-          cat > src/drive_credentials.py << 'EOF'
-          CLIENT_CONFIG = {}
-          SCOPES = []
+          cat > src/drive_credentials.py << EOF
+          CLIENT_CONFIG = {
+              "installed": {
+                  "client_id": "${{ secrets.DRIVE_CLIENT_ID }}",
+                  "client_secret": "${{ secrets.DRIVE_CLIENT_SECRET }}",
+                  "project_id": "dnd-logger-487422",
+                  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                  "token_uri": "https://oauth2.googleapis.com/token",
+                  "redirect_uris": ["http://localhost"],
+              }
+          }
+          SCOPES = ["https://www.googleapis.com/auth/drive"]
           EOF
 
       - name: Build with PyInstaller

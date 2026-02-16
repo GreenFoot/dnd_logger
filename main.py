@@ -1,4 +1,4 @@
-"""Icewind Dale — D&D Session Logger entry point."""
+"""DnD Logger — D&D Session Logger entry point."""
 
 import ctypes
 import os
@@ -7,7 +7,7 @@ import sys
 # Set Windows App ID for proper taskbar icon grouping
 try:
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
-        "icewindale.dnd.sessionlogger.1"
+        "dndlogger.dnd.sessionlogger.1"
     )
 except Exception:
     pass
@@ -28,11 +28,11 @@ def main():
 
     from src.utils import project_root
 
-    log_file = os.path.join(project_root(), "icewind_dale.log")
+    log_file = os.path.join(project_root(), "dnd_logger.log")
     handler = RotatingFileHandler(log_file, maxBytes=2 * 1024 * 1024, backupCount=3)
     handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
     logging.basicConfig(level=logging.DEBUG, handlers=[handler])
-    log = logging.getLogger("icewind")
+    log = logging.getLogger("dndlogger")
 
     def exception_hook(exc_type, exc_value, exc_tb):
         msg = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
@@ -45,13 +45,13 @@ def main():
     try:
         from PyQt6.QtGui import QIcon
         from PyQt6.QtWidgets import QApplication
-        from src.app import IcewindDaleApp
+        from src.app import DndLoggerApp
         from src.utils import resource_path
 
         app = QApplication(sys.argv)
-        app.setApplicationName("Icewind Dale")
-        app.setOrganizationName("IcewindDale")
-        app.setApplicationDisplayName("Icewind Dale — D&D Session Logger")
+        app.setApplicationName("DnD Logger")
+        app.setOrganizationName("DnDLogger")
+        app.setApplicationDisplayName("DnD Logger")
 
         # Set app-wide icon (taskbar + all windows)
         # Prefer PNG — QIcon handles it more reliably than ICO in frozen builds
@@ -62,7 +62,7 @@ def main():
             app.setWindowIcon(QIcon(icon_path))
 
         log.info("Application starting")
-        window = IcewindDaleApp()
+        window = DndLoggerApp()
         window.show()
         log.info("Window shown")
 

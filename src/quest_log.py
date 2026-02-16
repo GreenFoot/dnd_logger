@@ -1,13 +1,16 @@
 """Quest Log — structured quest tracker, inherits from RichTextEditorWidget."""
 
 from .rich_editor import RichTextEditorWidget
-from .utils import quest_log_path
+from .utils import active_campaign_name, quest_log_path
 
-_DEFAULT_QUEST_LOG = """\
-<h1 style="color:#d4af37; text-align:center;">Quest Log &mdash; Icewind Dale</h1>
+
+def _default_quest_log_html(campaign_name: str) -> str:
+    """Return the default quest log HTML template for a campaign."""
+    return f"""\
+<h1 style="color:#d4af37; text-align:center;">Quest Log &mdash; {campaign_name}</h1>
 <hr>
 <p><em>Ce registre recense les quêtes actives, indices découverts
-et mystères à élucider dans les terres glaciales d'Icewind Dale.</em></p>
+et mystères à élucider au cours de la campagne.</em></p>
 <hr>
 <h2 style="color:#6ab4d4;">Quêtes Actives</h2>
 <ul>
@@ -29,9 +32,10 @@ class QuestLogWidget(RichTextEditorWidget):
 
     def __init__(self, config: dict, parent=None):
         self._config = config
+        cname = active_campaign_name(config)
         super().__init__(
             file_path=quest_log_path(config),
-            default_html=_DEFAULT_QUEST_LOG,
+            default_html=_default_quest_log_html(cname),
             editor_object_name="quest_log_editor",
             foldable_heading_levels=set(),
             fold_by_default=True,

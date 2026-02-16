@@ -1,4 +1,4 @@
-"""One-time script to copy existing data to %APPDATA%\\IcewindDaleLogger.
+"""One-time script to copy existing data to %APPDATA%\\DnDLogger.
 
 Usage:
     python setup_appdata.py            # skip files that already exist
@@ -10,10 +10,10 @@ import shutil
 import sys
 
 SRC = os.path.dirname(os.path.abspath(__file__))
-DEST = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "IcewindDaleLogger")
+DEST = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "DnDLogger")
 
-FILES = ("config.json", "quest_log.html", "journal.html")
-DIRS = ["sessions"]
+FILES = ("config.json",)
+DIRS = ["campaigns"]
 
 
 def main():

@@ -4,7 +4,7 @@ import os
 import re
 import shutil
 
-from PyQt6.QtCore import QPoint, QSize, Qt, QTimer
+from PyQt6.QtCore import QPoint, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
     QBrush, QColor, QFont, QIcon, QKeySequence, QPainter, QPen, QPixmap,
     QPolygon, QShortcut, QTextCharFormat, QTextCursor, QTextBlock,
@@ -257,6 +257,8 @@ class RichTextEditorWidget(QWidget):
     Subclasses provide ``file_path``, ``default_html``, and
     ``editor_object_name`` via constructor parameters.
     """
+
+    file_saved = pyqtSignal(str)  # emitted after save() with the file path
 
     def __init__(self, file_path: str, default_html: str,
                  editor_object_name: str = "rich_editor",
@@ -651,8 +653,26 @@ class RichTextEditorWidget(QWidget):
         try:
             with open(self._path, "w", encoding="utf-8") as f:
                 f.write(html)
+            self.file_saved.emit(self._path)
         except OSError:
             pass
+
+    def reload_from_disk(self):
+        """Reload file content from disk (e.g. after a remote sync update)."""
+        if not os.path.exists(self._path):
+            return
+        try:
+            with open(self._path, "r", encoding="utf-8") as f:
+                html = self._strip_inline_fonts(f.read())
+        except OSError:
+            return
+        # Preserve scroll position
+        vbar = self.editor.verticalScrollBar()
+        scroll_pos = vbar.value()
+        self.editor.blockSignals(True)
+        self.editor.setHtml(html)
+        self.editor.blockSignals(False)
+        vbar.setValue(scroll_pos)
 
     def set_tts_engine(self, tts_engine):
         """Set a shared TTS engine for read-aloud context menu."""
@@ -676,6 +696,18 @@ class RichTextEditorWidget(QWidget):
         text = cursor.selectedText()
         if text and self._tts_engine and self._tts_engine.is_available:
             self._tts_engine.speak_requested.emit(text)
+
+    def switch_file(self, new_path: str, new_default_html: str):
+        """Switch to a different file (e.g. on campaign change)."""
+        self.save()
+        self._path = new_path
+        self._default_html = new_default_html
+        self._load()
+        # Reset fold state
+        self._fold_mgr.unfold_all()
+        if self._fold_by_default:
+            self._fold_mgr.fold_all()
+        self._fold_gutter.update()
 
     def get_compact_context(self) -> str:
         """Return last ~4000 chars of plain text for context chaining."""

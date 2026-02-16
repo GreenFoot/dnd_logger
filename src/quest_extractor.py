@@ -1,10 +1,9 @@
 """AI quest extraction from session summaries via Mistral API."""
 
-import difflib
 import re
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
-from PyQt6.QtGui import QColor, QTextBlockFormat, QTextCharFormat, QTextCursor
+from PyQt6.QtGui import QTextCursor
 from PyQt6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -13,9 +12,11 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
+from .diff_utils import apply_inline_diff, extract_html_without_deleted
+
 _EXTRACTION_PROMPT = """\
 Tu es un assistant spécialisé dans le suivi de quêtes pour une campagne \
-Dungeons & Dragons dans Icewind Dale (Royaumes Oubliés).
+Dungeons & Dragons ({campaign_name}).
 
 À partir du résumé de session ci-dessous et de l'état actuel du quest log, \
 génère le quest log COMPLET recompilé et enrichi avec les nouvelles \
@@ -30,10 +31,10 @@ RÈGLE ABSOLUE — RETOURNE UNIQUEMENT LE HTML:
 
 Structure HTML exacte à produire (les 3 sections DOIVENT être présentes):
 
-<h1 style="color:#d4af37; text-align:center;">Quest Log &mdash; Icewind Dale</h1>
+<h1 style="color:#d4af37; text-align:center;">Quest Log &mdash; {campaign_name}</h1>
 <hr>
 <p><em>Ce registre recense les quêtes actives, indices découverts
-et mystères à élucider dans les terres glaciales d'Icewind Dale.</em></p>
+et mystères à élucider au cours de la campagne.</em></p>
 <hr>
 <h2 style="color:#6ab4d4;">Quêtes Actives</h2>
 <ul>
@@ -111,11 +112,13 @@ class QuestExtractorWorker(QObject):
     completed = pyqtSignal(str)  # quest update HTML
     error = pyqtSignal(str)
 
-    def __init__(self, summary_html: str, current_quests: str, config: dict):
+    def __init__(self, summary_html: str, current_quests: str, config: dict,
+                 campaign_name: str = ""):
         super().__init__()
         self._summary = summary_html
         self._current_quests = current_quests
         self._config = config
+        self._campaign_name = campaign_name
 
     def run(self):
         try:
@@ -130,6 +133,7 @@ class QuestExtractorWorker(QObject):
             model = self._config.get("summary_model", "mistral-large-latest")
 
             prompt = _EXTRACTION_PROMPT.format(
+                campaign_name=self._campaign_name or "D&D",
                 current_quests=self._current_quests or "(Aucune quête enregistrée)",
                 summary=self._summary,
             )
@@ -146,12 +150,6 @@ class QuestExtractorWorker(QObject):
 
         except Exception as e:
             self.error.emit(f"Erreur d'extraction de quêtes: {e}")
-
-
-_COLOR_ADDED = QColor("#1a3d1a")
-_COLOR_DELETED_BG = QColor("#3d1a1a")
-_COLOR_DELETED_TEXT = QColor("#ff8888")
-_DELETED_STATE = 1
 
 
 class QuestProposalDialog(QDialog):
@@ -195,174 +193,21 @@ class QuestProposalDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
-        self._apply_diff_highlights()
-
-    # ------------------------------------------------------------------
-    # Diff highlighting
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _filtered(lines: list[str]) -> tuple[list[str], list[int]]:
-        """Normalize lines for comparison and return (filtered, index_map).
-
-        Collapses whitespace, replaces non-breaking spaces, and drops blank
-        lines so that insignificant rendering differences between the
-        Qt-round-tripped current HTML and the raw Mistral-proposed HTML do
-        not produce false diff noise.  ``index_map[k]`` gives the original
-        line index for each kept line.
-        """
-        out: list[str] = []
-        idx_map: list[int] = []
-        for i, raw in enumerate(lines):
-            norm = " ".join(raw.replace("\xa0", " ").split())
-            if norm:
-                out.append(norm)
-                idx_map.append(i)
-        return out, idx_map
-
-    def _apply_diff_highlights(self):
-        """Compute diff and insert inline highlights (green=added, red=deleted)."""
-        doc = self.editor.document()
-        proposed_lines = self.editor.toPlainText().split("\n")
-        current_lines = self._current_lines
-
-        self.editor.blockSignals(True)
-
-        if not current_lines:
-            # First-ever quest log — everything is new.
-            for idx in range(doc.blockCount()):
-                block = doc.findBlockByNumber(idx)
-                if block.isValid():
-                    cursor = QTextCursor(block)
-                    fmt = block.blockFormat()
-                    fmt.setBackground(_COLOR_ADDED)
-                    cursor.setBlockFormat(fmt)
-            self.editor.moveCursor(QTextCursor.MoveOperation.Start)
-            self.editor.blockSignals(False)
-            return
-
-        # Compare *normalized, non-blank* lines so whitespace / nbsp
-        # differences between the two HTML renderings don't cause the
-        # entire document to show as replaced.
-        cur_filt, cur_map = self._filtered(current_lines)
-        pro_filt, pro_map = self._filtered(proposed_lines)
-
-        matcher = difflib.SequenceMatcher(
-            None, cur_filt, pro_filt, autojunk=False
-        )
-        opcodes = matcher.get_opcodes()
-
-        # Pass 1 — green background on added / changed proposed blocks.
-        for tag, _i1, _i2, j1, j2 in opcodes:
-            if tag in ("insert", "replace"):
-                for k in range(j1, j2):
-                    block = doc.findBlockByNumber(pro_map[k])
-                    if block.isValid():
-                        cursor = QTextCursor(block)
-                        fmt = block.blockFormat()
-                        fmt.setBackground(_COLOR_ADDED)
-                        cursor.setBlockFormat(fmt)
-
-        # Pass 2 — collect where deleted lines should be inserted.
-        # Each entry is (proposed_block_number, [original_line_texts]).
-        insertions: list[tuple[int, list[str]]] = []
-        for tag, i1, i2, j1, _j2 in opcodes:
-            if tag in ("delete", "replace"):
-                del_texts = [current_lines[cur_map[k]] for k in range(i1, i2)]
-                if j1 < len(pro_map):
-                    insert_before = pro_map[j1]
-                else:
-                    insert_before = len(proposed_lines)  # append at end
-                insertions.append((insert_before, del_texts))
-
-        # Pass 3 — insert deleted lines inline, processing bottom-to-top so
-        # that earlier block numbers remain stable.
-        original_block_count = doc.blockCount()
-        del_blk_fmt = QTextBlockFormat()
-        del_blk_fmt.setBackground(_COLOR_DELETED_BG)
-        del_chr_fmt = QTextCharFormat()
-        del_chr_fmt.setForeground(_COLOR_DELETED_TEXT)
-        del_chr_fmt.setFontStrikeOut(True)
-
-        for proposed_idx, del_lines in reversed(insertions):
-            if proposed_idx < original_block_count:
-                # Insert each deleted line *before* the target block.
-                block = doc.findBlockByNumber(proposed_idx)
-                # Save the original block format so insertBlock() can
-                # hand it to the displaced content block, preserving
-                # heading level, list membership, alignment, etc.
-                target_blk_fmt = block.blockFormat()
-                cursor = QTextCursor(block)
-                cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
-                for line in del_lines:
-                    # insertBlock(fmt) at start-of-block pushes existing
-                    # content to the next block with *fmt*, keeping its
-                    # structural formatting intact.
-                    cursor.insertBlock(target_blk_fmt)
-                    cursor.movePosition(
-                        QTextCursor.MoveOperation.PreviousBlock
-                    )
-                    cursor.setBlockFormat(del_blk_fmt)
-                    cursor.setCharFormat(del_chr_fmt)
-                    cursor.insertText(line)
-                    cursor.block().setUserState(_DELETED_STATE)
-                    # Return to the (shifted) target block for the next line.
-                    cursor.movePosition(QTextCursor.MoveOperation.NextBlock)
-                    cursor.movePosition(
-                        QTextCursor.MoveOperation.StartOfBlock
-                    )
-            else:
-                # Deletion at the very end — append after last block.
-                cursor = QTextCursor(doc)
-                cursor.movePosition(QTextCursor.MoveOperation.End)
-                for line in del_lines:
-                    cursor.insertBlock(del_blk_fmt, del_chr_fmt)
-                    cursor.insertText(line)
-                    cursor.block().setUserState(_DELETED_STATE)
-
-        self.editor.moveCursor(QTextCursor.MoveOperation.Start)
-        self.editor.blockSignals(False)
-
-    # ------------------------------------------------------------------
-    # HTML extraction
-    # ------------------------------------------------------------------
+        apply_inline_diff(self.editor, self._current_lines)
 
     def get_html(self) -> str:
         """Return quest HTML with deleted-marked lines stripped and highlights cleared."""
-        doc = self.editor.document()
-        clean = QTextEdit()
-        clean_cursor = clean.textCursor()
-        first = True
-
-        block = doc.begin()
-        while block.isValid():
-            if block.userState() != _DELETED_STATE:
-                blk_fmt = QTextBlockFormat(block.blockFormat())
-                blk_fmt.clearBackground()
-                if first:
-                    clean_cursor.setBlockFormat(blk_fmt)
-                    first = False
-                else:
-                    clean_cursor.insertBlock(blk_fmt)
-                # Copy block content preserving character formatting.
-                src = QTextCursor(block)
-                src.movePosition(
-                    QTextCursor.MoveOperation.EndOfBlock,
-                    QTextCursor.MoveMode.KeepAnchor,
-                )
-                if src.hasSelection():
-                    clean_cursor.insertFragment(src.selection())
-            block = block.next()
-
-        return clean.toHtml()
+        return extract_html_without_deleted(self.editor)
 
 
 def start_quest_extraction(
-    summary_html: str, current_quests: str, config: dict
+    summary_html: str, current_quests: str, config: dict,
+    campaign_name: str = "",
 ) -> tuple[QThread, QuestExtractorWorker]:
     """Create a quest extraction worker in a new thread."""
     thread = QThread()
-    worker = QuestExtractorWorker(summary_html, current_quests, config)
+    worker = QuestExtractorWorker(summary_html, current_quests, config,
+                                  campaign_name=campaign_name)
     worker.moveToThread(thread)
     thread.started.connect(worker.run)
     worker.completed.connect(thread.quit)

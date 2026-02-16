@@ -5,13 +5,16 @@ from datetime import datetime
 from PyQt6.QtGui import QTextCursor
 
 from .rich_editor import RichTextEditorWidget
-from .utils import journal_path
+from .utils import active_campaign_name, journal_path
 
-_DEFAULT_JOURNAL = """\
-<h1 style="color:#d4af37; text-align:center;">Journal &mdash; Icewind Dale</h1>
+
+def _default_journal_html(campaign_name: str) -> str:
+    """Return the default journal HTML template for a campaign."""
+    return f"""\
+<h1 style="color:#d4af37; text-align:center;">Journal &mdash; {campaign_name}</h1>
 <hr>
 <p><em>Bienvenue, aventurier. Ce journal contient la chronique de vos exploits
-dans les terres glaciales d'Icewind Dale. Les recits épiques de chaque session
+au cours de la campagne. Les récits épiques de chaque session
 seront consignés ici pour la postérité.</em></p>
 <hr>
 """
@@ -22,9 +25,10 @@ class JournalWidget(RichTextEditorWidget):
 
     def __init__(self, config: dict, parent=None):
         self._config = config
+        cname = active_campaign_name(config)
         super().__init__(
             file_path=journal_path(config),
-            default_html=_DEFAULT_JOURNAL,
+            default_html=_default_journal_html(cname),
             editor_object_name="journal_editor",
             foldable_heading_levels={2},
             fold_by_default=True,

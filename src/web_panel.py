@@ -5,15 +5,23 @@ import logging
 import os
 
 from PyQt6.QtCore import QSize, QUrl
-from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QPen
+from PyQt6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
 from PyQt6.QtWebEngineCore import (
-    QWebEnginePage, QWebEngineProfile, QWebEngineSettings,
+    QWebEnginePage,
+    QWebEngineProfile,
+    QWebEngineSettings,
     QWebEngineUrlRequestInterceptor,
 )
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (
-    QApplication, QHBoxLayout, QPushButton, QStyle, QVBoxLayout, QWidget,
+    QApplication,
+    QHBoxLayout,
+    QPushButton,
+    QStyle,
+    QVBoxLayout,
+    QWidget,
 )
+
 from .utils import browser_data_dir, load_config, save_config
 
 log = logging.getLogger("dndlogger.web")
@@ -55,6 +63,7 @@ def _icon_forward(p, s):
 
 def _icon_refresh(p, s):
     from PyQt6.QtCore import QRectF
+
     m = s * 0.25
     rect = QRectF(m, m, s - 2 * m, s - 2 * m)
     p.drawArc(rect, 30 * 16, 300 * 16)
@@ -125,7 +134,7 @@ class DndBeyondBrowser(QWidget):
         """Create a named persistent profile for cookies/storage."""
         import sys
 
-        self._profile = QWebEngineProfile("icewind_dale", self)
+        self._profile = QWebEngineProfile("dnd_logger", self)
 
         # In frozen builds, Qt's default storage path is unreliable —
         # point explicitly to %APPDATA% for stable persistence.
@@ -133,9 +142,7 @@ class DndBeyondBrowser(QWidget):
             self._profile.setPersistentStoragePath(browser_data_dir())
             self._profile.setCachePath(browser_data_dir() + "/cache")
 
-        self._profile.setPersistentCookiesPolicy(
-            QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies
-        )
+        self._profile.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies)
         self._profile.setHttpUserAgent(_CHROME_UA)
         log.info("Profile storage: %s", self._profile.persistentStoragePath())
 

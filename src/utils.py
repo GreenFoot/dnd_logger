@@ -82,13 +82,13 @@ def resource_path(relative_path: str) -> str:
 def _data_dir() -> str:
     """Return the user-writable data directory for the app.
 
-    - PyInstaller exe: %APPDATA%/DnDLogger (migrates from IcewindDaleLogger)
+    - PyInstaller exe: %APPDATA%/DnDLogger (migrates from DnDLogger)
     - Dev mode: repo root (where main.py lives)
     """
     if hasattr(sys, "_MEIPASS"):
         appdata = os.environ.get("APPDATA", os.path.expanduser("~"))
         new_dir = os.path.join(appdata, _APP_NAME)
-        old_dir = os.path.join(appdata, "IcewindDaleLogger")
+        old_dir = os.path.join(appdata, "DnDLogger")
         if not os.path.exists(new_dir) and os.path.exists(old_dir):
             os.rename(old_dir, new_dir)
             log.info("Migrated data dir %s -> %s", old_dir, new_dir)
@@ -107,6 +107,7 @@ def config_path() -> str:
 
 
 # ── Campaign helpers ──────────────────────────────────────
+
 
 def campaign_dir(name: str) -> str:
     """Return the directory for a given campaign name, creating it if needed."""
@@ -136,12 +137,14 @@ def list_campaigns(cfg: dict) -> list[str]:
     if not os.path.isdir(campaigns_root):
         return []
     return sorted(
-        d for d in os.listdir(campaigns_root)
+        d
+        for d in os.listdir(campaigns_root)
         if os.path.isdir(os.path.join(campaigns_root, d)) and not d.startswith("_")
     )
 
 
 # ── Path functions (campaign-aware) ───────────────────────
+
 
 def quest_log_path(cfg: dict) -> str:
     """Return the absolute path to the quest log file."""
@@ -164,6 +167,7 @@ def shared_config_path(cfg: dict) -> str:
 
 
 # ── Config I/O ────────────────────────────────────────────
+
 
 def load_shared_config(cfg: dict) -> dict:
     """Load shared config from the active campaign's shared_config.json."""

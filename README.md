@@ -1,4 +1,4 @@
-# Icewind Dale -- D&D Session Logger
+# D&D Logger
 
 A PyQt6 desktop application for recording, transcribing, and summarizing Dungeons & Dragons sessions. Features an embedded D&D Beyond browser, a quest log, a journal, and an AI-powered transcription/summarization pipeline using the Mistral API.
 
@@ -16,7 +16,7 @@ The UI is in French. D&D-specific terms remain in English.
 - **Google Drive sync** -- share quest log, journal, and campaign settings across players via a shared Google Drive folder
 - **Text-to-speech** readback of summaries with animated overlay controls (play/pause/stop)
 - **Audio import** -- import existing audio files (FLAC, WAV, MP3, OGG, M4A) for transcription
-- **Dark fantasy theme** (Icewind Dale aesthetic, Cinzel font, frost/aurora overlays)
+- **Dark fantasy theme** (Cinzel font, frost/aurora overlays)
 
 ## Project Structure
 
@@ -24,7 +24,6 @@ The UI is in French. D&D-specific terms remain in English.
 dnd_logger/
 ├── main.py                    # Entry point
 ├── requirements.txt           # Python dependencies
-├── icewind_dale.spec          # PyInstaller build spec
 ├── installer.iss              # Inno Setup installer script
 ├── setup_appdata.py           # One-time script to migrate data to %APPDATA%
 ├── src/
@@ -94,9 +93,11 @@ pythonw main.py
 
 ### First Run
 
-On first launch, a setup wizard will prompt for:
-- Mistral API key (required for transcription and summarization)
-- Audio input device selection
+On first launch:
+1. A campaign creation dialog prompts for a campaign name (or to join one via Google Drive)
+2. A setup wizard prompts for:
+   - Mistral API key (required for transcription and summarization)
+   - Audio input device selection
 
 ### D&D Beyond Login
 
@@ -110,25 +111,28 @@ All user data is stored in the project root directory:
 
 ```
 dnd_logger/
-├── config.json          # Personal settings (API key, audio, paths, Drive config)
-├── shared_config.json   # Shared settings (context bias, models, language -- synced via Drive)
-├── quest_log.html       # Quest log content (auto-saved, synced via Drive)
-├── journal.html         # Journal content (auto-saved, synced via Drive)
-├── drive_token.json     # Google OAuth2 refresh token (gitignored)
-├── drive_sync_state.json # Sync state tracking (gitignored)
-├── icewind_dale.log     # Application log (rotating, 2 MB max, 3 backups)
-├── sessions/            # Recorded audio and transcripts
-│   └── session_YYYYMMDD_HHMMSS/
-│       ├── recording.wav       # Raw audio recording
-│       ├── full_audio.flac     # FLAC conversion (created during transcription)
-│       ├── chunk_NNN.flac      # FLAC chunks (only if audio > 2.5h)
-│       └── transcript.txt      # Transcription output
-└── browser_data/        # QWebEngine profile (cookies, cache, local storage)
+├── config.json              # Personal settings (API key, audio, campaign config)
+├── drive_token.json         # Google OAuth2 refresh token (gitignored)
+├── dnd_logger.log           # Application log (rotating, 2 MB max, 3 backups)
+├── campaigns/
+│   ├── <campaign_name>/
+│   │   ├── quest_log.html       # Quest log content (auto-saved, synced via Drive)
+│   │   ├── journal.html         # Journal content (auto-saved, synced via Drive)
+│   │   ├── shared_config.json   # Shared settings (synced via Drive)
+│   │   ├── drive_sync_state.json # Sync state tracking
+│   │   └── sessions/
+│   │       └── session_YYYYMMDD_HHMMSS/
+│   │           ├── recording.wav       # Raw audio recording
+│   │           ├── full_audio.flac     # FLAC conversion
+│   │           ├── chunk_NNN.flac      # FLAC chunks (only if audio > 2.5h)
+│   │           └── transcript.txt      # Transcription output
+│   └── _trash/                  # Deleted campaigns (restorable)
+└── browser_data/                # QWebEngine profile (cookies, cache, local storage)
 ```
 
 ### As a Compiled Executable
 
-User data is stored in `%APPDATA%\IcewindDaleLogger\` with the same structure as above. Bundled assets (fonts, images, stylesheets) remain inside the PyInstaller bundle.
+User data is stored in `%APPDATA%\DnDLogger\` with the same structure as above. Bundled assets (fonts, images, stylesheets) remain inside the PyInstaller bundle.
 
 To migrate existing data from a development setup to the exe data directory, run:
 
@@ -137,7 +141,7 @@ python setup_appdata.py            # skip files that already exist
 python setup_appdata.py --force    # overwrite all files
 ```
 
-This copies `config.json`, `shared_config.json`, `quest_log.html`, `journal.html`, and `sessions/` to `%APPDATA%\IcewindDaleLogger\`.
+This copies `config.json`, campaign data, and `sessions/` to `%APPDATA%\DnDLogger\`.
 
 ## Building the Executable
 
@@ -146,16 +150,16 @@ This copies `config.json`, `shared_config.json`, `quest_log.html`, `journal.html
 pip install pyinstaller
 
 # Build using the spec file (--onedir mode, required for QWebEngine)
-pyinstaller icewind_dale.spec --noconfirm
+pyinstaller dnd_logger.spec --noconfirm
 ```
 
-The output is in `dist/Icewind Dale/`. The entry point is `Icewind Dale.exe`.
+The output is in `dist/DnD Logger/`. The entry point is `DnD Logger.exe`.
 
 > **Important:** The `--onefile` mode is not compatible with QWebEngine. The spec file uses `--onedir` with `collect_all` for QtWebEngine data and binaries.
 
 ## Creating the Installer
 
-The project includes an [Inno Setup](https://jrsoftware.org/isinfo.php) script to package the app as a standard Windows installer. The installer requires **no admin rights** -- it installs to `%LOCALAPPDATA%\Icewind Dale\`.
+The project includes an [Inno Setup](https://jrsoftware.org/isinfo.php) script to package the app as a standard Windows installer. The installer requires **no admin rights**.
 
 ### Prerequisites
 
@@ -172,11 +176,11 @@ Download and install [Inno Setup](https://jrsoftware.org/isdl.php) (free).
 iscc installer.iss
 ```
 
-The output is `installer_output/IcewindDale_Setup.exe`.
+The output is `installer_output/DnDLogger_Setup.exe`.
 
 ### What the installer does
 
-- Installs the app to `%LOCALAPPDATA%\Icewind Dale\` (no admin rights needed)
+- Installs the app to `%LOCALAPPDATA%\DnD Logger\` (no admin rights needed)
 - Creates a Start Menu entry with an uninstaller
 - Optionally creates a desktop shortcut
 - Offers to launch the app after installation
@@ -186,15 +190,15 @@ The output is `installer_output/IcewindDale_Setup.exe`.
 
 | What | Where |
 |------|-------|
-| App binaries | `%LOCALAPPDATA%\Icewind Dale\` |
-| User data | `%APPDATA%\IcewindDaleLogger\` |
+| App binaries | `%LOCALAPPDATA%\DnD Logger\` |
+| User data | `%APPDATA%\DnDLogger\` |
 
 ### Distributing
 
 To distribute the app, share **one** of the following:
 
-- **Installer (recommended):** `installer_output/IcewindDale_Setup.exe` -- single file, handles installation and shortcuts
-- **Portable:** the entire `dist/Icewind Dale/` folder -- run `Icewind Dale.exe` directly, no installation needed
+- **Installer (recommended):** `installer_output/DnDLogger_Setup.exe` -- single file, handles installation and shortcuts
+- **Portable:** the entire `dist/DnD Logger/` folder -- run `DnD Logger.exe` directly, no installation needed
 
 ## Audio Pipeline
 
@@ -217,13 +221,9 @@ Settings are split across two files:
 | `audio_device` | `null` | Audio input device index |
 | `sample_rate` | `16000` | Recording sample rate (Hz) |
 | `channels` | `1` | Recording channels (mono) |
-| `sessions_dir` | `"sessions"` | Sessions directory (relative or absolute) |
-| `quest_log_path` | `"quest_log.html"` | Quest log file path |
-| `journal_path` | `"journal.html"` | Journal file path |
 | `last_browser_url` | `"https://www.dndbeyond.com"` | Last visited URL in embedded browser |
-| `drive_sync_enabled` | `false` | Enable Google Drive sync |
-| `drive_campaign_name` | `"Icewind Dale"` | Campaign name (used as Drive folder name) |
-| `drive_campaign_folder_id` | `""` | Google Drive folder ID for the campaign |
+| `active_campaign` | `""` | Currently active campaign name |
+| `campaigns` | `{}` | Per-campaign config (Drive sync enabled, folder ID) |
 
 ### `shared_config.json` -- Shared settings (synced via Drive)
 
@@ -253,10 +253,9 @@ The app can sync the quest log, journal, and shared campaign settings across mul
 ### Usage
 
 1. Open **Settings > Google Drive** and click "Se connecter" -- a browser window opens for Google login
-2. Enter a **campaign name** (default: "Icewind Dale") -- this creates a folder on Drive
-3. Check **"Activer la synchronisation"** and save
-4. Share the campaign folder ID (shown in settings, copyable) with other players
-5. Other players paste the folder ID in the "Rejoindre" field to join the campaign
+2. Check **"Activer la synchronisation"** -- this creates a Drive folder for the active campaign
+3. Share the campaign folder ID (shown in settings, copyable) with other players
+4. Other players use "Rejoindre via Google Drive" when creating a new campaign and paste the folder ID
 
 ### How it works
 

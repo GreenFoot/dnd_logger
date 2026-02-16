@@ -160,13 +160,24 @@ class DndBeyondBrowser(QWidget):
 
     @staticmethod
     def _migrate_old_profile():
-        """Rename old 'icewind_dale' QtWebEngine profile dir to 'dnd_logger'."""
+        """Migrate old 'Icewind Dale' app data and profile dirs to current names."""
         import shutil
 
-        # Check both the browser_data_dir (frozen) and Qt default location
-        search_dirs = [browser_data_dir()]
-        # Qt default: AppData/Local/<AppName>/QtWebEngine
         local = os.environ.get("LOCALAPPDATA", "")
+
+        # Phase 1: Migrate old "Icewind Dale" app-level data dir into "DnD Logger"
+        if local:
+            old_app = os.path.join(local, "Icewind Dale")
+            new_app = os.path.join(local, "DnD Logger")
+            if os.path.isdir(old_app) and not os.path.isdir(new_app):
+                try:
+                    shutil.move(old_app, new_app)
+                    log.info("Migrated app dir %s -> %s", old_app, new_app)
+                except OSError as e:
+                    log.warning("Failed to migrate app dir: %s", e)
+
+        # Phase 2: Rename old "icewind_dale" profile subdirs to "dnd_logger"
+        search_dirs = [browser_data_dir()]
         if local:
             for app_dir in ("DnDLogger", "DnD Logger"):
                 search_dirs.append(os.path.join(local, app_dir))

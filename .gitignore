@@ -17,6 +17,7 @@ build/
 dist/
 installer_output/
 *.spec
+!dnd_logger.spec
 
 # Python
 __pycache__/

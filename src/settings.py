@@ -98,6 +98,9 @@ class SettingsDialog(QDialog):
         adv_tab = QWidget()
         adv_layout = QFormLayout(adv_tab)
 
+        self.auto_update_check = QCheckBox("Vérifier les mises à jour au démarrage")
+        adv_layout.addRow(self.auto_update_check)
+
         self.chunk_spin = QSpinBox()
         self.chunk_spin.setRange(10, 300)
         self.chunk_spin.setSuffix(" min")
@@ -199,6 +202,7 @@ class SettingsDialog(QDialog):
                 self.device_combo.setCurrentIndex(idx)
 
         self.sample_rate_spin.setValue(self._config.get("sample_rate", 16000))
+        self.auto_update_check.setChecked(self._config.get("auto_update_check", True))
         self.chunk_spin.setValue(self._config.get("chunk_duration_minutes", 150))
 
         bias = self._config.get("context_bias", [])
@@ -222,6 +226,7 @@ class SettingsDialog(QDialog):
         self._config["audio_device"] = self.device_combo.currentData()
         self._config["sample_rate"] = self.sample_rate_spin.value()
         self._config["chunk_duration_minutes"] = self.chunk_spin.value()
+        self._config["auto_update_check"] = self.auto_update_check.isChecked()
 
         bias_text = self.bias_edit.toPlainText().strip()
         self._config["context_bias"] = [line.strip() for line in bias_text.split("\n") if line.strip()]

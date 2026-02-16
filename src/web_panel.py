@@ -134,6 +134,9 @@ class DndBeyondBrowser(QWidget):
         """Create a named persistent profile for cookies/storage."""
         import sys
 
+        # Migrate old "icewind_dale" profile data to "dnd_logger"
+        self._migrate_old_profile()
+
         self._profile = QWebEngineProfile("dnd_logger", self)
 
         # In frozen builds, Qt's default storage path is unreliable —
@@ -154,6 +157,31 @@ class DndBeyondBrowser(QWidget):
             self._interceptor = _NoBrotliInterceptor(self)
             self._profile.setUrlRequestInterceptor(self._interceptor)
             log.info("Brotli interceptor installed")
+
+    @staticmethod
+    def _migrate_old_profile():
+        """Rename old 'icewind_dale' QtWebEngine profile dir to 'dnd_logger'."""
+        import shutil
+
+        # Check both the browser_data_dir (frozen) and Qt default location
+        search_dirs = [browser_data_dir()]
+        # Qt default: AppData/Local/<AppName>/QtWebEngine
+        local = os.environ.get("LOCALAPPDATA", "")
+        if local:
+            for app_dir in ("DnDLogger", "DnD Logger"):
+                search_dirs.append(os.path.join(local, app_dir))
+
+        for base in search_dirs:
+            for sub in ("", "QtWebEngine"):
+                parent = os.path.join(base, sub) if sub else base
+                old = os.path.join(parent, "icewind_dale")
+                new = os.path.join(parent, "dnd_logger")
+                if os.path.isdir(old) and not os.path.isdir(new):
+                    try:
+                        shutil.move(old, new)
+                        log.info("Migrated profile dir %s -> %s", old, new)
+                    except OSError as e:
+                        log.warning("Failed to migrate profile dir: %s", e)
 
     @staticmethod
     def _clean_stale_locks(data_dir):

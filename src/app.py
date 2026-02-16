@@ -3,6 +3,8 @@
 import os
 import shutil
 
+from src import __version__
+
 from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtGui import (
     QAction,
@@ -615,7 +617,7 @@ class DndLoggerApp(QMainWindow):
 
     def _build_ui(self):
         cname = active_campaign_name(self._config)
-        self.setWindowTitle(f"{cname} \u2014 DnD Logger")
+        self.setWindowTitle(f"{cname} \u2014 DnD Logger v{__version__}")
         self.setMinimumSize(1200, 700)
 
         # Main splitter: left (browser) | right (tabs)
@@ -862,7 +864,7 @@ class DndLoggerApp(QMainWindow):
         self._config = load_config()
 
         # Update window title
-        self.setWindowTitle(f"{name} \u2014 DnD Logger")
+        self.setWindowTitle(f"{name} \u2014 DnD Logger v{__version__}")
 
         # Switch editor files
         from .quest_log import _default_quest_log_html

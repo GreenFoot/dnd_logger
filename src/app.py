@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
     QDialogButtonBox,
+    QGroupBox,
     QHBoxLayout,
     QInputDialog,
     QLabel,
@@ -89,25 +90,59 @@ class CampaignCreationDialog(QDialog):
             layout.addWidget(hint)
             layout.addSpacing(8)
 
+        # --- Local creation ---
         name_label = QLabel("Nom de la campagne:")
         layout.addWidget(name_label)
         self._name_edit = QLineEdit()
         self._name_edit.setPlaceholderText("Ex: Icewind Dale, Curse of Strahd...")
         layout.addWidget(self._name_edit)
 
-        layout.addSpacing(12)
+        layout.addSpacing(4)
 
-        btn_row = QHBoxLayout()
+        create_row = QHBoxLayout()
+        create_row.addStretch()
         self._btn_create = QPushButton("Créer")
         self._btn_create.setObjectName("btn_primary")
         self._btn_create.clicked.connect(self._on_create)
-        btn_row.addWidget(self._btn_create)
+        create_row.addWidget(self._btn_create)
+        layout.addLayout(create_row)
 
-        self._btn_drive = QPushButton("Rejoindre via Google Drive")
-        self._btn_drive.clicked.connect(self._on_drive_join)
-        btn_row.addWidget(self._btn_drive)
-        layout.addLayout(btn_row)
+        layout.addSpacing(12)
 
+        # --- Google Drive section ---
+        drive_group = QGroupBox("Google Drive")
+        drive_layout = QVBoxLayout(drive_group)
+
+        status_row = QHBoxLayout()
+        status_row.addWidget(QLabel("Statut:"))
+        self._drive_status_label = QLabel("Non connecté")
+        self._drive_status_label.setStyleSheet("color: #8899aa;")
+        status_row.addWidget(self._drive_status_label)
+        status_row.addStretch()
+        self._btn_drive_login = QPushButton("Se connecter")
+        self._btn_drive_login.setObjectName("btn_primary")
+        self._btn_drive_login.clicked.connect(self._drive_login)
+        status_row.addWidget(self._btn_drive_login)
+        drive_layout.addLayout(status_row)
+
+        folder_row = QHBoxLayout()
+        folder_row.addWidget(QLabel("ID du dossier:"))
+        self._folder_id_edit = QLineEdit()
+        self._folder_id_edit.setPlaceholderText("Coller l'ID du dossier partagé...")
+        folder_row.addWidget(self._folder_id_edit)
+        drive_layout.addLayout(folder_row)
+
+        join_row = QHBoxLayout()
+        join_row.addStretch()
+        self._btn_join = QPushButton("Rejoindre")
+        self._btn_join.setObjectName("btn_primary")
+        self._btn_join.clicked.connect(self._on_join)
+        join_row.addWidget(self._btn_join)
+        drive_layout.addLayout(join_row)
+
+        layout.addWidget(drive_group)
+
+        # Status message
         self._status_label = QLabel("")
         self._status_label.setStyleSheet("color: #8899aa; font-size: 11px;")
         self._status_label.setWordWrap(True)
@@ -117,6 +152,9 @@ class CampaignCreationDialog(QDialog):
             cancel_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
             cancel_box.rejected.connect(self.reject)
             layout.addWidget(cancel_box)
+
+        # Initialize Drive status
+        self._refresh_drive_status()
 
     def _on_create(self):
         name = self._name_edit.text().strip()
@@ -132,55 +170,77 @@ class CampaignCreationDialog(QDialog):
         self._drive_folder_id = ""
         self.accept()
 
-    def _on_drive_join(self):
+    def _refresh_drive_status(self):
+        """Update Drive status label from saved credentials."""
         try:
-            from .drive_auth import load_credentials, start_auth_flow
+            from .drive_auth import get_user_email, load_credentials
+
+            creds = load_credentials()
+            if creds and creds.valid:
+                email = get_user_email(creds)
+                self._drive_status_label.setText(email or "Connecté")
+                self._drive_status_label.setStyleSheet("color: #7ec83a;")
+                self._btn_drive_login.setEnabled(False)
+            else:
+                self._drive_status_label.setText("Non connecté")
+                self._drive_status_label.setStyleSheet("color: #8899aa;")
+                self._btn_drive_login.setEnabled(True)
+        except ImportError:
+            self._drive_status_label.setText("Dépendances Google manquantes")
+            self._drive_status_label.setStyleSheet("color: #ff6b6b;")
+            self._btn_drive_login.setEnabled(False)
+            self._btn_join.setEnabled(False)
+
+    def _drive_login(self):
+        """Start OAuth2 login flow."""
+        try:
+            from .drive_auth import start_auth_flow
+
+            self._btn_drive_login.setEnabled(False)
+            self._btn_drive_login.setText("Connexion en cours...")
+            self._btn_create.setEnabled(False)
+            self._auth_thread, self._auth_worker = start_auth_flow()
+            self._auth_worker.auth_completed.connect(self._on_auth_done)
+            self._auth_worker.auth_failed.connect(self._on_auth_failed)
+            self._auth_thread.start()
         except ImportError:
             QMessageBox.critical(
                 self, "Erreur",
                 "Installez les dépendances Google:\n"
                 "pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib",
             )
-            return
-
-        creds = load_credentials()
-        if not creds:
-            self._status_label.setText("Connexion en cours...")
-            self._status_label.setStyleSheet("color: #d4af37; font-size: 11px;")
-            self._btn_drive.setEnabled(False)
-            self._btn_create.setEnabled(False)
-            self._auth_thread, self._auth_worker = start_auth_flow()
-            self._auth_worker.auth_completed.connect(self._on_auth_done)
-            self._auth_worker.auth_failed.connect(self._on_auth_failed)
-            self._auth_thread.start()
-            return
-
-        self._prompt_folder_id(creds)
 
     def _on_auth_done(self, creds):
-        self._btn_drive.setEnabled(True)
+        self._btn_drive_login.setText("Se connecter")
         self._btn_create.setEnabled(True)
-        self._status_label.setText("Connecté ! Entrez l'ID du dossier.")
+        self._refresh_drive_status()
+        self._status_label.setText("Connecté ! Collez l'ID du dossier et cliquez Rejoindre.")
         self._status_label.setStyleSheet("color: #7ec83a; font-size: 11px;")
-        self._prompt_folder_id(creds)
 
     def _on_auth_failed(self, error: str):
-        self._btn_drive.setEnabled(True)
+        self._btn_drive_login.setText("Se connecter")
+        self._btn_drive_login.setEnabled(True)
         self._btn_create.setEnabled(True)
         self._status_label.setText(f"Échec de connexion: {error}")
         self._status_label.setStyleSheet("color: #ff6b6b; font-size: 11px;")
 
-    def _prompt_folder_id(self, creds):
-        folder_id, ok = QInputDialog.getText(
-            self, "Rejoindre via Google Drive",
-            "ID du dossier partagé Google Drive:"
-        )
-        if not ok or not folder_id.strip():
-            self._status_label.setText("")
+    def _on_join(self):
+        """Resolve folder name from Drive and accept."""
+        folder_id = self._folder_id_edit.text().strip()
+        if not folder_id:
+            self._status_label.setText("Collez l'ID du dossier partagé.")
+            self._status_label.setStyleSheet("color: #ff6b6b; font-size: 11px;")
             return
-        folder_id = folder_id.strip()
 
         try:
+            from .drive_auth import load_credentials
+
+            creds = load_credentials()
+            if not creds:
+                self._status_label.setText("Connectez-vous d'abord à Google Drive.")
+                self._status_label.setStyleSheet("color: #ff6b6b; font-size: 11px;")
+                return
+
             from googleapiclient.discovery import build
 
             self._status_label.setText("Résolution du dossier...")
@@ -204,6 +264,9 @@ class CampaignCreationDialog(QDialog):
             self._campaign_name = folder_name
             self._drive_folder_id = folder_id
             self.accept()
+        except ImportError:
+            self._status_label.setText("Dépendances Google manquantes.")
+            self._status_label.setStyleSheet("color: #ff6b6b; font-size: 11px;")
         except Exception as e:
             self._status_label.setText(f"Erreur Drive: {e}")
             self._status_label.setStyleSheet("color: #ff6b6b; font-size: 11px;")

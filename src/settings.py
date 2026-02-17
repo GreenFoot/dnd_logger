@@ -25,6 +25,9 @@ from PySide6.QtWidgets import (
 from . import themed_dialogs as dlg
 from .audio_recorder import AudioRecorder
 from .frost_overlay import GoldFiligreeOverlay
+from .summarizer import _SYSTEM_PROMPT as DEFAULT_SUMMARY_SYSTEM
+from .summarizer import _CONDENSE_PROMPT as DEFAULT_CONDENSE
+from .quest_extractor import _EXTRACTION_PROMPT as DEFAULT_QUEST_EXTRACTION
 from .utils import (
     active_campaign_name,
     campaign_drive_config,
@@ -112,6 +115,48 @@ class SettingsDialog(QDialog):
         adv_layout.addRow("Biais de contexte D&D:", self.bias_edit)
 
         self.tabs.addTab(adv_tab, "Avancé")
+
+        # === Prompts Tab ===
+        prompts_tab = QWidget()
+        prompts_layout = QVBoxLayout(prompts_tab)
+
+        # Prompt selector
+        selector_row = QHBoxLayout()
+        selector_row.addWidget(QLabel("Prompt:"))
+        self.prompt_combo = QComboBox()
+        self._prompt_keys = [
+            ("prompt_summary_system", "Résumé de session (system)", DEFAULT_SUMMARY_SYSTEM),
+            ("prompt_condense", "Condensation (texte long)", DEFAULT_CONDENSE),
+            ("prompt_quest_extraction", "Extraction de quêtes", DEFAULT_QUEST_EXTRACTION),
+        ]
+        for _key, label, _default in self._prompt_keys:
+            self.prompt_combo.addItem(label)
+        self.prompt_combo.currentIndexChanged.connect(self._on_prompt_selected)
+        selector_row.addWidget(self.prompt_combo, stretch=1)
+        prompts_layout.addLayout(selector_row)
+
+        # Placeholder info
+        self.prompt_info_label = QLabel("")
+        self.prompt_info_label.setStyleSheet("color: #8899aa; font-size: 11px;")
+        self.prompt_info_label.setWordWrap(True)
+        prompts_layout.addWidget(self.prompt_info_label)
+
+        # Prompt editor
+        self.prompt_edit = QTextEdit()
+        self.prompt_edit.setAcceptRichText(False)
+        prompts_layout.addWidget(self.prompt_edit, stretch=1)
+
+        # Reset button
+        btn_row_prompts = QHBoxLayout()
+        btn_row_prompts.addStretch()
+        self.btn_reset_prompt = QPushButton("Réinitialiser ce prompt")
+        self.btn_reset_prompt.clicked.connect(self._reset_current_prompt)
+        btn_row_prompts.addWidget(self.btn_reset_prompt)
+        prompts_layout.addLayout(btn_row_prompts)
+
+        # Internal storage for edited prompts
+        self._prompt_texts = {}
+        self.tabs.addTab(prompts_tab, "Prompts")
 
         # === Google Drive Tab ===
         drive_tab = QWidget()
@@ -208,6 +253,12 @@ class SettingsDialog(QDialog):
         bias = self._config.get("context_bias", [])
         self.bias_edit.setPlainText("\n".join(bias))
 
+        # Prompts — load custom or show default
+        for key, _label, default in self._prompt_keys:
+            custom = self._config.get(key, "")
+            self._prompt_texts[key] = custom
+        self._on_prompt_selected(0)
+
         # Drive tab — read from campaign config
         cname = active_campaign_name(self._config)
         self._drive_campaign_label.setText(cname)
@@ -231,6 +282,11 @@ class SettingsDialog(QDialog):
         bias_text = self.bias_edit.toPlainText().strip()
         self._config["context_bias"] = [line.strip() for line in bias_text.split("\n") if line.strip()]
 
+        # Prompts — save current editor state, then store all
+        self._store_current_prompt()
+        for key, _label, _default in self._prompt_keys:
+            self._config[key] = self._prompt_texts.get(key, "")
+
         # Drive settings — write into campaigns dict
         cname = active_campaign_name(self._config)
         if "campaigns" not in self._config:
@@ -248,6 +304,45 @@ class SettingsDialog(QDialog):
 
     def get_config(self) -> dict:
         return self._config
+
+    # ── Prompts ────────────────────────────────────────────
+
+    _PLACEHOLDER_HINTS = {
+        "prompt_summary_system": "Variables: aucune (prompt système fixe)",
+        "prompt_condense": "Variables: {text}",
+        "prompt_quest_extraction": "Variables: {campaign_name}, {current_quests}, {summary}",
+    }
+
+    def _on_prompt_selected(self, index: int):
+        """Switch the editor to the selected prompt."""
+        # Save text of previously selected prompt
+        self._store_current_prompt()
+        self._current_prompt_index = index
+        key, _label, default = self._prompt_keys[index]
+        custom = self._prompt_texts.get(key, "")
+        self.prompt_edit.setPlainText(custom if custom else default)
+        self.prompt_info_label.setText(self._PLACEHOLDER_HINTS.get(key, ""))
+        self.btn_reset_prompt.setEnabled(bool(custom))
+
+    def _store_current_prompt(self):
+        """Save the editor text back to the internal dict."""
+        if not hasattr(self, "_current_prompt_index"):
+            return
+        key, _label, default = self._prompt_keys[self._current_prompt_index]
+        text = self.prompt_edit.toPlainText().strip()
+        # Store empty string if text matches default (= no customization)
+        if text == default.strip():
+            self._prompt_texts[key] = ""
+        else:
+            self._prompt_texts[key] = text
+        self.btn_reset_prompt.setEnabled(bool(self._prompt_texts[key]))
+
+    def _reset_current_prompt(self):
+        """Reset the current prompt to its built-in default."""
+        key, _label, default = self._prompt_keys[self._current_prompt_index]
+        self.prompt_edit.setPlainText(default)
+        self._prompt_texts[key] = ""
+        self.btn_reset_prompt.setEnabled(False)
 
     # ── Google Drive ────────────────────────────────────────
 

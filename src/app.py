@@ -28,12 +28,10 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox,
     QGroupBox,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QLineEdit,
     QMainWindow,
     QMenuBar,
-    QMessageBox,
     QProgressDialog,
     QPushButton,
     QSplitter,
@@ -48,6 +46,7 @@ from .session_tab import SessionTab
 from .settings import FirstRunWizard, SettingsDialog
 from .tts_engine import create_tts_thread
 from .tts_overlay import TTSOverlay
+from . import themed_dialogs as dlg
 from .updater import start_update_check, start_update_download
 from .utils import (
     SHARED_CONFIG_KEYS,
@@ -248,7 +247,7 @@ class CampaignCreationDialog(QDialog):
             self._auth_worker.auth_failed.connect(self._on_auth_failed)
             self._auth_thread.start()
         except ImportError:
-            QMessageBox.critical(
+            dlg.critical(
                 self, "Erreur",
                 "Installez les dépendances Google:\n"
                 "pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib",
@@ -1065,20 +1064,18 @@ class DndLoggerApp(QMainWindow):
         if not campaigns:
             return
 
-        name, ok = QInputDialog.getItem(
+        name, ok = dlg.get_item(
             self, "Supprimer une campagne",
-            "Choisissez la campagne à supprimer:", campaigns, 0, False
+            "Choisissez la campagne à supprimer :", campaigns, 0, False
         )
         if not ok:
             return
 
-        confirm = QMessageBox.question(
+        if not dlg.question(
             self, "Confirmer la suppression",
             f"Supprimer la campagne \"{name}\" ?\n"
             "Les fichiers seront déplacés dans campaigns/_trash/.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if confirm != QMessageBox.StandardButton.Yes:
+        ):
             return
 
         # Save editors if deleting the active campaign
@@ -1119,19 +1116,19 @@ class DndLoggerApp(QMainWindow):
         """Restore a previously deleted campaign from _trash/."""
         trash_dir = os.path.join(project_root(), "campaigns", "_trash")
         if not os.path.isdir(trash_dir):
-            QMessageBox.information(self, "Restaurer", "Aucune campagne archivée.")
+            dlg.information(self, "Restaurer", "Aucune campagne archivée.")
             return
         trashed = sorted(
             d for d in os.listdir(trash_dir)
             if os.path.isdir(os.path.join(trash_dir, d))
         )
         if not trashed:
-            QMessageBox.information(self, "Restaurer", "Aucune campagne archivée.")
+            dlg.information(self, "Restaurer", "Aucune campagne archivée.")
             return
 
-        name, ok = QInputDialog.getItem(
+        name, ok = dlg.get_item(
             self, "Restaurer une campagne",
-            "Choisissez la campagne à restaurer:", trashed, 0, False
+            "Choisissez la campagne à restaurer :", trashed, 0, False
         )
         if not ok:
             return
@@ -1276,7 +1273,7 @@ class DndLoggerApp(QMainWindow):
         self._update_worker.update_available.connect(self._on_update_available)
         self._update_worker.no_update.connect(self._on_no_update)
         self._update_worker.error.connect(
-            lambda msg: QMessageBox.warning(
+            lambda msg: dlg.warning(
                 self, "Mise à jour",
                 f"Impossible de vérifier les mises à jour.\n{msg}",
             )
@@ -1287,19 +1284,68 @@ class DndLoggerApp(QMainWindow):
 
     def _on_update_available(self, tag, name, url, body):
         self._on_update_thread_done()
-        box = QMessageBox(self)
-        box.setIcon(QMessageBox.Icon.Information)
-        box.setWindowTitle("Mise à jour disponible")
-        box.setText(f"Version {tag} disponible !\n{name}")
-        box.setDetailedText(body)
-        btn_download = box.addButton("Télécharger et installer", QMessageBox.ButtonRole.AcceptRole)
-        box.addButton("Plus tard", QMessageBox.ButtonRole.RejectRole)
-        box.exec()
-        if box.clickedButton() == btn_download:
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Mise à jour disponible")
+        dlg.setFixedWidth(400)
+
+        layout = QVBoxLayout(dlg)
+        layout.setSpacing(12)
+        layout.setContentsMargins(20, 20, 20, 16)
+
+        title = QLabel(f"Version {tag} disponible !")
+        title.setStyleSheet("font-size: 14px; font-weight: bold;")
+        layout.addWidget(title)
+
+        if name and name != tag:
+            subtitle = QLabel(name)
+            subtitle.setWordWrap(True)
+            layout.addWidget(subtitle)
+
+        if body:
+            from PyQt6.QtWidgets import QTextEdit
+            details_text = QTextEdit()
+            details_text.setReadOnly(True)
+            details_text.setPlainText(body)
+            details_text.setMaximumHeight(150)
+            details_text.setVisible(False)
+
+            btn_details = QPushButton("Détails ▸")
+            btn_details.setFlat(True)
+            btn_details.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_details.setStyleSheet(
+                "text-align: left; padding: 0; border: none; "
+                "color: #5a9bc8; font-size: 12px;"
+            )
+
+            def _toggle_details():
+                visible = not details_text.isVisible()
+                details_text.setVisible(visible)
+                btn_details.setText("Détails ▾" if visible else "Détails ▸")
+                dlg.adjustSize()
+
+            btn_details.clicked.connect(_toggle_details)
+            layout.addWidget(btn_details)
+            layout.addWidget(details_text)
+
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(10)
+        btn_later = QPushButton("Plus tard")
+        btn_download = QPushButton("Télécharger et installer")
+        btn_download.setObjectName("btn_gold")
+        btn_row.addStretch()
+        btn_row.addWidget(btn_later)
+        btn_row.addWidget(btn_download)
+        layout.addLayout(btn_row)
+
+        btn_later.clicked.connect(dlg.reject)
+        btn_download.clicked.connect(dlg.accept)
+
+        if dlg.exec() == QDialog.DialogCode.Accepted:
             self._start_update_download(url)
 
     def _on_no_update(self):
-        QMessageBox.information(
+        dlg.information(
             self, "Mise à jour",
             f"Vous utilisez la dernière version (v{__version__}).",
         )
@@ -1349,14 +1395,12 @@ class DndLoggerApp(QMainWindow):
     def _on_download_completed(self, path):
         self._progress_dlg.close()
         self._cleanup_download_thread()
-        confirm = QMessageBox.question(
+        if dlg.question(
             self, "Mise à jour",
             "Téléchargement terminé.\n"
             "L'application va se fermer pour installer la mise à jour.\n\n"
             "Continuer ?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if confirm == QMessageBox.StandardButton.Yes:
+        ):
             CREATE_NEW_PROCESS_GROUP = 0x00000200
             DETACHED_PROCESS = 0x00000008
             subprocess.Popen(
@@ -1369,7 +1413,7 @@ class DndLoggerApp(QMainWindow):
     def _on_download_error(self, msg):
         self._progress_dlg.close()
         self._cleanup_download_thread()
-        QMessageBox.warning(
+        dlg.warning(
             self, "Mise à jour",
             f"Erreur lors du téléchargement.\n{msg}",
         )

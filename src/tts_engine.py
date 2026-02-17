@@ -14,7 +14,7 @@ import tempfile
 import threading
 import time
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
+from PySide6.QtCore import QObject, QThread, Signal, Slot
 
 
 class TTSEngine(QObject):
@@ -24,13 +24,13 @@ class TTSEngine(QObject):
     in parallel so transitions are nearly instantaneous.
     """
 
-    started = pyqtSignal()
-    finished = pyqtSignal()
-    paused = pyqtSignal()
-    resumed = pyqtSignal()
-    error = pyqtSignal(str)
-    available = pyqtSignal(bool)
-    speak_requested = pyqtSignal(str)
+    started = Signal()
+    finished = Signal()
+    paused = Signal()
+    resumed = Signal()
+    error = Signal(str)
+    available = Signal(bool)
+    speak_requested = Signal(str)
 
     VOICE = "fr-FR-RemyMultilingualNeural"
 
@@ -121,7 +121,7 @@ class TTSEngine(QObject):
         except Exception as e:
             result[1] = e
 
-    @pyqtSlot(str)
+    @Slot(str)
     def _on_speak(self, text: str):
         """Generate and play speech with pipelined sentence generation."""
         if not self._is_available:

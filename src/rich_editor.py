@@ -4,12 +4,12 @@ import os
 import re
 import shutil
 
-from PyQt6.QtCore import QPoint, QSize, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import (
+from PySide6.QtCore import QPoint, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import (
     QBrush, QColor, QFont, QIcon, QKeySequence, QPainter, QPen, QPixmap,
     QPolygon, QShortcut, QTextCharFormat, QTextCursor, QTextBlock,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QComboBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTextEdit,
     QVBoxLayout, QWidget,
 )
@@ -258,7 +258,7 @@ class RichTextEditorWidget(QWidget):
     ``editor_object_name`` via constructor parameters.
     """
 
-    file_saved = pyqtSignal(str)  # emitted after save() with the file path
+    file_saved = Signal(str)  # emitted after save() with the file path
 
     def __init__(self, file_path: str, default_html: str,
                  editor_object_name: str = "rich_editor",
@@ -597,7 +597,7 @@ class RichTextEditorWidget(QWidget):
             fmt.setFontWeight(QFont.Weight.Bold)
         cursor.mergeCharFormat(fmt)
         # Set heading level on block format for fast detection
-        from PyQt6.QtGui import QTextBlockFormat
+        from PySide6.QtGui import QTextBlockFormat
         block_fmt = QTextBlockFormat()
         block_fmt.setHeadingLevel(index)
         cursor.mergeBlockFormat(block_fmt)
@@ -681,7 +681,7 @@ class RichTextEditorWidget(QWidget):
         menu = self.editor.createStandardContextMenu()
         selection = self.editor.textCursor().selectedText()
         if selection and self._tts_engine and self._tts_engine.is_available:
-            from PyQt6.QtGui import QAction
+            from PySide6.QtGui import QAction
             menu.addSeparator()
             tts_action = QAction("Lire la selection", menu)
             tts_action.triggered.connect(lambda: self._speak_selection())

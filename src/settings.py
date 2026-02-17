@@ -2,9 +2,9 @@
 
 import os
 
-from PyQt6.QtCore import QObject, QThread, Qt, pyqtSignal
-from PyQt6.QtGui import QBrush, QPalette, QPixmap
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QObject, QThread, Qt, Signal
+from PySide6.QtGui import QBrush, QPalette, QPixmap
+from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
@@ -360,7 +360,7 @@ class SettingsDialog(QDialog):
         """Copy the campaign folder ID to clipboard."""
         folder_id = self.drive_folder_id_label.text()
         if folder_id:
-            from PyQt6.QtWidgets import QApplication
+            from PySide6.QtWidgets import QApplication
 
             QApplication.clipboard().setText(folder_id)
 
@@ -404,8 +404,8 @@ class SettingsDialog(QDialog):
 
 class _FolderWorker(QObject):
     """Resolve the Drive campaign folder ID in a background thread."""
-    finished = pyqtSignal(str)   # folder_id
-    error = pyqtSignal(str)
+    finished = Signal(str)   # folder_id
+    error = Signal(str)
 
     def __init__(self, campaign_name: str):
         super().__init__()

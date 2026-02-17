@@ -1,8 +1,8 @@
 """Gold corner bracket overlay — minimal L-shaped decorations."""
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QPainter, QPen
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QPainter, QPen
+from PySide6.QtWidgets import QWidget
 
 
 class GoldFiligreeOverlay(QWidget):
@@ -32,7 +32,7 @@ class GoldFiligreeOverlay(QWidget):
         self.update()
 
     def eventFilter(self, obj, event):
-        from PyQt6.QtCore import QEvent
+        from PySide6.QtCore import QEvent
         if obj is self.parent() and event.type() == QEvent.Type.Resize:
             self.setGeometry(self.parent().rect())
             self.raise_()

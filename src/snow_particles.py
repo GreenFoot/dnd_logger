@@ -12,9 +12,9 @@ Supports 6 distinct particle types mapped to D&D campaigns:
 import math
 import random
 
-from PyQt6.QtCore import QRectF, Qt, QTimer
-from PyQt6.QtGui import QColor, QPainter, QPen, QRadialGradient
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import QRectF, Qt, QTimer
+from PySide6.QtGui import QColor, QPainter, QPen, QRadialGradient
+from PySide6.QtWidgets import QWidget
 
 
 # ── Base particle ─────────────────────────────────────────
@@ -490,7 +490,7 @@ class SnowParticleOverlay(QWidget):
         self._particle_color = tuple(rgb)
 
     def eventFilter(self, obj, event):
-        from PyQt6.QtCore import QEvent
+        from PySide6.QtCore import QEvent
         if obj is self.parent() and event.type() == QEvent.Type.Resize:
             self.setGeometry(self.parent().rect())
             self.raise_()
@@ -566,7 +566,7 @@ class AuroraShimmerOverlay(QWidget):
         self._aurora_tones = tones
 
     def eventFilter(self, obj, event):
-        from PyQt6.QtCore import QEvent
+        from PySide6.QtCore import QEvent
         if obj is self.parent() and event.type() == QEvent.Type.Resize:
             self.setGeometry(self.parent().rect())
         return False

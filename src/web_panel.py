@@ -4,16 +4,16 @@ import glob
 import logging
 import os
 
-from PyQt6.QtCore import QSize, QUrl
-from PyQt6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
-from PyQt6.QtWebEngineCore import (
+from PySide6.QtCore import QSize, QUrl
+from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtWebEngineCore import (
     QWebEnginePage,
     QWebEngineProfile,
     QWebEngineSettings,
     QWebEngineUrlRequestInterceptor,
 )
-from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWidgets import (
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
     QPushButton,
@@ -62,7 +62,7 @@ def _icon_forward(p, s):
 
 
 def _icon_refresh(p, s):
-    from PyQt6.QtCore import QRectF
+    from PySide6.QtCore import QRectF
 
     m = s * 0.25
     rect = QRectF(m, m, s - 2 * m, s - 2 * m)

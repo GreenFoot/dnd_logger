@@ -318,21 +318,18 @@ class RichTextEditorWidget(QWidget):
         self.btn_bold.setIcon(_make_format_icon("B", "bold"))
         self.btn_bold.setIconSize(QSize(18, 18))
         self.btn_bold.setToolTip("Gras (Ctrl+B)")
-        self.btn_bold.setFixedSize(32, 28)
         self.btn_bold.setCheckable(True)
 
         self.btn_italic = QPushButton()
         self.btn_italic.setIcon(_make_format_icon("I", "italic"))
         self.btn_italic.setIconSize(QSize(18, 18))
         self.btn_italic.setToolTip("Italique (Ctrl+I)")
-        self.btn_italic.setFixedSize(32, 28)
         self.btn_italic.setCheckable(True)
 
         self.btn_underline = QPushButton()
         self.btn_underline.setIcon(_make_format_icon("U", "underline"))
         self.btn_underline.setIconSize(QSize(18, 18))
         self.btn_underline.setToolTip("Souligner (Ctrl+U)")
-        self.btn_underline.setFixedSize(32, 28)
         self.btn_underline.setCheckable(True)
 
         self.heading_combo = QComboBox()
@@ -343,19 +340,20 @@ class RichTextEditorWidget(QWidget):
         self.btn_fold_all.setIcon(_make_fold_icon())
         self.btn_fold_all.setIconSize(QSize(18, 18))
         self.btn_fold_all.setToolTip("Replier tout (Ctrl+Shift+-)")
-        self.btn_fold_all.setFixedSize(32, 28)
 
         self.btn_unfold_all = QPushButton()
         self.btn_unfold_all.setIcon(_make_unfold_icon())
         self.btn_unfold_all.setIconSize(QSize(18, 18))
         self.btn_unfold_all.setToolTip("Déplier tout (Ctrl+Shift+=)")
-        self.btn_unfold_all.setFixedSize(32, 28)
 
         self.btn_save = QPushButton(" Sauvegarder")
         self.btn_save.setIcon(_make_save_icon())
         self.btn_save.setIconSize(QSize(16, 16))
         self.btn_save.setObjectName("btn_primary")
 
+        for w in (self.btn_bold, self.btn_italic, self.btn_underline,
+                  self.btn_fold_all, self.btn_unfold_all):
+            w.setObjectName("btn_editor_toolbar")
         for w in (self.btn_bold, self.btn_italic, self.btn_underline,
                   self.heading_combo, self.btn_fold_all, self.btn_unfold_all,
                   self.btn_save):

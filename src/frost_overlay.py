@@ -13,9 +13,10 @@ class GoldFiligreeOverlay(QWidget):
     Mouse-transparent, zero ongoing CPU cost.
     """
 
-    def __init__(self, parent=None, corner_size=15):
+    def __init__(self, parent=None, corner_size=15, color=None):
         super().__init__(parent)
         self._arm = corner_size
+        self._color = color or QColor(201, 168, 50, 100)
 
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -24,6 +25,11 @@ class GoldFiligreeOverlay(QWidget):
         if parent:
             parent.installEventFilter(self)
             self.raise_()
+
+    def set_color(self, color: QColor):
+        """Update the filigree color and repaint."""
+        self._color = color
+        self.update()
 
     def eventFilter(self, obj, event):
         from PyQt6.QtCore import QEvent
@@ -41,8 +47,7 @@ class GoldFiligreeOverlay(QWidget):
         arm = self._arm
         inset = 4  # px from actual edge
 
-        gold = QColor(201, 168, 50, 100)
-        pen = QPen(gold, 1.0)
+        pen = QPen(self._color, 1.0)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
 

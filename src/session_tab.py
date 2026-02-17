@@ -36,13 +36,19 @@ from .utils import active_campaign_name, ensure_dir, format_duration, format_fil
 
 
 class _ThinDivider(QWidget):
-    """A thin gold divider line with a small center diamond. Height: 12px."""
+    """A thin accent divider line with a small center diamond. Height: 12px."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, accent_color=None):
         super().__init__(parent)
+        self._accent = accent_color or QColor(201, 168, 50)
         self.setFixedHeight(12)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setStyleSheet("background: transparent;")
+
+    def set_accent_color(self, color: QColor):
+        """Update the divider accent color and repaint."""
+        self._accent = color
+        self.update()
 
     def paintEvent(self, event):
         from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPen
@@ -54,9 +60,10 @@ class _ThinDivider(QWidget):
         cy = self.height() / 2
         margin = 40
 
-        # Thin gold line
-        gold = QColor(201, 168, 50, 70)
-        painter.setPen(QPen(gold, 1.0))
+        # Thin accent line
+        line_color = QColor(self._accent)
+        line_color.setAlpha(70)
+        painter.setPen(QPen(line_color, 1.0))
         painter.drawLine(int(margin), int(cy), int(w - margin), int(cy))
 
         # Center diamond
@@ -68,14 +75,16 @@ class _ThinDivider(QWidget):
         diamond.lineTo(w / 2 - ds, cy)
         diamond.closeSubpath()
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor(201, 168, 50, 100))
+        fill_color = QColor(self._accent)
+        fill_color.setAlpha(100)
+        painter.setBrush(fill_color)
         painter.drawPath(diamond)
 
         painter.end()
 
 
 def _make_divider() -> QWidget:
-    """Create a thin gold divider widget."""
+    """Create a thin gold divider widget (standalone helper)."""
     return _ThinDivider()
 
 
@@ -189,9 +198,21 @@ class SessionTab(QWidget):
         self._init_tts()
         self._init_recording_effects()
 
+    def _make_divider(self):
+        """Create a divider and track it for theme updates."""
+        d = _ThinDivider()
+        self._dividers.append(d)
+        return d
+
+    def set_divider_accent(self, color):
+        """Update accent color on all dividers."""
+        for d in self._dividers:
+            d.set_accent_color(color)
+
     def _build_ui(self):
         layout = QVBoxLayout(self)
         layout.setSpacing(8)
+        self._dividers = []
 
         # === Recording Controls ===
         rec_layout = QHBoxLayout()
@@ -226,7 +247,7 @@ class SessionTab(QWidget):
         layout.addWidget(self.status_label)
 
         # ── Ornate divider: Recording ↔ Transcript ──
-        layout.addWidget(_make_divider())
+        layout.addWidget(self._make_divider())
 
         # === Transcript ===
         transcript_label = QLabel("Transcription")
@@ -244,7 +265,7 @@ class SessionTab(QWidget):
         layout.addWidget(self.transcript_display)
 
         # ── Ornate divider: Transcript ↔ Summary ──
-        layout.addWidget(_make_divider())
+        layout.addWidget(self._make_divider())
 
         # === Summary ===
         summary_header = QHBoxLayout()
@@ -271,7 +292,7 @@ class SessionTab(QWidget):
         layout.addWidget(self.summary_display)
 
         # ── Ornate divider: Summary ↔ Actions ──
-        layout.addWidget(_make_divider())
+        layout.addWidget(self._make_divider())
 
         # === Action Buttons ===
         action_layout = QHBoxLayout()

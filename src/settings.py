@@ -14,7 +14,6 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QMessageBox,
     QPushButton,
     QSpinBox,
     QTabWidget,
@@ -23,6 +22,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from . import themed_dialogs as dlg
 from .audio_recorder import AudioRecorder
 from .frost_overlay import GoldFiligreeOverlay
 from .utils import (
@@ -285,7 +285,7 @@ class SettingsDialog(QDialog):
             self._auth_worker.auth_failed.connect(self._on_auth_failed)
             self._auth_thread.start()
         except ImportError:
-            QMessageBox.critical(
+            dlg.critical(
                 self,
                 "Erreur",
                 "Installez les dépendances Google:\n"
@@ -301,7 +301,7 @@ class SettingsDialog(QDialog):
         """OAuth2 flow failed."""
         self.btn_drive_login.setText("Se connecter")
         self.btn_drive_login.setEnabled(True)
-        QMessageBox.warning(self, "Échec de connexion", f"Erreur: {error}")
+        dlg.warning(self, "Échec de connexion", f"Erreur: {error}")
 
     def _drive_logout(self):
         """Disconnect from Google Drive."""
@@ -354,7 +354,7 @@ class SettingsDialog(QDialog):
             self._folder_thread = None
             self._folder_worker = None
         self.drive_folder_id_label.setPlaceholderText("Aucun dossier créé")
-        QMessageBox.warning(self, "Google Drive", f"Impossible de créer le dossier: {error}")
+        dlg.warning(self, "Google Drive", f"Impossible de créer le dossier: {error}")
 
     def _copy_folder_id(self):
         """Copy the campaign folder ID to clipboard."""
@@ -394,11 +394,11 @@ class SettingsDialog(QDialog):
             sd.wait()
             rms = np.sqrt(np.mean(data.astype(np.float32) ** 2))
             if rms > 100:
-                QMessageBox.information(self, "Test Microphone", f"Microphone fonctionne ! (niveau: {rms:.0f})")
+                dlg.information(self, "Test Microphone", f"Microphone fonctionne ! (niveau: {rms:.0f})")
             else:
-                QMessageBox.warning(self, "Test Microphone", "Signal très faible. Vérifiez votre microphone.")
+                dlg.warning(self, "Test Microphone", "Signal très faible. Vérifiez votre microphone.")
         except Exception as e:
-            QMessageBox.critical(self, "Test Microphone", f"Erreur: {e}")
+            dlg.critical(self, "Test Microphone", f"Erreur: {e}")
 
 
 
@@ -444,7 +444,7 @@ class FirstRunWizard(QDialog):
         layout = QVBoxLayout(self)
 
         # Banner
-        banner_path = resource_path("assets/images/banner_dndlogger.png")
+        banner_path = resource_path("assets/images/app/banner_dndlogger.png")
         if os.path.exists(banner_path):
             banner_pix = QPixmap(banner_path)
             if not banner_pix.isNull():
@@ -508,10 +508,8 @@ class FirstRunWizard(QDialog):
 
     def _apply_theme(self):
         """Apply frost-themed background and overlays to the wizard."""
-        # Dimmed frost background
-        bg_path = resource_path("assets/images/frost_bg.png")
-        if not os.path.exists(bg_path):
-            bg_path = resource_path("assets/images/frost_bg_generated.png")
+        # Background
+        bg_path = resource_path("assets/images/backgrounds/bg_icewind_dale.png")
         if os.path.exists(bg_path):
             palette = self.palette()
             bg_pix = QPixmap(bg_path)

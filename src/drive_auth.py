@@ -4,7 +4,7 @@ import json
 import logging
 import os
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PySide6.QtCore import QObject, QThread, Signal
 
 from .utils import project_root
 
@@ -72,8 +72,8 @@ def get_user_email(creds) -> str:
 class DriveAuthWorker(QObject):
     """Runs the OAuth2 installed-app flow in a background thread."""
 
-    auth_completed = pyqtSignal(object)  # google.oauth2.credentials.Credentials
-    auth_failed = pyqtSignal(str)
+    auth_completed = Signal(object)  # google.oauth2.credentials.Credentials
+    auth_failed = Signal(str)
 
     def run(self):
         try:

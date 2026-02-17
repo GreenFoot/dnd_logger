@@ -14,7 +14,7 @@ except Exception:
 
 # PyInstaller: QWebEngine needs explicit paths to resources in frozen builds.
 if hasattr(sys, "_MEIPASS"):
-    _qt6_dir = os.path.join(sys._MEIPASS, "PyQt6", "Qt6")
+    _qt6_dir = os.path.join(sys._MEIPASS, "PySide6", "Qt6")
     os.environ["QTWEBENGINE_RESOURCES_PATH"] = os.path.join(_qt6_dir, "resources")
     os.environ["QTWEBENGINE_LOCALES_PATH"] = os.path.join(_qt6_dir, "translations", "qtwebengine_locales")
     os.environ["QTWEBENGINEPROCESS_PATH"] = os.path.join(_qt6_dir, "bin", "QtWebEngineProcess.exe")
@@ -43,8 +43,8 @@ def main():
     sys.excepthook = exception_hook
 
     try:
-        from PyQt6.QtGui import QIcon
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtGui import QIcon
+        from PySide6.QtWidgets import QApplication
         from src.app import DndLoggerApp
         from src.utils import resource_path
 

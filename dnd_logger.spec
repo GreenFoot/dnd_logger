@@ -8,10 +8,10 @@ block_cipher = None
 
 # Collect all Qt WebEngine data
 webengine_datas, webengine_binaries, webengine_hiddenimports = collect_all(
-    "PyQt6.QtWebEngineWidgets"
+    "PySide6.QtWebEngineWidgets"
 )
 webengine_core_datas, webengine_core_binaries, webengine_core_hiddenimports = collect_all(
-    "PyQt6.QtWebEngineCore"
+    "PySide6.QtWebEngineCore"
 )
 
 a = Analysis(
@@ -47,7 +47,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=["PyQt5", "PySide2", "PySide6"],
+    excludes=["PyQt5", "PyQt6", "PySide2"],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,

@@ -8,8 +8,8 @@ import subprocess
 
 from src import __version__
 
-from PyQt6.QtCore import QSettings, QTimer, Qt
-from PyQt6.QtGui import (
+from PySide6.QtCore import QSettings, QTimer, Qt
+from PySide6.QtGui import (
     QAction,
     QActionGroup,
     QBrush,
@@ -21,7 +21,7 @@ from PyQt6.QtGui import (
     QPixmap,
     QShortcut,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
     QDialog,
@@ -76,7 +76,7 @@ class _ViewportBgPainter:
         self._last_size = None
 
     def eventFilter(self, obj, event):
-        from PyQt6.QtCore import QEvent
+        from PySide6.QtCore import QEvent
         if event.type() == QEvent.Type.Paint:
             size = obj.size()
             if size != self._last_size:
@@ -85,7 +85,7 @@ class _ViewportBgPainter:
                     Qt.TransformationMode.SmoothTransformation,
                 )
                 self._last_size = size
-            from PyQt6.QtGui import QPainter
+            from PySide6.QtGui import QPainter
             painter = QPainter(obj)
             painter.drawPixmap(0, 0, self._scaled)
             painter.end()
@@ -96,7 +96,7 @@ class _ViewportBgPainter:
 
 def _install_bg_painter(text_edit, pixmap):
     """Install a background-image painter on a QTextEdit's viewport."""
-    from PyQt6.QtCore import QObject
+    from PySide6.QtCore import QObject
     vp = text_edit.viewport()
     # Wrap in QObject so Qt event filter mechanism works
     parent = text_edit
@@ -829,7 +829,7 @@ class DndLoggerApp(QMainWindow):
 
     def _stop_tts(self):
         """Stop TTS playback on Escape key, unless a search bar is open."""
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
         from .rich_editor import _SearchLineEdit
         focused = QApplication.focusWidget()
         if isinstance(focused, _SearchLineEdit):
@@ -1303,7 +1303,7 @@ class DndLoggerApp(QMainWindow):
             layout.addWidget(subtitle)
 
         if body:
-            from PyQt6.QtWidgets import QTextEdit
+            from PySide6.QtWidgets import QTextEdit
             details_text = QTextEdit()
             details_text.setReadOnly(True)
             details_text.setPlainText(body)
@@ -1470,7 +1470,7 @@ class DndLoggerApp(QMainWindow):
             self._tts_thread.quit()
             self._tts_thread.wait(2000)
         # Give QWebEngine a moment to flush cookies/storage to disk
-        from PyQt6.QtCore import QElapsedTimer
+        from PySide6.QtCore import QElapsedTimer
 
         timer = QElapsedTimer()
         timer.start()

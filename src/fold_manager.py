@@ -2,8 +2,8 @@
 
 from dataclasses import dataclass, field
 
-from PyQt6.QtCore import QObject
-from PyQt6.QtGui import QTextBlock, QTextDocument
+from PySide6.QtCore import QObject
+from PySide6.QtGui import QTextBlock, QTextDocument
 
 
 @dataclass

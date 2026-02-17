@@ -1,8 +1,8 @@
 """FoldGutterWidget — painted gutter with fold triangle indicators."""
 
-from PyQt6.QtCore import QEvent, QPoint, Qt
-from PyQt6.QtGui import QBrush, QColor, QPainter, QPen, QPolygon
-from PyQt6.QtWidgets import QTextEdit, QWidget
+from PySide6.QtCore import QEvent, QPoint, Qt
+from PySide6.QtGui import QBrush, QColor, QPainter, QPen, QPolygon
+from PySide6.QtWidgets import QTextEdit, QWidget
 
 from .fold_manager import FoldManager
 
@@ -49,7 +49,7 @@ class FoldGutterWidget(QWidget):
         self.update()
 
     def sizeHint(self):
-        from PyQt6.QtCore import QSize
+        from PySide6.QtCore import QSize
         return QSize(GUTTER_WIDTH, 0)
 
     # ── Painting ──────────────────────────────────────────
@@ -145,7 +145,7 @@ class FoldGutterWidget(QWidget):
                 region = self._fold_mgr.regions().get(block_num)
                 if region and region.is_folded:
                     count = region.end - region.start
-                    from PyQt6.QtWidgets import QToolTip
+                    from PySide6.QtWidgets import QToolTip
                     QToolTip.showText(
                         event.globalPos(),
                         f"{count} ligne{'s' if count > 1 else ''} repliée{'s' if count > 1 else ''}",

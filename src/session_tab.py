@@ -8,9 +8,9 @@ from datetime import datetime
 
 import soundfile as sf
 
-from PyQt6.QtCore import Qt, QRectF, QTimer
-from PyQt6.QtGui import QAction, QColor, QPainter
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, QRectF, QTimer
+from PySide6.QtGui import QAction, QColor, QPainter
+from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QDialogButtonBox,
@@ -51,7 +51,7 @@ class _ThinDivider(QWidget):
         self.update()
 
     def paintEvent(self, event):
-        from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPen
+        from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)

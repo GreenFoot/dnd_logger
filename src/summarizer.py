@@ -2,7 +2,7 @@
 
 import re
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PySide6.QtCore import QObject, QThread, Signal
 
 
 def _strip_code_fences(text: str) -> str:
@@ -223,8 +223,8 @@ Texte:
 class SummarizerWorker(QObject):
     """Runs summarization in a QThread via Mistral chat API."""
 
-    completed = pyqtSignal(str)  # summary HTML
-    error = pyqtSignal(str)
+    completed = Signal(str)  # summary HTML
+    error = Signal(str)
 
     def __init__(self, transcript: str, quest_context: str, config: dict):
         super().__init__()

@@ -2,9 +2,9 @@
 
 import re
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
-from PyQt6.QtGui import QTextCursor
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtGui import QTextCursor
+from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QLabel,
@@ -109,8 +109,8 @@ def _strip_model_artifacts(text: str) -> str:
 class QuestExtractorWorker(QObject):
     """Extracts quest updates from a session summary via Mistral API."""
 
-    completed = pyqtSignal(str)  # quest update HTML
-    error = pyqtSignal(str)
+    completed = Signal(str)  # quest update HTML
+    error = Signal(str)
 
     def __init__(self, summary_html: str, current_quests: str, config: dict,
                  campaign_name: str = ""):

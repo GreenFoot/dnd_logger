@@ -2,9 +2,9 @@
 
 import math
 
-from PyQt6.QtCore import QEvent, QRectF, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import QEvent, QRectF, Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
+from PySide6.QtWidgets import QWidget
 
 
 class TTSOverlay(QWidget):
@@ -15,8 +15,8 @@ class TTSOverlay(QWidget):
         stop_requested: emitted when the user presses Escape.
     """
 
-    pause_toggled = pyqtSignal()
-    stop_requested = pyqtSignal()
+    pause_toggled = Signal()
+    stop_requested = Signal()
 
     _BAR_COUNT = 7
     _BAR_WIDTH = 8
@@ -46,7 +46,7 @@ class TTSOverlay(QWidget):
     def show_overlay(self):
         """Show overlay and start animation."""
         if not self.isVisible():
-            from PyQt6.QtWidgets import QApplication
+            from PySide6.QtWidgets import QApplication
             self._prev_focus = QApplication.focusWidget()
         self._paused = False
         self._tick = 0

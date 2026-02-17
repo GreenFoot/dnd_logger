@@ -6,7 +6,7 @@ import re
 import time
 
 import soundfile as sf
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PySide6.QtCore import QObject, QThread, Signal
 
 from .utils import load_config
 
@@ -113,10 +113,10 @@ def _transcribe_file(client, chunk_path: str, config: dict, retries: int = 3) ->
 class TranscriptionWorker(QObject):
     """Runs transcription in a QThread via Mistral Voxtral API."""
 
-    progress = pyqtSignal(int, int)  # current, total
-    chunk_completed = pyqtSignal(int, str)  # index, text
-    completed = pyqtSignal(str)  # full transcript
-    error = pyqtSignal(str)
+    progress = Signal(int, int)  # current, total
+    chunk_completed = Signal(int, str)  # index, text
+    completed = Signal(str)  # full transcript
+    error = Signal(str)
 
     def __init__(self, wav_path: str, config: dict):
         super().__init__()
@@ -162,8 +162,8 @@ class TranscriptionWorker(QObject):
 class LiveTranscriptionWorker(QObject):
     """Transcribes a single audio chunk for live/incremental transcription."""
 
-    completed = pyqtSignal(str)  # transcribed text
-    error = pyqtSignal(str)
+    completed = Signal(str)  # transcribed text
+    error = Signal(str)
 
     def __init__(self, flac_path: str, config: dict):
         super().__init__()

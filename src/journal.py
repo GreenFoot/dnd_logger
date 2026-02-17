@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from PyQt6.QtGui import QTextCursor
+from PySide6.QtGui import QTextCursor
 
 from .rich_editor import RichTextEditorWidget
 from .utils import active_campaign_name, journal_path

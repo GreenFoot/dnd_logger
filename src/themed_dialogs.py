@@ -1,7 +1,7 @@
 """Themed dialog helpers — instance-based so they inherit the app's QSS."""
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QHBoxLayout,

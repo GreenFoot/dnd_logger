@@ -2,8 +2,8 @@
 
 import difflib
 
-from PyQt6.QtGui import QColor, QTextBlockFormat, QTextCharFormat, QTextCursor
-from PyQt6.QtWidgets import QTextEdit
+from PySide6.QtGui import QColor, QTextBlockFormat, QTextCharFormat, QTextCursor
+from PySide6.QtWidgets import QTextEdit
 
 COLOR_ADDED = QColor("#1a3d1a")
 COLOR_DELETED_BG = QColor("#3d1a1a")

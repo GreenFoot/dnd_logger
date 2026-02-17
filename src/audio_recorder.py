@@ -8,7 +8,7 @@ from datetime import datetime
 import numpy as np
 import sounddevice as sd
 import soundfile as sf
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal
+from PySide6.QtCore import QObject, QTimer, Signal
 
 from .utils import ensure_dir, sessions_dir
 
@@ -16,14 +16,14 @@ from .utils import ensure_dir, sessions_dir
 class AudioRecorder(QObject):
     """Streams mic audio to a WAV file via a writer thread."""
 
-    recording_started = pyqtSignal()
-    recording_stopped = pyqtSignal(str)  # path to WAV
-    recording_paused = pyqtSignal()
-    recording_resumed = pyqtSignal()
-    level_update = pyqtSignal(float)  # 0.0-1.0 RMS level
-    duration_update = pyqtSignal(int)  # seconds elapsed
-    error_occurred = pyqtSignal(str)
-    silence_detected = pyqtSignal()  # emitted once per silence period
+    recording_started = Signal()
+    recording_stopped = Signal(str)  # path to WAV
+    recording_paused = Signal()
+    recording_resumed = Signal()
+    level_update = Signal(float)  # 0.0-1.0 RMS level
+    duration_update = Signal(int)  # seconds elapsed
+    error_occurred = Signal(str)
+    silence_detected = Signal()  # emitted once per silence period
 
     _SENTINEL = None  # signals writer thread to stop
     _SILENCE_THRESHOLD = 0.01  # RMS below this counts as silence

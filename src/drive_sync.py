@@ -8,7 +8,7 @@ import os
 import threading
 import time
 
-from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QThread, QTimer, pyqtSignal
+from PySide6.QtCore import QMutex, QMutexLocker, QObject, QThread, QTimer, Signal
 
 from .utils import (
     active_campaign_dir,
@@ -212,8 +212,8 @@ def _local_md5(filepath: str) -> str:
 # ---------------------------------------------------------------------------
 
 class _UploadWorker(QObject):
-    finished = pyqtSignal(str, dict)   # filename, metadata
-    error = pyqtSignal(str, str)       # filename, error message
+    finished = Signal(str, dict)   # filename, metadata
+    error = Signal(str, str)       # filename, error message
 
     def __init__(self, file_mgr: DriveFileManager, local_path: str, remote_name: str):
         super().__init__()
@@ -231,8 +231,8 @@ class _UploadWorker(QObject):
 
 class _PollWorker(QObject):
     """Check remote metadata for all synced files."""
-    finished = pyqtSignal(dict)  # {remote_name: metadata_or_None}
-    error = pyqtSignal(str)
+    finished = Signal(dict)  # {remote_name: metadata_or_None}
+    error = Signal(str)
 
     def __init__(self, file_mgr: DriveFileManager, filenames: list[str]):
         super().__init__()
@@ -253,8 +253,8 @@ class _PollWorker(QObject):
 
 
 class _DownloadWorker(QObject):
-    finished = pyqtSignal(str)   # remote_name
-    error = pyqtSignal(str, str)
+    finished = Signal(str)   # remote_name
+    error = Signal(str, str)
 
     def __init__(self, file_mgr: DriveFileManager, remote_name: str, local_path: str):
         super().__init__()
@@ -277,11 +277,11 @@ class _DownloadWorker(QObject):
 class DriveSyncEngine(QObject):
     """Orchestrates Google Drive sync for shared campaign files."""
 
-    status_changed = pyqtSignal(SyncStatus)
-    sync_completed = pyqtSignal()
-    conflict_detected = pyqtSignal(str, str, str)  # filename, local_html, remote_html
-    error_occurred = pyqtSignal(str)
-    remote_file_updated = pyqtSignal(str)  # filename that was downloaded
+    status_changed = Signal(SyncStatus)
+    sync_completed = Signal()
+    conflict_detected = Signal(str, str, str)  # filename, local_html, remote_html
+    error_occurred = Signal(str)
+    remote_file_updated = Signal(str)  # filename that was downloaded
 
     def __init__(self, config: dict, parent=None):
         super().__init__(parent)

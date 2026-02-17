@@ -7,7 +7,7 @@ import tempfile
 import urllib.request
 import urllib.error
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PySide6.QtCore import QObject, QThread, Signal
 
 from . import __version__
 
@@ -35,9 +35,9 @@ def parse_version(s: str) -> tuple[int, ...]:
 class UpdateCheckWorker(QObject):
     """Check GitHub for a newer release."""
 
-    update_available = pyqtSignal(str, str, str, str)  # tag, name, download_url, body
-    no_update = pyqtSignal()
-    error = pyqtSignal(str)
+    update_available = Signal(str, str, str, str)  # tag, name, download_url, body
+    no_update = Signal()
+    error = Signal(str)
 
     def run(self):
         try:
@@ -85,9 +85,9 @@ class UpdateCheckWorker(QObject):
 class UpdateDownloadWorker(QObject):
     """Download an installer asset in chunks."""
 
-    progress = pyqtSignal(int, int)  # downloaded, total
-    completed = pyqtSignal(str)      # local file path
-    error = pyqtSignal(str)
+    progress = Signal(int, int)  # downloaded, total
+    completed = Signal(str)      # local file path
+    error = Signal(str)
 
     def __init__(self, url: str):
         super().__init__()

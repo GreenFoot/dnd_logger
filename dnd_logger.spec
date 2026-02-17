@@ -41,6 +41,13 @@ a = Analysis(
         "google_auth_oauthlib",
         "google_auth_oauthlib.flow",
         "google_auth_httplib2",
+        "src.i18n.en",
+        "src.i18n.fr",
+        "src.i18n.de",
+        "src.i18n.es",
+        "src.i18n.it",
+        "src.i18n.nl",
+        "src.i18n.pt",
     ]
     + webengine_hiddenimports
     + webengine_core_hiddenimports,

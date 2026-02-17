@@ -9,6 +9,7 @@ import soundfile as sf
 from PySide6.QtCore import QObject, QThread, Signal
 
 from .utils import load_config
+from .i18n import tr
 
 
 class AudioChunker:
@@ -100,7 +101,7 @@ def _transcribe_file(client, chunk_path: str, config: dict, retries: int = 3) ->
         except Exception as e:
             err_str = str(e)
             if "401" in err_str:
-                raise RuntimeError("Clé API invalide. Verifiez votre clé dans les Paramètres.")
+                raise RuntimeError(tr("transcriber.error.invalid_key"))
             if "429" in err_str and attempt < retries - 1:
                 wait = 2 ** (attempt + 1)
                 time.sleep(wait)
@@ -130,7 +131,7 @@ class TranscriptionWorker(QObject):
 
             api_key = self._config.get("api_key", "")
             if not api_key:
-                self.error.emit("Clé API Mistral non configurée. Allez dans Paramètres.")
+                self.error.emit(tr("transcriber.error.no_api_key"))
                 return
 
             client = Mistral(api_key=api_key)
@@ -156,7 +157,7 @@ class TranscriptionWorker(QObject):
             self.completed.emit(full_text)
 
         except Exception as e:
-            self.error.emit(f"Erreur de transcription: {e}")
+            self.error.emit(tr("transcriber.error.transcription", error=e))
 
 
 class LiveTranscriptionWorker(QObject):
@@ -176,7 +177,7 @@ class LiveTranscriptionWorker(QObject):
 
             api_key = self._config.get("api_key", "")
             if not api_key:
-                self.error.emit("Clé API Mistral non configurée.")
+                self.error.emit(tr("transcriber.error.no_api_key_short"))
                 return
 
             client = Mistral(api_key=api_key)
@@ -191,7 +192,7 @@ class LiveTranscriptionWorker(QObject):
             self.completed.emit(text)
 
         except Exception as e:
-            self.error.emit(f"Erreur de transcription live: {e}")
+            self.error.emit(tr("transcriber.error.live_transcription", error=e))
 
 
 def start_transcription(wav_path: str, config: dict) -> tuple[QThread, TranscriptionWorker]:

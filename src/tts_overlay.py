@@ -6,6 +6,8 @@ from PySide6.QtCore import QEvent, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import QWidget
 
+from .i18n import tr
+
 
 class TTSOverlay(QWidget):
     """Semi-transparent overlay with sound-wave animation and TTS control hints.
@@ -130,7 +132,7 @@ class TTSOverlay(QWidget):
         sf = QFont("Cinzel", 11)
         sf.setBold(True)
         p.setFont(sf)
-        label = "En pause" if self._paused else "Lecture en cours\u2026"
+        label = tr("tts.status.paused") if self._paused else tr("tts.status.playing")
         p.drawText(QRectF(cx, cy + 85, card_w, 24),
                    Qt.AlignmentFlag.AlignCenter, label)
 
@@ -138,8 +140,8 @@ class TTSOverlay(QWidget):
         p.setPen(QColor(160, 155, 145))
         hf = QFont("Segoe UI", 9)
         p.setFont(hf)
-        pause_hint = "Espace : Reprendre" if self._paused else "Espace : Pause"
-        hints = f"{pause_hint}  |  \u00c9chap : Arr\u00eater"
+        pause_hint = tr("tts.hint.resume") if self._paused else tr("tts.hint.pause")
+        hints = f"{pause_hint}  |  {tr('tts.hint.stop')}"
         p.drawText(QRectF(cx, cy + 118, card_w, 20),
                    Qt.AlignmentFlag.AlignCenter, hints)
 

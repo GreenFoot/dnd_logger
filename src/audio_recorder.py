@@ -11,6 +11,7 @@ import soundfile as sf
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from .utils import ensure_dir, sessions_dir
+from .i18n import tr
 
 
 class AudioRecorder(QObject):
@@ -127,7 +128,7 @@ class AudioRecorder(QObject):
             self.recording_started.emit()
 
         except Exception as e:
-            self.error_occurred.emit(f"Erreur d'enregistrement: {e}")
+            self.error_occurred.emit(tr("recorder.error.recording", error=e))
             self._cleanup_on_error()
 
     def pause_recording(self):
@@ -141,7 +142,7 @@ class AudioRecorder(QObject):
             self._timer.stop()
             self.recording_paused.emit()
         except Exception as e:
-            self.error_occurred.emit(f"Erreur de pause: {e}")
+            self.error_occurred.emit(tr("recorder.error.pause", error=e))
 
     def resume_recording(self):
         """Resume a paused recording — restart the stream."""
@@ -154,7 +155,7 @@ class AudioRecorder(QObject):
             self._timer.start()
             self.recording_resumed.emit()
         except Exception as e:
-            self.error_occurred.emit(f"Erreur de reprise: {e}")
+            self.error_occurred.emit(tr("recorder.error.resume", error=e))
 
     def stop_recording(self) -> str | None:
         """Stop recording and return path to WAV file."""

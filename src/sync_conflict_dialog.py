@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from .diff_utils import apply_inline_diff, extract_html_without_deleted
+from .i18n import tr
 
 
 class SyncConflictDialog(QDialog):
@@ -24,17 +25,14 @@ class SyncConflictDialog(QDialog):
         self._remote_content = remote_content
         self._result: str | None = None
 
-        self.setWindowTitle(f"Conflit de synchronisation — {filename}")
+        self.setWindowTitle(tr("conflict.title", filename=filename))
         self.setMinimumSize(900, 600)
         self._build_ui()
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
 
-        header = QLabel(
-            f"Le fichier <b>{self._filename}</b> a été modifié localement et sur Google Drive.\n"
-            "Choisissez quelle version garder ou fusionnez manuellement."
-        )
+        header = QLabel(tr("conflict.header", filename=self._filename))
         header.setWordWrap(True)
         header.setObjectName("subheading")
         layout.addWidget(header)
@@ -44,7 +42,7 @@ class SyncConflictDialog(QDialog):
 
         # Local version
         local_col = QVBoxLayout()
-        local_label = QLabel("Version locale")
+        local_label = QLabel(tr("conflict.local_label"))
         local_label.setStyleSheet("color: #6ab4d4; font-weight: bold;")
         local_col.addWidget(local_label)
         self._local_preview = QTextEdit()
@@ -58,7 +56,7 @@ class SyncConflictDialog(QDialog):
 
         # Remote version
         remote_col = QVBoxLayout()
-        remote_label = QLabel("Version distante (Drive)")
+        remote_label = QLabel(tr("conflict.remote_label"))
         remote_label.setStyleSheet("color: #d4af37; font-weight: bold;")
         remote_col.addWidget(remote_label)
         self._remote_preview = QTextEdit()
@@ -73,7 +71,7 @@ class SyncConflictDialog(QDialog):
         layout.addLayout(previews, stretch=1)
 
         # Merged editor with diff highlights
-        merge_label = QLabel("Résultat fusionné (modifiable):")
+        merge_label = QLabel(tr("conflict.merge_label"))
         merge_label.setStyleSheet("font-weight: bold;")
         layout.addWidget(merge_label)
 
@@ -91,15 +89,15 @@ class SyncConflictDialog(QDialog):
         # Buttons
         btn_layout = QHBoxLayout()
 
-        btn_keep_local = QPushButton("Garder la version locale")
+        btn_keep_local = QPushButton(tr("conflict.btn_keep_local"))
         btn_keep_local.setStyleSheet("color: #6ab4d4;")
         btn_keep_local.clicked.connect(self._keep_local)
 
-        btn_keep_remote = QPushButton("Garder la version distante")
+        btn_keep_remote = QPushButton(tr("conflict.btn_keep_remote"))
         btn_keep_remote.setStyleSheet("color: #d4af37;")
         btn_keep_remote.clicked.connect(self._keep_remote)
 
-        btn_save_merge = QPushButton("Sauvegarder la fusion")
+        btn_save_merge = QPushButton(tr("conflict.btn_save_merge"))
         btn_save_merge.setObjectName("btn_primary")
         btn_save_merge.clicked.connect(self._save_merge)
 

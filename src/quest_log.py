@@ -2,29 +2,12 @@
 
 from .rich_editor import RichTextEditorWidget
 from .utils import active_campaign_name, quest_log_path
+from .i18n import tr
 
 
 def _default_quest_log_html(campaign_name: str) -> str:
     """Return the default quest log HTML template for a campaign."""
-    return f"""\
-<h1 style="color:#d4af37; text-align:center;">Quest Log &mdash; {campaign_name}</h1>
-<hr>
-<p><em>Ce registre recense les quêtes actives, indices découverts
-et mystères à élucider au cours de la campagne.</em></p>
-<hr>
-<h2 style="color:#6ab4d4;">Quêtes Actives</h2>
-<ul>
-<li><em>Aucune quête enregistrée pour le moment.</em></li>
-</ul>
-<h2 style="color:#6ab4d4;">Indices et Mystères</h2>
-<ul>
-<li><em>Aucun indice pour le moment.</em></li>
-</ul>
-<h2 style="color:#6ab4d4;">Quêtes Terminées</h2>
-<ul>
-<li><em>Aucune quête terminée.</em></li>
-</ul>
-"""
+    return tr("quest_log.default_html", campaign_name=campaign_name)
 
 
 class QuestLogWidget(RichTextEditorWidget):

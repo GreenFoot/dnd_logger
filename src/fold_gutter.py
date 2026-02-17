@@ -5,6 +5,7 @@ from PySide6.QtGui import QBrush, QColor, QPainter, QPen, QPolygon
 from PySide6.QtWidgets import QTextEdit, QWidget
 
 from .fold_manager import FoldManager
+from .i18n import tr
 
 GUTTER_WIDTH = 20
 
@@ -146,9 +147,10 @@ class FoldGutterWidget(QWidget):
                 if region and region.is_folded:
                     count = region.end - region.start
                     from PySide6.QtWidgets import QToolTip
+                    s = "s" if count > 1 else ""
                     QToolTip.showText(
                         event.globalPos(),
-                        f"{count} ligne{'s' if count > 1 else ''} repliée{'s' if count > 1 else ''}",
+                        tr("fold.lines_folded", count=count, s=s),
                     )
                     return True
         return super().event(event)

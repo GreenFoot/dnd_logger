@@ -18,6 +18,9 @@ SHARED_CONFIG_KEYS = {
     "summary_model",
     "chunk_duration_minutes",
     "diarize",
+    "prompt_summary_system",
+    "prompt_condense",
+    "prompt_quest_extraction",
 }
 
 _DEFAULT_CONFIG = {
@@ -34,6 +37,9 @@ _DEFAULT_CONFIG = {
     "auto_update_check": True,
     "active_campaign": "",
     "campaigns": {},
+    "prompt_summary_system": "",
+    "prompt_condense": "",
+    "prompt_quest_extraction": "",
     "context_bias": [
         "Dungeons & Dragons",
         "D&D",

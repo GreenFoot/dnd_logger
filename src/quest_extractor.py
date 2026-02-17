@@ -132,7 +132,8 @@ class QuestExtractorWorker(QObject):
             client = Mistral(api_key=api_key)
             model = self._config.get("summary_model", "mistral-large-latest")
 
-            prompt = _EXTRACTION_PROMPT.format(
+            extraction_template = self._config.get("prompt_quest_extraction") or _EXTRACTION_PROMPT
+            prompt = extraction_template.format(
                 campaign_name=self._campaign_name or "D&D",
                 current_quests=self._current_quests or "(Aucune quête enregistrée)",
                 summary=self._summary,

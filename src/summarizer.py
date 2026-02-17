@@ -256,10 +256,12 @@ class SummarizerWorker(QObject):
                 transcript=transcript,
             )
 
+            system_prompt = self._config.get("prompt_summary_system") or _SYSTEM_PROMPT
+
             response = client.chat.complete(
                 model=model,
                 messages=[
-                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_msg},
                 ],
                 temperature=0.2,
@@ -278,10 +280,11 @@ class SummarizerWorker(QObject):
 
     def _condense(self, client, model: str, text: str) -> str:
         """Condense a long transcript in chunks before final summarization."""
+        condense_template = self._config.get("prompt_condense") or _CONDENSE_PROMPT
         chunks = [text[i : i + self._CHUNK_SIZE] for i in range(0, len(text), self._CHUNK_SIZE)]
         condensed_parts = []
         for chunk in chunks:
-            prompt = _CONDENSE_PROMPT.format(text=chunk)
+            prompt = condense_template.format(text=chunk)
             response = client.chat.complete(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],

@@ -33,6 +33,7 @@ from .snow_particles import AuroraShimmerOverlay, SnowParticleOverlay
 from .summarizer import SummarizerWorker, start_summarization
 from .transcriber import TranscriptionWorker, start_live_transcription, start_transcription
 from .utils import active_campaign_name, ensure_dir, format_duration, format_file_size, sessions_dir
+from .i18n import tr
 
 
 class _ThinDivider(QWidget):
@@ -97,7 +98,7 @@ class PostRecordingDialog(QDialog):
 
     def __init__(self, wav_path: str, duration: int, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Enregistrement terminé")
+        self.setWindowTitle(tr("session.post.title"))
         self.setMinimumWidth(400)
         self.result_action = self.SAVE_ONLY
 
@@ -106,9 +107,9 @@ class PostRecordingDialog(QDialog):
         # Info
         size = os.path.getsize(wav_path) if os.path.exists(wav_path) else 0
         info = QLabel(
-            f"Durée: {format_duration(duration)}\n"
-            f"Taille: {format_file_size(size)}\n"
-            f"Fichier: {os.path.basename(wav_path)}"
+            f"{tr('session.post.duration')} {format_duration(duration)}\n"
+            f"{tr('session.post.size')} {format_file_size(size)}\n"
+            f"{tr('session.post.file')} {os.path.basename(wav_path)}"
         )
         info.setObjectName("subheading")
         layout.addWidget(info)
@@ -117,14 +118,14 @@ class PostRecordingDialog(QDialog):
         # Buttons
         btn_layout = QHBoxLayout()
 
-        btn_transcribe = QPushButton("Transcrire et Resumer")
+        btn_transcribe = QPushButton(tr("session.post.btn_transcribe"))
         btn_transcribe.setObjectName("btn_gold")
         btn_transcribe.clicked.connect(lambda: self._choose(self.TRANSCRIBE))
 
-        btn_rerecord = QPushButton("Re-enregistrer")
+        btn_rerecord = QPushButton(tr("session.post.btn_rerecord"))
         btn_rerecord.clicked.connect(lambda: self._choose(self.RE_RECORD))
 
-        btn_save = QPushButton("Sauvegarder sans transcrire")
+        btn_save = QPushButton(tr("session.post.btn_save_only"))
         btn_save.clicked.connect(lambda: self._choose(self.SAVE_ONLY))
 
         btn_layout.addWidget(btn_transcribe)
@@ -217,10 +218,10 @@ class SessionTab(QWidget):
         # === Recording Controls ===
         rec_layout = QHBoxLayout()
 
-        self.btn_record = QPushButton("Enregistrer")
+        self.btn_record = QPushButton(tr("session.btn.record"))
         self.btn_record.setObjectName("btn_record")
 
-        self.btn_stop = QPushButton("Arrêter")
+        self.btn_stop = QPushButton(tr("session.btn.stop"))
         self.btn_stop.setObjectName("btn_stop")
         self.btn_stop.setEnabled(False)
 
@@ -242,7 +243,7 @@ class SessionTab(QWidget):
         layout.addWidget(self.vu_meter)
 
         # Status
-        self.status_label = QLabel("Prêt à enregistrer")
+        self.status_label = QLabel(tr("session.status.ready"))
         self.status_label.setObjectName("status_label")
         layout.addWidget(self.status_label)
 
@@ -250,14 +251,14 @@ class SessionTab(QWidget):
         layout.addWidget(self._make_divider())
 
         # === Transcript ===
-        transcript_label = QLabel("Transcription")
-        transcript_label.setObjectName("subheading")
-        layout.addWidget(transcript_label)
+        self._transcript_label = QLabel(tr("session.label.transcription"))
+        self._transcript_label.setObjectName("subheading")
+        layout.addWidget(self._transcript_label)
 
         self.transcript_display = QTextEdit()
         self.transcript_display.setObjectName("transcript_display")
         self.transcript_display.setReadOnly(True)
-        self.transcript_display.setPlaceholderText("La transcription apparaitra ici après l'enregistrement...")
+        self.transcript_display.setPlaceholderText(tr("session.placeholder.transcript"))
         self.transcript_display.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.transcript_display.customContextMenuRequested.connect(
             lambda pos: self._tts_context_menu(self.transcript_display, pos)
@@ -269,12 +270,12 @@ class SessionTab(QWidget):
 
         # === Summary ===
         summary_header = QHBoxLayout()
-        summary_label = QLabel("Resumé Épique")
-        summary_label.setObjectName("subheading")
-        summary_header.addWidget(summary_label)
+        self._summary_label = QLabel(tr("session.label.summary"))
+        self._summary_label.setObjectName("subheading")
+        summary_header.addWidget(self._summary_label)
 
         self.btn_tts = QPushButton("\U0001f50a")
-        self.btn_tts.setToolTip("Lire le resumé à voix haute")
+        self.btn_tts.setToolTip(tr("session.btn.tts_tooltip"))
         self.btn_tts.setFixedWidth(36)
         self.btn_tts.setEnabled(False)
         summary_header.addWidget(self.btn_tts)
@@ -284,7 +285,7 @@ class SessionTab(QWidget):
         self.summary_display = QTextEdit()
         self.summary_display.setObjectName("summary_display")
         self.summary_display.setReadOnly(True)
-        self.summary_display.setPlaceholderText("Le resumé épique apparaitra ici...")
+        self.summary_display.setPlaceholderText(tr("session.placeholder.summary"))
         self.summary_display.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.summary_display.customContextMenuRequested.connect(
             lambda pos: self._tts_context_menu(self.summary_display, pos)
@@ -297,31 +298,31 @@ class SessionTab(QWidget):
         # === Action Buttons ===
         action_layout = QHBoxLayout()
 
-        self.btn_transcribe = QPushButton("Transcrire et Resumer")
+        self.btn_transcribe = QPushButton(tr("session.btn.transcribe"))
         self.btn_transcribe.setObjectName("btn_primary")
         self.btn_transcribe.setEnabled(False)
 
-        self.btn_add_journal = QPushButton("Ajouter au Journal")
+        self.btn_add_journal = QPushButton(tr("session.btn.add_journal"))
         self.btn_add_journal.setObjectName("btn_gold")
         self.btn_add_journal.setEnabled(False)
 
-        self.btn_update_quests = QPushButton("Mettre à jour les Quêtes")
+        self.btn_update_quests = QPushButton(tr("session.btn.update_quests"))
         self.btn_update_quests.setObjectName("btn_gold")
         self.btn_update_quests.setEnabled(False)
 
         # Overflow menu for secondary actions
         self._more_menu = QMenu(self)
-        self._act_import = self._more_menu.addAction("Importer un audio")
-        self._act_save_audio = self._more_menu.addAction("Sauvegarder l'audio")
+        self._act_import = self._more_menu.addAction(tr("session.menu.import_audio"))
+        self._act_save_audio = self._more_menu.addAction(tr("session.menu.save_audio"))
         self._act_save_audio.setEnabled(False)
         self._more_menu.addSeparator()
-        self._act_copy = self._more_menu.addAction("Copier le resumé")
+        self._act_copy = self._more_menu.addAction(tr("session.menu.copy_summary"))
         self._act_copy.setEnabled(False)
 
         self.btn_more = _VerticalDotsButton()
         self.btn_more.setObjectName("btn_more")
         self.btn_more.setText("")
-        self.btn_more.setToolTip("Plus d'options")
+        self.btn_more.setToolTip(tr("session.btn.more_tooltip"))
         self.btn_more.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.btn_more.setMenu(self._more_menu)
 
@@ -380,7 +381,7 @@ class SessionTab(QWidget):
 
     def _on_tts_available(self, available: bool):
         if not available:
-            self.btn_tts.setToolTip("Aucune voix française disponible")
+            self.btn_tts.setToolTip(tr("session.btn.tts_no_voice"))
 
     # --- Recording ---
 
@@ -398,7 +399,7 @@ class SessionTab(QWidget):
 
     def _on_recording_started(self):
         # Switch button to Pause mode
-        self.btn_record.setText("Pause")
+        self.btn_record.setText(tr("session.btn.pause"))
         self.btn_record.setObjectName("btn_pause")
         self.btn_record.style().unpolish(self.btn_record)
         self.btn_record.style().polish(self.btn_record)
@@ -406,7 +407,7 @@ class SessionTab(QWidget):
         self.btn_stop.setEnabled(True)
         self.btn_transcribe.setEnabled(False)
         self.transcript_display.clear()
-        self.status_label.setText("Enregistrement en cours...")
+        self.status_label.setText(tr("session.status.recording"))
         self.status_label.setStyleSheet("color: #ff6b6b;")
 
         # Reset live transcription state
@@ -424,11 +425,11 @@ class SessionTab(QWidget):
 
     def _on_recording_paused(self):
         """Switch button to Resume mode."""
-        self.btn_record.setText("Reprendre")
+        self.btn_record.setText(tr("session.btn.resume"))
         self.btn_record.setObjectName("btn_resume")
         self.btn_record.style().unpolish(self.btn_record)
         self.btn_record.style().polish(self.btn_record)
-        self.status_label.setText("Enregistrement en pause")
+        self.status_label.setText(tr("session.status.paused"))
         self.status_label.setStyleSheet("color: #e8a824;")
 
         # Pause atmosphere effects
@@ -439,11 +440,11 @@ class SessionTab(QWidget):
 
     def _on_recording_resumed(self):
         """Switch button back to Pause mode."""
-        self.btn_record.setText("Pause")
+        self.btn_record.setText(tr("session.btn.pause"))
         self.btn_record.setObjectName("btn_pause")
         self.btn_record.style().unpolish(self.btn_record)
         self.btn_record.style().polish(self.btn_record)
-        self.status_label.setText("Enregistrement en cours...")
+        self.status_label.setText(tr("session.status.recording"))
         self.status_label.setStyleSheet("color: #ff6b6b;")
 
         # Resume atmosphere effects
@@ -454,7 +455,7 @@ class SessionTab(QWidget):
 
     def _on_recording_stopped(self, wav_path: str):
         # Restore button to Record mode
-        self.btn_record.setText("Enregistrer")
+        self.btn_record.setText(tr("session.btn.record"))
         self.btn_record.setObjectName("btn_record")
         self.btn_record.style().unpolish(self.btn_record)
         self.btn_record.style().polish(self.btn_record)
@@ -471,7 +472,7 @@ class SessionTab(QWidget):
 
         if self._live_transcript_parts or self._live_tx_pending:
             # Live transcription was active — finalize automatically
-            self.status_label.setText("Finalisation de la transcription...")
+            self.status_label.setText(tr("session.status.finalizing"))
             self.status_label.setStyleSheet("color: #d4af37;")
 
             if self._live_tx_pending:
@@ -481,7 +482,7 @@ class SessionTab(QWidget):
                 self._do_final_live_transcription()
         else:
             # No live transcription happened — original dialog flow
-            self.status_label.setText("Enregistrement terminé")
+            self.status_label.setText(tr("session.status.stopped"))
             self.status_label.setStyleSheet("color: #7ec8e3;")
 
             dlg = PostRecordingDialog(wav_path, self._elapsed, self)
@@ -490,12 +491,12 @@ class SessionTab(QWidget):
             if dlg.result_action == PostRecordingDialog.TRANSCRIBE:
                 self._start_transcription()
             elif dlg.result_action == PostRecordingDialog.RE_RECORD:
-                self.status_label.setText("Prêt à re-enregistrer")
+                self.status_label.setText(tr("session.status.ready_rerecord"))
                 self.duration_label.setText("00:00:00")
             else:
                 self.btn_transcribe.setEnabled(True)
                 self._act_save_audio.setEnabled(True)
-                self.status_label.setText("Enregistrement sauvegardé")
+                self.status_label.setText(tr("session.status.saved"))
 
     def _pulse_record_button(self):
         """Cycle the pause button border through 3 states (slow breathing)."""
@@ -509,9 +510,9 @@ class SessionTab(QWidget):
         """Import an existing audio file for transcription."""
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Importer un fichier audio",
+            tr("session.dialog.import_title"),
             "",
-            "Fichiers audio (*.wav *.mp3 *.flac *.ogg *.m4a *.wma);;Tous (*)",
+            tr("session.dialog.import_filter"),
         )
         if not file_path:
             return
@@ -526,7 +527,7 @@ class SessionTab(QWidget):
         try:
             shutil.copy2(file_path, dest_path)
         except OSError as e:
-            self._on_error(f"Erreur lors de la copie: {e}")
+            self._on_error(tr("session.error.copy_failed", error=e))
             return
 
         self._current_wav_path = dest_path
@@ -534,14 +535,14 @@ class SessionTab(QWidget):
         self._act_save_audio.setEnabled(True)
 
         size = os.path.getsize(dest_path)
-        self.status_label.setText(f"Audio importé: {dest_name} ({format_file_size(size)})")
+        self.status_label.setText(tr("session.status.imported", name=dest_name, size=format_file_size(size)))
         self.status_label.setStyleSheet("color: #7ec8e3;")
 
     def _save_audio(self):
         """Save the audio as FLAC (converting from source if needed)."""
         src_path = self._current_wav_path or self._recorder.wav_path
         if not src_path or not os.path.exists(src_path):
-            self._on_error("Aucun fichier audio à sauvegarder.")
+            self._on_error(tr("session.error.no_audio_save"))
             return
 
         session_dir = os.path.dirname(src_path)
@@ -553,25 +554,25 @@ class SessionTab(QWidget):
                 data, sr = sf.read(src_path, dtype="int16")
                 sf.write(flac_path, data, sr, format="FLAC")
             except Exception as e:
-                self._on_error(f"Erreur de conversion FLAC: {e}")
+                self._on_error(tr("session.error.flac_failed", error=e))
                 return
 
         base = os.path.splitext(os.path.basename(src_path))[0]
         save_path, _ = QFileDialog.getSaveFileName(
             self,
-            "Sauvegarder le fichier audio",
+            tr("session.dialog.save_title"),
             f"{base}.flac",
-            "FLAC (*.flac);;Tous (*)",
+            tr("session.dialog.save_filter"),
         )
         if not save_path:
             return
 
         try:
             shutil.copy2(flac_path, save_path)
-            self.status_label.setText(f"Audio sauvegardé: {os.path.basename(save_path)}")
+            self.status_label.setText(tr("session.status.audio_saved", name=os.path.basename(save_path)))
             self.status_label.setStyleSheet("color: #7ec83a;")
         except OSError as e:
-            self._on_error(f"Erreur de sauvegarde: {e}")
+            self._on_error(tr("session.error.save_failed", error=e))
 
     def _on_level_update(self, level: float):
         self.vu_meter.setValue(int(level * 100))
@@ -585,10 +586,10 @@ class SessionTab(QWidget):
     def _start_transcription(self):
         wav_path = self._current_wav_path or self._recorder.wav_path
         if not wav_path or not os.path.exists(wav_path):
-            self._on_error("Aucun fichier audio trouvé.")
+            self._on_error(tr("session.error.no_audio"))
             return
 
-        self.status_label.setText("Transcription en cours...")
+        self.status_label.setText(tr("session.status.transcribing"))
         self.status_label.setStyleSheet("color: #d4af37;")
         self.btn_transcribe.setEnabled(False)
         self.transcript_display.clear()
@@ -628,7 +629,7 @@ class SessionTab(QWidget):
         self._live_tx_thread.start()
 
         count = len(self._live_transcript_parts) + 1
-        self.status_label.setText(f"Transcription du segment {count}...")
+        self.status_label.setText(tr("session.status.transcribing_segment", count=count))
         self.status_label.setStyleSheet("color: #d4af37;")
 
     def _do_final_live_transcription(self):
@@ -663,15 +664,16 @@ class SessionTab(QWidget):
             self._do_final_live_transcription()
         else:
             count = len(self._live_transcript_parts)
+            s = "s" if count > 1 else ""
             self.status_label.setText(
-                f"Enregistrement... ({count} segment{'s' if count > 1 else ''} transcrit{'s' if count > 1 else ''})"
+                tr("session.status.segments_transcribed", count=count, s=s)
             )
             self.status_label.setStyleSheet("color: #ff6b6b;")
 
     def _on_live_tx_error(self, msg: str):
         """Handle live transcription error — continue recording."""
         self._live_tx_pending = False
-        self.status_label.setText(f"Erreur transcription: {msg}")
+        self.status_label.setText(tr("session.status.transcription_error", msg=msg))
         self.status_label.setStyleSheet("color: #ff6b6b;")
 
         if self._is_final_live_chunk:
@@ -698,17 +700,17 @@ class SessionTab(QWidget):
         self.btn_transcribe.setEnabled(True)
 
         if full_text.strip():
-            self.status_label.setText("Transcription terminée. Génération du résumé...")
+            self.status_label.setText(tr("session.status.transcription_done"))
             self.status_label.setStyleSheet("color: #d4af37;")
             self._start_summarization()
         else:
-            self.status_label.setText("Aucun texte transcrit.")
+            self.status_label.setText(tr("session.status.no_text"))
             self.status_label.setStyleSheet("color: #7ec8e3;")
 
     # --- Batch transcription (post-recording) ---
 
     def _on_transcription_progress(self, current: int, total: int):
-        self.status_label.setText(f"Transcription: chunk {current}/{total}...")
+        self.status_label.setText(tr("session.status.transcribing_chunk", current=current, total=total))
 
     def _on_chunk_completed(self, index: int, text: str):
         self.transcript_display.append(text)
@@ -716,7 +718,7 @@ class SessionTab(QWidget):
     def _on_transcription_done(self, full_text: str):
         self._current_transcript = full_text
         self.transcript_display.setPlainText(full_text)
-        self.status_label.setText("Transcription terminée. Génération du résumé...")
+        self.status_label.setText(tr("session.status.transcription_done"))
         self._start_summarization()
 
     # --- Summarization ---
@@ -734,9 +736,9 @@ class SessionTab(QWidget):
         # Build combined context
         context_parts = []
         if journal_context:
-            context_parts.append(f"=== Journal (récits précédents) ===\n{journal_context}")
+            context_parts.append(f"{tr('session.context.journal_header')}\n{journal_context}")
         if quest_context:
-            context_parts.append(f"=== Quest Log (quêtes actives) ===\n{quest_context}")
+            context_parts.append(f"{tr('session.context.quest_header')}\n{quest_context}")
         combined_context = "\n\n".join(context_parts)
 
         self._summary_thread, self._summary_worker = start_summarization(
@@ -749,7 +751,7 @@ class SessionTab(QWidget):
     def _on_summary_done(self, summary_html: str):
         self._current_summary = summary_html
         self.summary_display.setHtml(summary_html)
-        self.status_label.setText("Resumé généré !")
+        self.status_label.setText(tr("session.status.summary_done"))
         self.status_label.setStyleSheet("color: #7ec83a;")
         self._act_copy.setEnabled(True)
         self.btn_add_journal.setEnabled(True)
@@ -765,12 +767,12 @@ class SessionTab(QWidget):
         if self._current_summary:
             clipboard = QApplication.clipboard()
             clipboard.setText(self._current_summary)
-            self.status_label.setText("Resumé copié dans le presse-papiers !")
+            self.status_label.setText(tr("session.status.copied"))
 
     def _add_to_journal(self):
         if self._current_summary and self._journal:
             self._journal.append_summary(self._current_summary)
-            self.status_label.setText("Resumé ajouté au Journal !")
+            self.status_label.setText(tr("session.status.added_journal"))
             self.status_label.setStyleSheet("color: #d4af37;")
             self.btn_add_journal.setEnabled(False)
 
@@ -782,7 +784,7 @@ class SessionTab(QWidget):
         if self._quest_log:
             current_quests = self._quest_log.editor.toPlainText()
 
-        self.status_label.setText("Extraction des quêtes en cours...")
+        self.status_label.setText(tr("session.status.quest_extracting"))
         self.status_label.setStyleSheet("color: #d4af37;")
         self.btn_update_quests.setEnabled(False)
 
@@ -795,7 +797,7 @@ class SessionTab(QWidget):
         self._quest_thread.start()
 
     def _on_quest_extraction_done(self, proposed_html: str):
-        self.status_label.setText("Propositions de quêtes prêtes.")
+        self.status_label.setText(tr("session.status.quest_ready"))
         self.status_label.setStyleSheet("color: #7ec83a;")
 
         current_html = self._quest_log.get_full_html() if self._quest_log else ""
@@ -804,10 +806,10 @@ class SessionTab(QWidget):
             edited_html = dlg.get_html()
             if self._quest_log:
                 self._quest_log.replace_quest_log(edited_html)
-                self.status_label.setText("Quêtes mises a jour !")
+                self.status_label.setText(tr("session.status.quest_updated"))
                 self.status_label.setStyleSheet("color: #d4af37;")
         else:
-            self.status_label.setText("Mise a jour des quêtes annulée.")
+            self.status_label.setText(tr("session.status.quest_cancelled"))
             self.btn_update_quests.setEnabled(True)
 
     def _tts_context_menu(self, editor: QTextEdit, pos):
@@ -816,7 +818,7 @@ class SessionTab(QWidget):
         selection = editor.textCursor().selectedText()
         if selection and self._tts_engine and self._tts_engine.is_available:
             menu.addSeparator()
-            tts_action = QAction("Lire la sélection", menu)
+            tts_action = QAction(tr("session.tts.read_selection"), menu)
             tts_action.triggered.connect(lambda _checked=False, t=selection: self._speak_text(t))
             menu.addAction(tts_action)
         menu.exec(editor.mapToGlobal(pos))
@@ -835,7 +837,7 @@ class SessionTab(QWidget):
         self.status_label.setText(msg)
         self.status_label.setStyleSheet("color: #ff6b6b;")
         # Restore record button to initial state
-        self.btn_record.setText("Enregistrer")
+        self.btn_record.setText(tr("session.btn.record"))
         self.btn_record.setObjectName("btn_record")
         self.btn_record.style().unpolish(self.btn_record)
         self.btn_record.style().polish(self.btn_record)
@@ -885,6 +887,44 @@ class SessionTab(QWidget):
                 os.remove(flac_file)
             except OSError:
                 pass
+
+    def retranslate_ui(self):
+        """Re-apply translated strings to all static UI elements."""
+        # Record/stop buttons — respect current state
+        if self._recorder.is_recording:
+            if self._recorder.is_paused:
+                self.btn_record.setText(tr("session.btn.resume"))
+            else:
+                self.btn_record.setText(tr("session.btn.pause"))
+        else:
+            self.btn_record.setText(tr("session.btn.record"))
+        self.btn_stop.setText(tr("session.btn.stop"))
+
+        # Status label — only retranslate if showing a fixed state
+        if not self._recorder.is_recording and not self._current_transcript:
+            self.status_label.setText(tr("session.status.ready"))
+
+        # Section labels
+        self._transcript_label.setText(tr("session.label.transcription"))
+        self._summary_label.setText(tr("session.label.summary"))
+
+        # Placeholders
+        self.transcript_display.setPlaceholderText(tr("session.placeholder.transcript"))
+        self.summary_display.setPlaceholderText(tr("session.placeholder.summary"))
+
+        # Action buttons
+        self.btn_transcribe.setText(tr("session.btn.transcribe"))
+        self.btn_add_journal.setText(tr("session.btn.add_journal"))
+        self.btn_update_quests.setText(tr("session.btn.update_quests"))
+
+        # Tooltips
+        self.btn_tts.setToolTip(tr("session.btn.tts_tooltip"))
+        self.btn_more.setToolTip(tr("session.btn.more_tooltip"))
+
+        # Overflow menu actions
+        self._act_import.setText(tr("session.menu.import_audio"))
+        self._act_save_audio.setText(tr("session.menu.save_audio"))
+        self._act_copy.setText(tr("session.menu.copy_summary"))
 
     def update_config(self, config: dict):
         """Update config after settings change."""

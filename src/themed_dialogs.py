@@ -11,6 +11,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from .i18n import tr
+
 
 # ── Message boxes ────────────────────────────────────────
 
@@ -75,8 +77,8 @@ def get_item(parent, title, label, items, current=0, editable=False):
 
     btn_row = QHBoxLayout()
     btn_row.addStretch()
-    btn_cancel = QPushButton("Annuler")
-    btn_ok = QPushButton("OK")
+    btn_cancel = QPushButton(tr("dialog.btn_cancel"))
+    btn_ok = QPushButton(tr("dialog.btn_ok"))
     btn_ok.setObjectName("btn_primary")
     btn_row.addWidget(btn_cancel)
     btn_row.addWidget(btn_ok)

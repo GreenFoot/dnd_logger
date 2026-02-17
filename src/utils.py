@@ -31,7 +31,7 @@ _DEFAULT_CONFIG = {
     "chunk_duration_minutes": 60,
     "transcription_model": "voxtral-mini-latest",
     "summary_model": "mistral-large-latest",
-    "language": "fr",
+    "language": "en",
     "diarize": False,
     "last_browser_url": "https://www.dndbeyond.com",
     "auto_update_check": True,
@@ -208,6 +208,11 @@ def load_config() -> dict:
     for k in SHARED_CONFIG_KEYS:
         if k in shared:
             cfg[k] = shared[k]
+
+    # Initialize i18n from config language
+    from . import i18n
+    i18n.set_language(cfg.get("language", "en"))
+
     return cfg
 
 
@@ -249,8 +254,16 @@ def format_duration(seconds: int) -> str:
 
 def format_file_size(size_bytes: int) -> str:
     """Format bytes as human-readable size."""
-    for unit in ("o", "Ko", "Mo", "Go"):
+    from .i18n import tr
+
+    units = (
+        tr("units.bytes"),
+        tr("units.kilobytes"),
+        tr("units.megabytes"),
+        tr("units.gigabytes"),
+    )
+    for unit in units:
         if size_bytes < 1024:
             return f"{size_bytes:.1f} {unit}"
         size_bytes /= 1024
-    return f"{size_bytes:.1f} To"
+    return f"{size_bytes:.1f} {tr('units.terabytes')}"

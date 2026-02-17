@@ -25,9 +25,9 @@ from PySide6.QtWidgets import (
 from . import themed_dialogs as dlg
 from .audio_recorder import AudioRecorder
 from .frost_overlay import GoldFiligreeOverlay
-from .summarizer import _SYSTEM_PROMPT as DEFAULT_SUMMARY_SYSTEM
-from .summarizer import _CONDENSE_PROMPT as DEFAULT_CONDENSE
-from .quest_extractor import _EXTRACTION_PROMPT as DEFAULT_QUEST_EXTRACTION
+from .i18n import set_language, tr
+from .summarizer import get_default_summary_system, get_default_condense
+from .quest_extractor import get_default_quest_extraction
 from .utils import (
     active_campaign_name,
     campaign_drive_config,
@@ -42,10 +42,12 @@ class SettingsDialog(QDialog):
     def __init__(self, config: dict, parent=None):
         super().__init__(parent)
         self._config = dict(config)  # Work on a copy
-        self.setWindowTitle("Paramètres — DnD Logger")
-        self.setMinimumSize(520, 420)
+        self._initial_language = config.get("language", "en")
+        self.setWindowTitle(tr("settings.title"))
         self._build_ui()
         self._populate()
+        self.tabs.setStyleSheet("QTabBar::tab { padding: 8px 14px; }")
+        self.adjustSize()
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
@@ -58,10 +60,10 @@ class SettingsDialog(QDialog):
 
         self.api_key_edit = QLineEdit()
         self.api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
-        self.api_key_edit.setPlaceholderText("Entrez votre cle API Mistral...")
-        api_layout.addRow("Clé API Mistral:", self.api_key_edit)
+        self.api_key_edit.setPlaceholderText(tr("settings.api.key_placeholder"))
+        api_layout.addRow(tr("settings.api.key_label"), self.api_key_edit)
 
-        self.btn_test_api = QPushButton("Tester la connexion")
+        self.btn_test_api = QPushButton(tr("settings.api.btn_test"))
         self.btn_test_api.setObjectName("btn_primary")
         self.btn_test_api.clicked.connect(self._test_api)
         api_layout.addRow("", self.btn_test_api)
@@ -71,9 +73,9 @@ class SettingsDialog(QDialog):
 
         self.summary_model_edit = QLineEdit()
         self.summary_model_edit.setPlaceholderText("mistral-large-latest")
-        api_layout.addRow("Modèle de résumé:", self.summary_model_edit)
+        api_layout.addRow(tr("settings.api.model_label"), self.summary_model_edit)
 
-        self.tabs.addTab(api_tab, "API")
+        self.tabs.addTab(api_tab, tr("settings.tab.api"))
 
         # === Audio Tab ===
         audio_tab = QWidget()
@@ -81,40 +83,51 @@ class SettingsDialog(QDialog):
 
         self.device_combo = QComboBox()
         self._devices = AudioRecorder.list_devices()
-        self.device_combo.addItem("Défaut (automatique)", None)
+        self.device_combo.addItem(tr("settings.audio.device_default"), None)
         for dev in self._devices:
             self.device_combo.addItem(dev["name"], dev["index"])
-        audio_layout.addRow("Périphérique d'entrée:", self.device_combo)
+        audio_layout.addRow(tr("settings.audio.device_label"), self.device_combo)
 
-        self.btn_test_mic = QPushButton("Tester le microphone")
+        self.btn_test_mic = QPushButton(tr("settings.audio.btn_test_mic"))
         self.btn_test_mic.clicked.connect(self._test_mic)
         audio_layout.addRow("", self.btn_test_mic)
 
         self.sample_rate_spin = QSpinBox()
         self.sample_rate_spin.setRange(8000, 48000)
         self.sample_rate_spin.setSingleStep(8000)
-        audio_layout.addRow("Fréquence d'échantillonnage:", self.sample_rate_spin)
+        audio_layout.addRow(tr("settings.audio.sample_rate_label"), self.sample_rate_spin)
 
-        self.tabs.addTab(audio_tab, "Audio")
+        self.tabs.addTab(audio_tab, tr("settings.tab.audio"))
 
         # === Advanced Tab ===
         adv_tab = QWidget()
         adv_layout = QFormLayout(adv_tab)
 
-        self.auto_update_check = QCheckBox("Vérifier les mises à jour au démarrage")
+        self.auto_update_check = QCheckBox(tr("settings.advanced.auto_update"))
         adv_layout.addRow(self.auto_update_check)
 
         self.chunk_spin = QSpinBox()
         self.chunk_spin.setRange(10, 300)
         self.chunk_spin.setSuffix(" min")
-        adv_layout.addRow("Durée max par chunk:", self.chunk_spin)
+        adv_layout.addRow(tr("settings.advanced.chunk_label"), self.chunk_spin)
 
         self.bias_edit = QTextEdit()
         self.bias_edit.setMaximumHeight(120)
-        self.bias_edit.setPlaceholderText("Termes D&D (un par ligne)...")
-        adv_layout.addRow("Biais de contexte D&D:", self.bias_edit)
+        self.bias_edit.setPlaceholderText(tr("settings.advanced.bias_placeholder"))
+        adv_layout.addRow(tr("settings.advanced.bias_label"), self.bias_edit)
 
-        self.tabs.addTab(adv_tab, "Avancé")
+        # Language selector
+        self.language_combo = QComboBox()
+        self.language_combo.addItem("English", "en")
+        self.language_combo.addItem("Français", "fr")
+        self.language_combo.addItem("Deutsch", "de")
+        self.language_combo.addItem("Español", "es")
+        self.language_combo.addItem("Italiano", "it")
+        self.language_combo.addItem("Nederlands", "nl")
+        self.language_combo.addItem("Português", "pt")
+        adv_layout.addRow(tr("settings.advanced.language_label"), self.language_combo)
+
+        self.tabs.addTab(adv_tab, tr("settings.tab.advanced"))
 
         # === Prompts Tab ===
         prompts_tab = QWidget()
@@ -122,14 +135,14 @@ class SettingsDialog(QDialog):
 
         # Prompt selector
         selector_row = QHBoxLayout()
-        selector_row.addWidget(QLabel("Prompt:"))
+        selector_row.addWidget(QLabel(tr("settings.prompts.prompt_label")))
         self.prompt_combo = QComboBox()
         self._prompt_keys = [
-            ("prompt_summary_system", "Résumé de session (system)", DEFAULT_SUMMARY_SYSTEM),
-            ("prompt_condense", "Condensation (texte long)", DEFAULT_CONDENSE),
-            ("prompt_quest_extraction", "Extraction de quêtes", DEFAULT_QUEST_EXTRACTION),
+            ("prompt_summary_system", tr("settings.prompts.summary_system_label"), get_default_summary_system),
+            ("prompt_condense", tr("settings.prompts.condense_label"), get_default_condense),
+            ("prompt_quest_extraction", tr("settings.prompts.quest_extraction_label"), get_default_quest_extraction),
         ]
-        for _key, label, _default in self._prompt_keys:
+        for _key, label, _default_fn in self._prompt_keys:
             self.prompt_combo.addItem(label)
         self.prompt_combo.currentIndexChanged.connect(self._on_prompt_selected)
         selector_row.addWidget(self.prompt_combo, stretch=1)
@@ -144,37 +157,38 @@ class SettingsDialog(QDialog):
         # Prompt editor
         self.prompt_edit = QTextEdit()
         self.prompt_edit.setAcceptRichText(False)
+        self.prompt_edit.textChanged.connect(self._on_prompt_text_changed)
         prompts_layout.addWidget(self.prompt_edit, stretch=1)
 
         # Reset button
         btn_row_prompts = QHBoxLayout()
         btn_row_prompts.addStretch()
-        self.btn_reset_prompt = QPushButton("Réinitialiser ce prompt")
+        self.btn_reset_prompt = QPushButton(tr("settings.prompts.btn_reset"))
         self.btn_reset_prompt.clicked.connect(self._reset_current_prompt)
         btn_row_prompts.addWidget(self.btn_reset_prompt)
         prompts_layout.addLayout(btn_row_prompts)
 
         # Internal storage for edited prompts
         self._prompt_texts = {}
-        self.tabs.addTab(prompts_tab, "Prompts")
+        self.tabs.addTab(prompts_tab, tr("settings.tab.prompts"))
 
         # === Google Drive Tab ===
         drive_tab = QWidget()
         drive_layout = QVBoxLayout(drive_tab)
 
         # Account group
-        account_group = QGroupBox("Compte Google")
+        account_group = QGroupBox(tr("settings.drive.account_group"))
         account_form = QFormLayout(account_group)
 
-        self.drive_status_label = QLabel("Non connecté")
+        self.drive_status_label = QLabel(tr("settings.drive.not_connected"))
         self.drive_status_label.setStyleSheet("color: #8899aa;")
-        account_form.addRow("Statut:", self.drive_status_label)
+        account_form.addRow(tr("settings.drive.status_label"), self.drive_status_label)
 
         btn_row = QHBoxLayout()
-        self.btn_drive_login = QPushButton("Se connecter")
+        self.btn_drive_login = QPushButton(tr("settings.drive.btn_login"))
         self.btn_drive_login.setObjectName("btn_primary")
         self.btn_drive_login.clicked.connect(self._drive_login)
-        self.btn_drive_logout = QPushButton("Se déconnecter")
+        self.btn_drive_logout = QPushButton(tr("settings.drive.btn_logout"))
         self.btn_drive_logout.clicked.connect(self._drive_logout)
         self.btn_drive_logout.setEnabled(False)
         btn_row.addWidget(self.btn_drive_login)
@@ -185,41 +199,41 @@ class SettingsDialog(QDialog):
         drive_layout.addWidget(account_group)
 
         # Campaign sync group
-        campaign_group = QGroupBox("Synchronisation de campagne")
+        campaign_group = QGroupBox(tr("settings.drive.campaign_sync_group"))
         campaign_form = QFormLayout(campaign_group)
 
         campaign_label = QLabel("")
         campaign_label.setStyleSheet("color: #d4af37;")
         self._drive_campaign_label = campaign_label
-        campaign_form.addRow("Campagne active:", campaign_label)
+        campaign_form.addRow(tr("settings.drive.active_campaign_label"), campaign_label)
 
         join_row = QHBoxLayout()
         self.drive_join_id = QLineEdit()
-        self.drive_join_id.setPlaceholderText("Coller l'ID du dossier partagé...")
+        self.drive_join_id.setPlaceholderText(tr("settings.drive.join_placeholder"))
         join_row.addWidget(self.drive_join_id)
-        join_row.addWidget(QLabel("(pour rejoindre)"))
-        campaign_form.addRow("Rejoindre:", join_row)
+        join_row.addWidget(QLabel(tr("settings.drive.join_hint")))
+        campaign_form.addRow(tr("settings.drive.folder_id_label"), join_row)
 
         folder_row = QHBoxLayout()
         self.drive_folder_id_label = QLineEdit()
         self.drive_folder_id_label.setReadOnly(True)
-        self.drive_folder_id_label.setPlaceholderText("Aucun dossier créé")
-        self.btn_copy_folder_id = QPushButton("Copier")
+        self.drive_folder_id_label.setPlaceholderText(tr("settings.drive.no_folder"))
+        self.btn_copy_folder_id = QPushButton(tr("settings.drive.btn_copy"))
         self.btn_copy_folder_id.setFixedWidth(100)
         self.btn_copy_folder_id.clicked.connect(self._copy_folder_id)
         folder_row.addWidget(self.drive_folder_id_label)
         folder_row.addWidget(self.btn_copy_folder_id)
-        campaign_form.addRow("ID du dossier:", folder_row)
+        campaign_form.addRow(tr("settings.drive.folder_id_label"), folder_row)
 
         drive_layout.addWidget(campaign_group)
 
         # Sync toggle
-        self.drive_sync_checkbox = QCheckBox("Activer la synchronisation Google Drive")
+        self.drive_sync_checkbox = QCheckBox(tr("settings.drive.sync_checkbox"))
         self.drive_sync_checkbox.toggled.connect(self._on_sync_toggled)
         drive_layout.addWidget(self.drive_sync_checkbox)
 
         drive_layout.addStretch()
-        self.tabs.addTab(drive_tab, "Google Drive")
+        self.tabs.addTab(drive_tab, tr("settings.tab.drive"))
 
         self._auth_thread = None
         self._auth_worker = None
@@ -253,8 +267,14 @@ class SettingsDialog(QDialog):
         bias = self._config.get("context_bias", [])
         self.bias_edit.setPlainText("\n".join(bias))
 
+        # Language
+        lang = self._config.get("language", "en")
+        lang_idx = self.language_combo.findData(lang)
+        if lang_idx >= 0:
+            self.language_combo.setCurrentIndex(lang_idx)
+
         # Prompts — load custom or show default
-        for key, _label, default in self._prompt_keys:
+        for key, _label, _default_fn in self._prompt_keys:
             custom = self._config.get(key, "")
             self._prompt_texts[key] = custom
         self._on_prompt_selected(0)
@@ -282,9 +302,13 @@ class SettingsDialog(QDialog):
         bias_text = self.bias_edit.toPlainText().strip()
         self._config["context_bias"] = [line.strip() for line in bias_text.split("\n") if line.strip()]
 
+        # Language
+        new_lang = self.language_combo.currentData()
+        self._config["language"] = new_lang
+
         # Prompts — save current editor state, then store all
         self._store_current_prompt()
-        for key, _label, _default in self._prompt_keys:
+        for key, _label, _default_fn in self._prompt_keys:
             self._config[key] = self._prompt_texts.get(key, "")
 
         # Drive settings — write into campaigns dict
@@ -300,6 +324,11 @@ class SettingsDialog(QDialog):
         self._config["campaigns"][cname]["drive_sync_enabled"] = self.drive_sync_checkbox.isChecked()
 
         save_config(self._config)
+
+        # Apply language change immediately (no restart needed)
+        if new_lang != self._initial_language:
+            set_language(new_lang)
+
         self.accept()
 
     def get_config(self) -> dict:
@@ -308,9 +337,9 @@ class SettingsDialog(QDialog):
     # ── Prompts ────────────────────────────────────────────
 
     _PLACEHOLDER_HINTS = {
-        "prompt_summary_system": "Variables: aucune (prompt système fixe)",
-        "prompt_condense": "Variables: {text}",
-        "prompt_quest_extraction": "Variables: {campaign_name}, {current_quests}, {summary}",
+        "prompt_summary_system": "settings.prompts.hint.summary_system",
+        "prompt_condense": "settings.prompts.hint.condense",
+        "prompt_quest_extraction": "settings.prompts.hint.quest_extraction",
     }
 
     def _on_prompt_selected(self, index: int):
@@ -318,20 +347,29 @@ class SettingsDialog(QDialog):
         # Save text of previously selected prompt
         self._store_current_prompt()
         self._current_prompt_index = index
-        key, _label, default = self._prompt_keys[index]
+        key, _label, default_fn = self._prompt_keys[index]
         custom = self._prompt_texts.get(key, "")
-        self.prompt_edit.setPlainText(custom if custom else default)
-        self.prompt_info_label.setText(self._PLACEHOLDER_HINTS.get(key, ""))
+        self.prompt_edit.setPlainText(custom if custom else default_fn())
+        hint_key = self._PLACEHOLDER_HINTS.get(key, "")
+        self.prompt_info_label.setText(tr(hint_key) if hint_key else "")
         self.btn_reset_prompt.setEnabled(bool(custom))
+
+    def _on_prompt_text_changed(self):
+        """Enable the reset button when the editor text differs from default."""
+        if not hasattr(self, "_current_prompt_index"):
+            return
+        _key, _label, default_fn = self._prompt_keys[self._current_prompt_index]
+        text = self.prompt_edit.toPlainText().strip()
+        self.btn_reset_prompt.setEnabled(text != default_fn().strip())
 
     def _store_current_prompt(self):
         """Save the editor text back to the internal dict."""
         if not hasattr(self, "_current_prompt_index"):
             return
-        key, _label, default = self._prompt_keys[self._current_prompt_index]
+        key, _label, default_fn = self._prompt_keys[self._current_prompt_index]
         text = self.prompt_edit.toPlainText().strip()
         # Store empty string if text matches default (= no customization)
-        if text == default.strip():
+        if text == default_fn().strip():
             self._prompt_texts[key] = ""
         else:
             self._prompt_texts[key] = text
@@ -339,8 +377,8 @@ class SettingsDialog(QDialog):
 
     def _reset_current_prompt(self):
         """Reset the current prompt to its built-in default."""
-        key, _label, default = self._prompt_keys[self._current_prompt_index]
-        self.prompt_edit.setPlainText(default)
+        key, _label, default_fn = self._prompt_keys[self._current_prompt_index]
+        self.prompt_edit.setPlainText(default_fn())
         self._prompt_texts[key] = ""
         self.btn_reset_prompt.setEnabled(False)
 
@@ -354,17 +392,17 @@ class SettingsDialog(QDialog):
             creds = load_credentials()
             if creds and creds.valid:
                 email = get_user_email(creds)
-                self.drive_status_label.setText(email or "Connecté")
+                self.drive_status_label.setText(email or tr("settings.drive.connected"))
                 self.drive_status_label.setStyleSheet("color: #7ec83a;")
                 self.btn_drive_login.setEnabled(False)
                 self.btn_drive_logout.setEnabled(True)
             else:
-                self.drive_status_label.setText("Non connecté")
+                self.drive_status_label.setText(tr("settings.drive.not_connected"))
                 self.drive_status_label.setStyleSheet("color: #8899aa;")
                 self.btn_drive_login.setEnabled(True)
                 self.btn_drive_logout.setEnabled(False)
         except ImportError:
-            self.drive_status_label.setText("Dépendances Google manquantes")
+            self.drive_status_label.setText(tr("settings.drive.deps_missing"))
             self.drive_status_label.setStyleSheet("color: #ff6b6b;")
             self.btn_drive_login.setEnabled(False)
 
@@ -374,7 +412,7 @@ class SettingsDialog(QDialog):
             from .drive_auth import start_auth_flow
 
             self.btn_drive_login.setEnabled(False)
-            self.btn_drive_login.setText("Connexion en cours...")
+            self.btn_drive_login.setText(tr("settings.drive.logging_in"))
             self._auth_thread, self._auth_worker = start_auth_flow()
             self._auth_worker.auth_completed.connect(self._on_auth_completed)
             self._auth_worker.auth_failed.connect(self._on_auth_failed)
@@ -382,21 +420,20 @@ class SettingsDialog(QDialog):
         except ImportError:
             dlg.critical(
                 self,
-                "Erreur",
-                "Installez les dépendances Google:\n"
-                "pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib",
+                tr("app.campaign.error_title"),
+                tr("app.campaign.drive_install_deps"),
             )
 
     def _on_auth_completed(self, creds):
         """OAuth2 flow completed successfully."""
-        self.btn_drive_login.setText("Se connecter")
+        self.btn_drive_login.setText(tr("settings.drive.btn_login"))
         self._refresh_drive_status()
 
     def _on_auth_failed(self, error: str):
         """OAuth2 flow failed."""
-        self.btn_drive_login.setText("Se connecter")
+        self.btn_drive_login.setText(tr("settings.drive.btn_login"))
         self.btn_drive_login.setEnabled(True)
-        dlg.warning(self, "Échec de connexion", f"Erreur: {error}")
+        dlg.warning(self, tr("settings.drive.login_failed_title"), tr("settings.drive.login_failed", error=error))
 
     def _drive_logout(self):
         """Disconnect from Google Drive."""
@@ -414,7 +451,7 @@ class SettingsDialog(QDialog):
             return
 
         cname = active_campaign_name(self._config)
-        self.drive_folder_id_label.setPlaceholderText("Création du dossier...")
+        self.drive_folder_id_label.setPlaceholderText(tr("settings.drive.creating_folder"))
 
         self._folder_worker = _FolderWorker(cname)
         self._folder_thread = QThread()
@@ -432,7 +469,7 @@ class SettingsDialog(QDialog):
             self._folder_thread = None
             self._folder_worker = None
         self.drive_folder_id_label.setText(folder_id)
-        self.drive_folder_id_label.setPlaceholderText("Aucun dossier créé")
+        self.drive_folder_id_label.setPlaceholderText(tr("settings.drive.no_folder"))
         # Also store it so _save_and_accept persists it
         cname = active_campaign_name(self._config)
         if "campaigns" not in self._config:
@@ -448,8 +485,8 @@ class SettingsDialog(QDialog):
             self._folder_thread.wait()
             self._folder_thread = None
             self._folder_worker = None
-        self.drive_folder_id_label.setPlaceholderText("Aucun dossier créé")
-        dlg.warning(self, "Google Drive", f"Impossible de créer le dossier: {error}")
+        self.drive_folder_id_label.setPlaceholderText(tr("settings.drive.no_folder"))
+        dlg.warning(self, "Google Drive", tr("settings.drive.folder_error", error=error))
 
     def _copy_folder_id(self):
         """Copy the campaign folder ID to clipboard."""
@@ -463,7 +500,7 @@ class SettingsDialog(QDialog):
         """Test the Mistral API connection."""
         key = self.api_key_edit.text().strip()
         if not key:
-            self.api_status.setText("Entrez une clé API d'abord.")
+            self.api_status.setText(tr("settings.api.enter_key_first"))
             self.api_status.setStyleSheet("color: #ff6b6b;")
             return
         try:
@@ -471,10 +508,10 @@ class SettingsDialog(QDialog):
 
             client = Mistral(api_key=key)
             result = client.models.list()
-            self.api_status.setText("Connexion réussie !")
+            self.api_status.setText(tr("settings.api.test_success"))
             self.api_status.setStyleSheet("color: #7ec83a;")
         except Exception as e:
-            self.api_status.setText(f"Échec: {e}")
+            self.api_status.setText(tr("settings.api.test_fail", error=e))
             self.api_status.setStyleSheet("color: #ff6b6b;")
 
     def _test_mic(self):
@@ -489,11 +526,11 @@ class SettingsDialog(QDialog):
             sd.wait()
             rms = np.sqrt(np.mean(data.astype(np.float32) ** 2))
             if rms > 100:
-                dlg.information(self, "Test Microphone", f"Microphone fonctionne ! (niveau: {rms:.0f})")
+                dlg.information(self, tr("settings.audio.test_title"), tr("settings.audio.test_ok", level=f"{rms:.0f}"))
             else:
-                dlg.warning(self, "Test Microphone", "Signal très faible. Vérifiez votre microphone.")
+                dlg.warning(self, tr("settings.audio.test_title"), tr("settings.audio.test_weak"))
         except Exception as e:
-            dlg.critical(self, "Test Microphone", f"Erreur: {e}")
+            dlg.critical(self, tr("settings.audio.test_title"), tr("settings.audio.test_error", error=e))
 
 
 
@@ -514,7 +551,7 @@ class _FolderWorker(QObject):
 
             creds = load_credentials()
             if not creds:
-                self.error.emit("Non connecté à Google Drive")
+                self.error.emit(tr("settings.drive.not_connected_error"))
                 return
             service = build("drive", "v3", credentials=creds)
             mgr = DriveFolderManager(service)
@@ -530,7 +567,7 @@ class FirstRunWizard(QDialog):
     def __init__(self, config: dict, parent=None):
         super().__init__(parent)
         self._config = config
-        self.setWindowTitle("Bienvenue — DnD Logger")
+        self.setWindowTitle(tr("wizard.title"))
         self.setMinimumSize(520, 440)
         self._build_ui()
         self._apply_theme()
@@ -550,12 +587,12 @@ class FirstRunWizard(QDialog):
                 layout.addSpacing(8)
         else:
             # Fallback text title
-            title = QLabel("Bienvenue dans DnD Logger")
+            title = QLabel(tr("wizard.welcome"))
             title.setObjectName("heading")
             title.setAlignment(Qt.AlignmentFlag.AlignCenter)
             layout.addWidget(title)
 
-        subtitle = QLabel("Votre compagnon de session D&D.\n" "Configurons les éléments essentiels pour commencer.")
+        subtitle = QLabel(tr("wizard.subtitle"))
         subtitle.setObjectName("subheading")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle.setWordWrap(True)
@@ -563,35 +600,35 @@ class FirstRunWizard(QDialog):
         layout.addSpacing(16)
 
         # API Key
-        api_group = QGroupBox("Clé API Mistral")
+        api_group = QGroupBox(tr("wizard.api_group"))
         api_layout = QFormLayout(api_group)
         self.api_key_edit = QLineEdit()
         self.api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
-        self.api_key_edit.setPlaceholderText("Entrez votre clé API Mistral...")
+        self.api_key_edit.setPlaceholderText(tr("wizard.api_placeholder"))
         api_layout.addRow(self.api_key_edit)
 
-        api_hint = QLabel("Obtenez une clé sur console.mistral.ai")
+        api_hint = QLabel(tr("wizard.api_hint"))
         api_hint.setStyleSheet("color: #8899aa; font-size: 11px;")
         api_layout.addRow(api_hint)
         layout.addWidget(api_group)
 
         # Audio
-        audio_group = QGroupBox("Microphone")
+        audio_group = QGroupBox(tr("wizard.mic_group"))
         audio_layout = QFormLayout(audio_group)
         self.device_combo = QComboBox()
         self._devices = AudioRecorder.list_devices()
-        self.device_combo.addItem("Défaut (automatique)", None)
+        self.device_combo.addItem(tr("settings.audio.device_default"), None)
         for dev in self._devices:
             self.device_combo.addItem(dev["name"], dev["index"])
-        audio_layout.addRow("Périphérique:", self.device_combo)
+        audio_layout.addRow(tr("wizard.mic_device_label"), self.device_combo)
         layout.addWidget(audio_group)
 
         layout.addStretch()
 
         # Buttons
         btn_layout = QHBoxLayout()
-        self.btn_skip = QPushButton("Configurer plus tard")
-        self.btn_done = QPushButton("Commencer l'aventure !")
+        self.btn_skip = QPushButton(tr("wizard.btn_skip"))
+        self.btn_done = QPushButton(tr("wizard.btn_done"))
         self.btn_done.setObjectName("btn_gold")
         btn_layout.addWidget(self.btn_skip)
         btn_layout.addStretch()

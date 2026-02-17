@@ -16,6 +16,8 @@ import time
 
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 
+from .i18n import tr
+
 
 class TTSEngine(QObject):
     """TTS playback using Microsoft Edge TTS in a background thread.
@@ -125,7 +127,7 @@ class TTSEngine(QObject):
     def _on_speak(self, text: str):
         """Generate and play speech with pipelined sentence generation."""
         if not self._is_available:
-            self.error.emit("TTS non disponible.")
+            self.error.emit(tr("tts.error.unavailable"))
             return
         try:
             clean = self._clean_text(text)
@@ -218,7 +220,7 @@ class TTSEngine(QObject):
         except Exception as e:
             self._playing = False
             if not self._stop_requested:
-                self.error.emit(f"Erreur TTS: {e}")
+                self.error.emit(tr("tts.error.generic", error=e))
             else:
                 self.finished.emit()
 

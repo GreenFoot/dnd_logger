@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 
 from .fold_manager import FoldManager
 from .fold_gutter import FoldGutterWidget, GUTTER_WIDTH
+from .i18n import tr
 
 
 def _make_format_icon(letter: str, style: str = "", size: int = 20) -> QIcon:
@@ -317,36 +318,36 @@ class RichTextEditorWidget(QWidget):
         self.btn_bold = QPushButton()
         self.btn_bold.setIcon(_make_format_icon("B", "bold"))
         self.btn_bold.setIconSize(QSize(18, 18))
-        self.btn_bold.setToolTip("Gras (Ctrl+B)")
+        self.btn_bold.setToolTip(tr("editor.tooltip.bold"))
         self.btn_bold.setCheckable(True)
 
         self.btn_italic = QPushButton()
         self.btn_italic.setIcon(_make_format_icon("I", "italic"))
         self.btn_italic.setIconSize(QSize(18, 18))
-        self.btn_italic.setToolTip("Italique (Ctrl+I)")
+        self.btn_italic.setToolTip(tr("editor.tooltip.italic"))
         self.btn_italic.setCheckable(True)
 
         self.btn_underline = QPushButton()
         self.btn_underline.setIcon(_make_format_icon("U", "underline"))
         self.btn_underline.setIconSize(QSize(18, 18))
-        self.btn_underline.setToolTip("Souligner (Ctrl+U)")
+        self.btn_underline.setToolTip(tr("editor.tooltip.underline"))
         self.btn_underline.setCheckable(True)
 
         self.heading_combo = QComboBox()
-        self.heading_combo.addItems(["Normal", "Titre 1", "Titre 2", "Titre 3"])
+        self.heading_combo.addItems([tr("editor.heading.normal"), tr("editor.heading.h1"), tr("editor.heading.h2"), tr("editor.heading.h3")])
         self.heading_combo.setFixedWidth(110)
 
         self.btn_fold_all = QPushButton()
         self.btn_fold_all.setIcon(_make_fold_icon())
         self.btn_fold_all.setIconSize(QSize(18, 18))
-        self.btn_fold_all.setToolTip("Replier tout (Ctrl+Shift+-)")
+        self.btn_fold_all.setToolTip(tr("editor.tooltip.fold_all"))
 
         self.btn_unfold_all = QPushButton()
         self.btn_unfold_all.setIcon(_make_unfold_icon())
         self.btn_unfold_all.setIconSize(QSize(18, 18))
-        self.btn_unfold_all.setToolTip("Déplier tout (Ctrl+Shift+=)")
+        self.btn_unfold_all.setToolTip(tr("editor.tooltip.unfold_all"))
 
-        self.btn_save = QPushButton(" Sauvegarder")
+        self.btn_save = QPushButton(tr("editor.btn.save"))
         self.btn_save.setIcon(_make_save_icon())
         self.btn_save.setIconSize(QSize(16, 16))
         self.btn_save.setObjectName("btn_primary")
@@ -392,16 +393,16 @@ class RichTextEditorWidget(QWidget):
 
         self._search_input = _SearchLineEdit()
         self._search_input.set_editor_widget(self)
-        self._search_input.setPlaceholderText("Rechercher…")
+        self._search_input.setPlaceholderText(tr("editor.search.placeholder"))
         self._search_input.setClearButtonEnabled(True)
 
         self._search_prev = QPushButton("▲")
         self._search_prev.setFixedSize(28, 28)
-        self._search_prev.setToolTip("Précédent (Shift+Enter)")
+        self._search_prev.setToolTip(tr("editor.search.prev_tooltip"))
 
         self._search_next = QPushButton("▼")
         self._search_next.setFixedSize(28, 28)
-        self._search_next.setToolTip("Suivant (Enter)")
+        self._search_next.setToolTip(tr("editor.search.next_tooltip"))
 
         self._search_count = QLabel()
         self._search_count.setObjectName("status_label")
@@ -409,7 +410,7 @@ class RichTextEditorWidget(QWidget):
 
         self._search_close = QPushButton("✕")
         self._search_close.setFixedSize(28, 28)
-        self._search_close.setToolTip("Fermer (Échap)")
+        self._search_close.setToolTip(tr("editor.search.close_tooltip"))
 
         for w in (self._search_input, self._search_prev, self._search_next,
                   self._search_count, self._search_close):
@@ -480,7 +481,7 @@ class RichTextEditorWidget(QWidget):
             self._search_index = 0
             self._goto_match()
         else:
-            self._search_count.setText("0 résultat")
+            self._search_count.setText(tr("editor.search.no_results"))
 
     def _highlight_matches(self):
         selections = []
@@ -683,7 +684,7 @@ class RichTextEditorWidget(QWidget):
         if selection and self._tts_engine and self._tts_engine.is_available:
             from PySide6.QtGui import QAction
             menu.addSeparator()
-            tts_action = QAction("Lire la selection", menu)
+            tts_action = QAction(tr("editor.tts.read_selection"), menu)
             tts_action.triggered.connect(lambda: self._speak_selection())
             menu.addAction(tts_action)
         menu.exec(self.editor.mapToGlobal(pos))
@@ -706,6 +707,33 @@ class RichTextEditorWidget(QWidget):
         if self._fold_by_default:
             self._fold_mgr.fold_all()
         self._fold_gutter.update()
+
+    def retranslate_ui(self):
+        """Re-apply translated strings to all static UI elements."""
+        # Toolbar button tooltips
+        self.btn_bold.setToolTip(tr("editor.tooltip.bold"))
+        self.btn_italic.setToolTip(tr("editor.tooltip.italic"))
+        self.btn_underline.setToolTip(tr("editor.tooltip.underline"))
+        self.btn_fold_all.setToolTip(tr("editor.tooltip.fold_all"))
+        self.btn_unfold_all.setToolTip(tr("editor.tooltip.unfold_all"))
+        self.btn_save.setText(tr("editor.btn.save"))
+
+        # Heading combo — preserve current index
+        idx = self.heading_combo.currentIndex()
+        self.heading_combo.blockSignals(True)
+        self.heading_combo.clear()
+        self.heading_combo.addItems([
+            tr("editor.heading.normal"), tr("editor.heading.h1"),
+            tr("editor.heading.h2"), tr("editor.heading.h3"),
+        ])
+        self.heading_combo.setCurrentIndex(idx)
+        self.heading_combo.blockSignals(False)
+
+        # Search bar
+        self._search_input.setPlaceholderText(tr("editor.search.placeholder"))
+        self._search_prev.setToolTip(tr("editor.search.prev_tooltip"))
+        self._search_next.setToolTip(tr("editor.search.next_tooltip"))
+        self._search_close.setToolTip(tr("editor.search.close_tooltip"))
 
     def get_compact_context(self) -> str:
         """Return last ~4000 chars of plain text for context chaining."""

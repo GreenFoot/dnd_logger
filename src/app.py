@@ -47,6 +47,7 @@ from .settings import FirstRunWizard, SettingsDialog
 from .tts_engine import create_tts_thread
 from .tts_overlay import TTSOverlay
 from . import themed_dialogs as dlg
+from .i18n import tr
 from .updater import start_update_check, start_update_download
 from .utils import (
     SHARED_CONFIG_KEYS,
@@ -118,7 +119,7 @@ class CampaignCreationDialog(QDialog):
         self._drive_folder_id = ""
         self._auth_thread = None
         self._auth_worker = None
-        self.setWindowTitle("Nouvelle campagne")
+        self.setWindowTitle(tr("app.menu.new_campaign").rstrip("."))
         self.setMinimumWidth(460)
         self._build_ui()
         if force:
@@ -128,23 +129,23 @@ class CampaignCreationDialog(QDialog):
         layout = QVBoxLayout(self)
 
         if self._force:
-            hint = QLabel("Aucune campagne trouvée.")
+            hint = QLabel(tr("app.campaign.no_campaigns"))
             hint.setStyleSheet("color: #d4af37; font-size: 13px;")
             layout.addWidget(hint)
             layout.addSpacing(8)
 
         # --- Local creation ---
-        name_label = QLabel("Nom de la campagne:")
+        name_label = QLabel(tr("app.campaign.name_label"))
         layout.addWidget(name_label)
         self._name_edit = QLineEdit()
-        self._name_edit.setPlaceholderText("Ex: Icewind Dale, Curse of Strahd...")
+        self._name_edit.setPlaceholderText(tr("app.campaign.name_placeholder"))
         layout.addWidget(self._name_edit)
 
         layout.addSpacing(4)
 
         create_row = QHBoxLayout()
         create_row.addStretch()
-        self._btn_create = QPushButton("Créer")
+        self._btn_create = QPushButton(tr("app.campaign.btn_create"))
         self._btn_create.setObjectName("btn_primary")
         self._btn_create.clicked.connect(self._on_create)
         create_row.addWidget(self._btn_create)
@@ -153,31 +154,31 @@ class CampaignCreationDialog(QDialog):
         layout.addSpacing(12)
 
         # --- Google Drive section ---
-        drive_group = QGroupBox("Google Drive")
+        drive_group = QGroupBox(tr("app.campaign.drive_group"))
         drive_layout = QVBoxLayout(drive_group)
 
         status_row = QHBoxLayout()
-        status_row.addWidget(QLabel("Statut:"))
-        self._drive_status_label = QLabel("Non connecté")
+        status_row.addWidget(QLabel(tr("app.campaign.drive_status_label")))
+        self._drive_status_label = QLabel(tr("app.campaign.drive_not_connected"))
         self._drive_status_label.setStyleSheet("color: #8899aa;")
         status_row.addWidget(self._drive_status_label)
         status_row.addStretch()
-        self._btn_drive_login = QPushButton("Se connecter")
+        self._btn_drive_login = QPushButton(tr("app.campaign.drive_btn_login"))
         self._btn_drive_login.setObjectName("btn_primary")
         self._btn_drive_login.clicked.connect(self._drive_login)
         status_row.addWidget(self._btn_drive_login)
         drive_layout.addLayout(status_row)
 
         folder_row = QHBoxLayout()
-        folder_row.addWidget(QLabel("ID du dossier:"))
+        folder_row.addWidget(QLabel(tr("app.campaign.drive_folder_id_label")))
         self._folder_id_edit = QLineEdit()
-        self._folder_id_edit.setPlaceholderText("Coller l'ID du dossier partagé...")
+        self._folder_id_edit.setPlaceholderText(tr("app.campaign.drive_folder_placeholder"))
         folder_row.addWidget(self._folder_id_edit)
         drive_layout.addLayout(folder_row)
 
         join_row = QHBoxLayout()
         join_row.addStretch()
-        self._btn_join = QPushButton("Rejoindre")
+        self._btn_join = QPushButton(tr("app.campaign.drive_btn_join"))
         self._btn_join.setObjectName("btn_primary")
         self._btn_join.clicked.connect(self._on_join)
         join_row.addWidget(self._btn_join)
@@ -202,11 +203,11 @@ class CampaignCreationDialog(QDialog):
     def _on_create(self):
         name = self._name_edit.text().strip()
         if not name:
-            self._status_label.setText("Le nom ne peut pas être vide.")
+            self._status_label.setText(tr("app.campaign.name_empty"))
             self._status_label.setStyleSheet("color: #ff6b6b; font-size: 11px;")
             return
         if name in self._existing:
-            self._status_label.setText(f'La campagne "{name}" existe déjà.')
+            self._status_label.setText(tr("app.campaign.name_exists", name=name))
             self._status_label.setStyleSheet("color: #ff6b6b; font-size: 11px;")
             return
         self._campaign_name = name
@@ -221,15 +222,15 @@ class CampaignCreationDialog(QDialog):
             creds = load_credentials()
             if creds and creds.valid:
                 email = get_user_email(creds)
-                self._drive_status_label.setText(email or "Connecté")
+                self._drive_status_label.setText(email or tr("app.campaign.drive_connected"))
                 self._drive_status_label.setStyleSheet("color: #7ec83a;")
                 self._btn_drive_login.setEnabled(False)
             else:
-                self._drive_status_label.setText("Non connecté")
+                self._drive_status_label.setText(tr("app.campaign.drive_not_connected"))
                 self._drive_status_label.setStyleSheet("color: #8899aa;")
                 self._btn_drive_login.setEnabled(True)
         except ImportError:
-            self._drive_status_label.setText("Dépendances Google manquantes")
+            self._drive_status_label.setText(tr("app.campaign.drive_deps_missing"))
             self._drive_status_label.setStyleSheet("color: #ff6b6b;")
             self._btn_drive_login.setEnabled(False)
             self._btn_join.setEnabled(False)
@@ -240,7 +241,7 @@ class CampaignCreationDialog(QDialog):
             from .drive_auth import start_auth_flow
 
             self._btn_drive_login.setEnabled(False)
-            self._btn_drive_login.setText("Connexion en cours...")
+            self._btn_drive_login.setText(tr("app.campaign.drive_logging_in"))
             self._btn_create.setEnabled(False)
             self._auth_thread, self._auth_worker = start_auth_flow()
             self._auth_worker.auth_completed.connect(self._on_auth_done)
@@ -248,30 +249,29 @@ class CampaignCreationDialog(QDialog):
             self._auth_thread.start()
         except ImportError:
             dlg.critical(
-                self, "Erreur",
-                "Installez les dépendances Google:\n"
-                "pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib",
+                self, tr("app.campaign.error_title"),
+                tr("app.campaign.drive_install_deps"),
             )
 
     def _on_auth_done(self, creds):
-        self._btn_drive_login.setText("Se connecter")
+        self._btn_drive_login.setText(tr("app.campaign.drive_btn_login"))
         self._btn_create.setEnabled(True)
         self._refresh_drive_status()
-        self._status_label.setText("Connecté ! Collez l'ID du dossier et cliquez Rejoindre.")
+        self._status_label.setText(tr("app.campaign.drive_login_success"))
         self._status_label.setStyleSheet("color: #7ec83a; font-size: 11px;")
 
     def _on_auth_failed(self, error: str):
-        self._btn_drive_login.setText("Se connecter")
+        self._btn_drive_login.setText(tr("app.campaign.drive_btn_login"))
         self._btn_drive_login.setEnabled(True)
         self._btn_create.setEnabled(True)
-        self._status_label.setText(f"Échec de connexion: {error}")
+        self._status_label.setText(tr("app.campaign.drive_login_failed", error=error))
         self._status_label.setStyleSheet("color: #ff6b6b; font-size: 11px;")
 
     def _on_join(self):
         """Resolve folder name from Drive and accept."""
         folder_id = self._folder_id_edit.text().strip()
         if not folder_id:
-            self._status_label.setText("Collez l'ID du dossier partagé.")
+            self._status_label.setText(tr("app.campaign.drive_paste_id"))
             self._status_label.setStyleSheet("color: #ff6b6b; font-size: 11px;")
             return
 
@@ -280,13 +280,13 @@ class CampaignCreationDialog(QDialog):
 
             creds = load_credentials()
             if not creds:
-                self._status_label.setText("Connectez-vous d'abord à Google Drive.")
+                self._status_label.setText(tr("app.campaign.drive_login_first"))
                 self._status_label.setStyleSheet("color: #ff6b6b; font-size: 11px;")
                 return
 
             from googleapiclient.discovery import build
 
-            self._status_label.setText("Résolution du dossier...")
+            self._status_label.setText(tr("app.campaign.drive_resolving"))
             self._status_label.setStyleSheet("color: #d4af37; font-size: 11px;")
             QApplication.processEvents()
 
@@ -295,12 +295,12 @@ class CampaignCreationDialog(QDialog):
             folder_name = result.get("name", "").strip()
 
             if not folder_name:
-                self._status_label.setText("Impossible de résoudre le nom du dossier.")
+                self._status_label.setText(tr("app.campaign.drive_resolve_failed"))
                 self._status_label.setStyleSheet("color: #ff6b6b; font-size: 11px;")
                 return
 
             if folder_name in self._existing:
-                self._status_label.setText(f'La campagne "{folder_name}" existe déjà.')
+                self._status_label.setText(tr("app.campaign.name_exists", name=folder_name))
                 self._status_label.setStyleSheet("color: #ff6b6b; font-size: 11px;")
                 return
 
@@ -308,10 +308,10 @@ class CampaignCreationDialog(QDialog):
             self._drive_folder_id = folder_id
             self.accept()
         except ImportError:
-            self._status_label.setText("Dépendances Google manquantes.")
+            self._status_label.setText(tr("app.campaign.drive_deps_missing"))
             self._status_label.setStyleSheet("color: #ff6b6b; font-size: 11px;")
         except Exception as e:
-            self._status_label.setText(f"Erreur Drive: {e}")
+            self._status_label.setText(tr("app.campaign.drive_error", error=e))
             self._status_label.setStyleSheet("color: #ff6b6b; font-size: 11px;")
 
     def get_result(self) -> tuple[str, str]:
@@ -577,12 +577,12 @@ class DndLoggerApp(QMainWindow):
             return
         from .drive_sync import SyncStatus
         labels = {
-            SyncStatus.DISABLED: ("Drive: désactivé", "#8899aa"),
-            SyncStatus.IDLE: ("Drive: synchronisé", "#7ec83a"),
-            SyncStatus.SYNCING: ("Drive: synchronisation...", "#d4af37"),
-            SyncStatus.CONFLICT: ("Drive: conflit détecté", "#ff6b6b"),
-            SyncStatus.ERROR: ("Drive: erreur", "#ff6b6b"),
-            SyncStatus.OFFLINE: ("Drive: hors ligne", "#8899aa"),
+            SyncStatus.DISABLED: (tr("app.sync.disabled"), "#8899aa"),
+            SyncStatus.IDLE: (tr("app.sync.idle"), "#7ec83a"),
+            SyncStatus.SYNCING: (tr("app.sync.syncing"), "#d4af37"),
+            SyncStatus.CONFLICT: (tr("app.sync.conflict"), "#ff6b6b"),
+            SyncStatus.ERROR: (tr("app.sync.error"), "#ff6b6b"),
+            SyncStatus.OFFLINE: (tr("app.sync.offline"), "#8899aa"),
         }
         text, color = labels.get(status, ("Drive: ?", "#8899aa"))
         self._sync_status_label.setText(text)
@@ -716,11 +716,11 @@ class DndLoggerApp(QMainWindow):
             return None
 
         dlg = QDialog(self)
-        dlg.setWindowTitle("Choisir un thème")
+        dlg.setWindowTitle(tr("app.theme.title"))
         dlg.setMinimumWidth(350)
         layout = QVBoxLayout(dlg)
 
-        label = QLabel("Aucun thème automatique trouvé pour cette campagne.\nChoisissez un thème visuel:")
+        label = QLabel(tr("app.theme.label"))
         layout.addWidget(label)
 
         combo = QComboBox()
@@ -930,15 +930,15 @@ class DndLoggerApp(QMainWindow):
 
         # Journal tab (first)
         if os.path.exists(quill_icon_path):
-            self.right_tabs.addTab(self.journal, QIcon(quill_icon_path), "Journal")
+            self.right_tabs.addTab(self.journal, QIcon(quill_icon_path), tr("app.tab.journal"))
         else:
-            self.right_tabs.addTab(self.journal, "Journal")
+            self.right_tabs.addTab(self.journal, tr("app.tab.journal"))
 
         # Quest Log tab (second)
         if os.path.exists(quill_icon_path):
-            self.right_tabs.addTab(self.quest_log, QIcon(quill_icon_path), "Quest Log")
+            self.right_tabs.addTab(self.quest_log, QIcon(quill_icon_path), tr("app.tab.quest_log"))
         else:
-            self.right_tabs.addTab(self.quest_log, "Quest Log")
+            self.right_tabs.addTab(self.quest_log, tr("app.tab.quest_log"))
 
         # Session tab (third)
         self.session_tab = SessionTab(
@@ -947,7 +947,7 @@ class DndLoggerApp(QMainWindow):
             quest_log_widget=self.quest_log,
             tts_engine=self._tts_engine,
         )
-        self.right_tabs.addTab(self.session_tab, "Session")
+        self.right_tabs.addTab(self.session_tab, tr("app.tab.session"))
         self._session_tab_index = self.right_tabs.indexOf(self.session_tab)
         self._update_session_icon()
 
@@ -964,41 +964,42 @@ class DndLoggerApp(QMainWindow):
 
     def _build_menu(self):
         menu_bar = self.menuBar()
+        menu_bar.clear()
 
         # Fichier menu
-        file_menu = menu_bar.addMenu("Fichier")
+        file_menu = menu_bar.addMenu(tr("app.menu.file"))
 
-        settings_action = QAction("Paramètres...", self)
+        settings_action = QAction(tr("app.menu.settings"), self)
         settings_action.setShortcut(QKeySequence("Ctrl+,"))
         settings_action.triggered.connect(self._open_settings)
         file_menu.addAction(settings_action)
 
-        update_action = QAction("Vérifier les mises à jour...", self)
+        update_action = QAction(tr("app.menu.check_updates"), self)
         update_action.triggered.connect(self._manual_update_check)
         file_menu.addAction(update_action)
 
         file_menu.addSeparator()
 
-        save_action = QAction("Sauvegarder", self)
+        save_action = QAction(tr("app.menu.save"), self)
         save_action.setShortcut(QKeySequence("Ctrl+S"))
         save_action.triggered.connect(self._save_active_editor)
         file_menu.addAction(save_action)
 
         file_menu.addSeparator()
 
-        quit_action = QAction("Quitter", self)
+        quit_action = QAction(tr("app.menu.quit"), self)
         quit_action.setShortcut(QKeySequence("Ctrl+Q"))
         quit_action.triggered.connect(self.close)
         file_menu.addAction(quit_action)
 
         # Campaign menu
-        self._campaign_menu = menu_bar.addMenu("Campagne")
+        self._campaign_menu = menu_bar.addMenu(tr("app.menu.campaign"))
         self._rebuild_campaign_menu()
 
         # Session menu
-        session_menu = menu_bar.addMenu("Session")
+        session_menu = menu_bar.addMenu(tr("app.menu.session"))
 
-        record_action = QAction("Enregistrer / Arrêter", self)
+        record_action = QAction(tr("app.menu.record_stop"), self)
         record_action.setShortcut(QKeySequence("Ctrl+R"))
         record_action.triggered.connect(self._toggle_recording)
         session_menu.addAction(record_action)
@@ -1018,15 +1019,15 @@ class DndLoggerApp(QMainWindow):
 
         self._campaign_menu.addSeparator()
 
-        new_action = QAction("Nouvelle campagne...", self)
+        new_action = QAction(tr("app.menu.new_campaign"), self)
         new_action.triggered.connect(self._new_campaign)
         self._campaign_menu.addAction(new_action)
 
-        delete_action = QAction("Supprimer la campagne...", self)
+        delete_action = QAction(tr("app.menu.delete_campaign"), self)
         delete_action.triggered.connect(self._delete_campaign)
         self._campaign_menu.addAction(delete_action)
 
-        restore_action = QAction("Restaurer une campagne...", self)
+        restore_action = QAction(tr("app.menu.restore_campaign"), self)
         restore_action.triggered.connect(self._restore_campaign)
         self._campaign_menu.addAction(restore_action)
 
@@ -1034,7 +1035,7 @@ class DndLoggerApp(QMainWindow):
         available = self._available_themes()
         if available:
             self._campaign_menu.addSeparator()
-            theme_menu = self._campaign_menu.addMenu("Thème")
+            theme_menu = self._campaign_menu.addMenu(tr("app.menu.theme"))
             theme_group = QActionGroup(theme_menu)
             theme_group.setExclusive(True)
             for tid, tdata in sorted(available.items(), key=lambda x: x[1].get("display_name", "")):
@@ -1065,16 +1066,15 @@ class DndLoggerApp(QMainWindow):
             return
 
         name, ok = dlg.get_item(
-            self, "Supprimer une campagne",
-            "Choisissez la campagne à supprimer :", campaigns, 0, False
+            self, tr("app.campaign.delete_title"),
+            tr("app.campaign.delete_label"), campaigns, 0, False
         )
         if not ok:
             return
 
         if not dlg.question(
-            self, "Confirmer la suppression",
-            f"Supprimer la campagne \"{name}\" ?\n"
-            "Les fichiers seront déplacés dans campaigns/_trash/.",
+            self, tr("app.campaign.delete_confirm_title"),
+            tr("app.campaign.delete_confirm", name=name),
         ):
             return
 
@@ -1116,19 +1116,19 @@ class DndLoggerApp(QMainWindow):
         """Restore a previously deleted campaign from _trash/."""
         trash_dir = os.path.join(project_root(), "campaigns", "_trash")
         if not os.path.isdir(trash_dir):
-            dlg.information(self, "Restaurer", "Aucune campagne archivée.")
+            dlg.information(self, tr("app.campaign.restore_title"), tr("app.campaign.restore_none"))
             return
         trashed = sorted(
             d for d in os.listdir(trash_dir)
             if os.path.isdir(os.path.join(trash_dir, d))
         )
         if not trashed:
-            dlg.information(self, "Restaurer", "Aucune campagne archivée.")
+            dlg.information(self, tr("app.campaign.restore_title"), tr("app.campaign.restore_none"))
             return
 
         name, ok = dlg.get_item(
-            self, "Restaurer une campagne",
-            "Choisissez la campagne à restaurer :", trashed, 0, False
+            self, tr("app.campaign.restore_title"),
+            tr("app.campaign.restore_label"), trashed, 0, False
         )
         if not ok:
             return
@@ -1222,12 +1222,19 @@ class DndLoggerApp(QMainWindow):
                 self._refresh_config()
 
     def _open_settings(self):
+        old_lang = self._config.get("language", "en")
         drive_cfg = campaign_drive_config(self._config)
         was_sync_enabled = drive_cfg.get("drive_sync_enabled", False)
         dlg = SettingsDialog(self._config, self)
         if dlg.exec():
             self._config = dlg.get_config()
             self._refresh_config()
+
+            # Live language switch — retranslate all UI if language changed
+            new_lang = self._config.get("language", "en")
+            if new_lang != old_lang:
+                self.retranslate_ui()
+
             # (Re)start or stop sync engine based on settings change
             new_drive_cfg = campaign_drive_config(self._config)
             now_sync_enabled = new_drive_cfg.get("drive_sync_enabled", False)
@@ -1244,6 +1251,24 @@ class DndLoggerApp(QMainWindow):
         # Trigger shared_config upload if sync is active
         if self._sync_engine:
             self._sync_engine.trigger_upload("shared_config.json")
+
+    def retranslate_ui(self):
+        """Re-apply translated strings after a language change."""
+        # Rebuild menus (clear + recreate)
+        self._build_menu()
+
+        # Tab titles
+        self.right_tabs.setTabText(
+            self.right_tabs.indexOf(self.journal), tr("app.tab.journal"))
+        self.right_tabs.setTabText(
+            self.right_tabs.indexOf(self.quest_log), tr("app.tab.quest_log"))
+        self.right_tabs.setTabText(
+            self.right_tabs.indexOf(self.session_tab), tr("app.tab.session"))
+
+        # Child widgets
+        self.session_tab.retranslate_ui()
+        self.journal.retranslate_ui()
+        self.quest_log.retranslate_ui()
 
     def _toggle_recording(self):
         """Toggle recording from keyboard shortcut."""
@@ -1274,8 +1299,8 @@ class DndLoggerApp(QMainWindow):
         self._update_worker.no_update.connect(self._on_no_update)
         self._update_worker.error.connect(
             lambda msg: dlg.warning(
-                self, "Mise à jour",
-                f"Impossible de vérifier les mises à jour.\n{msg}",
+                self, tr("app.update.title"),
+                tr("app.update.check_error", msg=msg),
             )
         )
         self._update_worker.no_update.connect(self._on_update_thread_done)
@@ -1286,14 +1311,14 @@ class DndLoggerApp(QMainWindow):
         self._on_update_thread_done()
 
         dlg = QDialog(self)
-        dlg.setWindowTitle("Mise à jour disponible")
+        dlg.setWindowTitle(tr("app.update.available_title"))
         dlg.setFixedWidth(400)
 
         layout = QVBoxLayout(dlg)
         layout.setSpacing(12)
         layout.setContentsMargins(20, 20, 20, 16)
 
-        title = QLabel(f"Version {tag} disponible !")
+        title = QLabel(tr("app.update.version_available", tag=tag))
         title.setStyleSheet("font-size: 14px; font-weight: bold;")
         layout.addWidget(title)
 
@@ -1310,7 +1335,7 @@ class DndLoggerApp(QMainWindow):
             details_text.setMaximumHeight(150)
             details_text.setVisible(False)
 
-            btn_details = QPushButton("Détails ▸")
+            btn_details = QPushButton(tr("app.update.btn_details") + " ▸")
             btn_details.setFlat(True)
             btn_details.setCursor(Qt.CursorShape.PointingHandCursor)
             btn_details.setStyleSheet(
@@ -1321,7 +1346,7 @@ class DndLoggerApp(QMainWindow):
             def _toggle_details():
                 visible = not details_text.isVisible()
                 details_text.setVisible(visible)
-                btn_details.setText("Détails ▾" if visible else "Détails ▸")
+                btn_details.setText(tr("app.update.btn_details") + (" ▾" if visible else " ▸"))
                 dlg.adjustSize()
 
             btn_details.clicked.connect(_toggle_details)
@@ -1330,8 +1355,8 @@ class DndLoggerApp(QMainWindow):
 
         btn_row = QHBoxLayout()
         btn_row.setSpacing(10)
-        btn_later = QPushButton("Plus tard")
-        btn_download = QPushButton("Télécharger et installer")
+        btn_later = QPushButton(tr("app.update.btn_later"))
+        btn_download = QPushButton(tr("app.update.btn_download"))
         btn_download.setObjectName("btn_gold")
         btn_row.addStretch()
         btn_row.addWidget(btn_later)
@@ -1346,8 +1371,8 @@ class DndLoggerApp(QMainWindow):
 
     def _on_no_update(self):
         dlg.information(
-            self, "Mise à jour",
-            f"Vous utilisez la dernière version (v{__version__}).",
+            self, tr("app.update.title"),
+            tr("app.update.no_update", version=__version__),
         )
 
     def _on_update_check_error(self, msg):
@@ -1367,9 +1392,9 @@ class DndLoggerApp(QMainWindow):
         self._download_thread, self._download_worker = start_update_download(url)
 
         self._progress_dlg = QProgressDialog(
-            "Téléchargement de la mise à jour...", "Annuler", 0, 100, self
+            tr("app.update.downloading"), tr("app.update.btn_cancel"), 0, 100, self
         )
-        self._progress_dlg.setWindowTitle("Mise à jour")
+        self._progress_dlg.setWindowTitle(tr("app.update.title"))
         self._progress_dlg.setWindowModality(Qt.WindowModality.WindowModal)
         self._progress_dlg.setMinimumDuration(0)
         self._progress_dlg.canceled.connect(self._download_worker.cancel)
@@ -1384,22 +1409,20 @@ class DndLoggerApp(QMainWindow):
             self._progress_dlg.setMaximum(total)
             self._progress_dlg.setValue(downloaded)
             self._progress_dlg.setLabelText(
-                f"Téléchargement... {format_file_size(downloaded)} / {format_file_size(total)}"
+                tr("app.update.download_progress", downloaded=format_file_size(downloaded), total=format_file_size(total))
             )
         else:
             self._progress_dlg.setMaximum(0)
             self._progress_dlg.setLabelText(
-                f"Téléchargement... {format_file_size(downloaded)}"
+                tr("app.update.download_progress_unknown", downloaded=format_file_size(downloaded))
             )
 
     def _on_download_completed(self, path):
         self._progress_dlg.close()
         self._cleanup_download_thread()
         if dlg.question(
-            self, "Mise à jour",
-            "Téléchargement terminé.\n"
-            "L'application va se fermer pour installer la mise à jour.\n\n"
-            "Continuer ?",
+            self, tr("app.update.title"),
+            tr("app.update.download_done"),
         ):
             CREATE_NEW_PROCESS_GROUP = 0x00000200
             DETACHED_PROCESS = 0x00000008
@@ -1414,8 +1437,8 @@ class DndLoggerApp(QMainWindow):
         self._progress_dlg.close()
         self._cleanup_download_thread()
         dlg.warning(
-            self, "Mise à jour",
-            f"Erreur lors du téléchargement.\n{msg}",
+            self, tr("app.update.title"),
+            tr("app.update.download_error", msg=msg),
         )
 
     def _cleanup_update_thread(self):

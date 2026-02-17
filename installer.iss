@@ -29,18 +29,59 @@ CloseApplications=yes
 RestartApplications=yes
 
 [Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "french"; MessagesFile: "compiler:Languages\French.isl"
+Name: "german"; MessagesFile: "compiler:Languages\German.isl"
+Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
+Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
+Name: "dutch"; MessagesFile: "compiler:Languages\Dutch.isl"
+Name: "portuguese"; MessagesFile: "compiler:Languages\Portuguese.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Creer un raccourci sur le Bureau"; GroupDescription: "Raccourcis:"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
 Source: "dist\DnD Logger\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{group}\Desinstaller {#MyAppName}"; Filename: "{uninstallexe}"
+Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{userdesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Lancer {#MyAppName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+function GetAppLangCode(): String;
+var
+  Lang: String;
+begin
+  Lang := ActiveLanguage;
+  if Lang = 'french' then Result := 'fr'
+  else if Lang = 'german' then Result := 'de'
+  else if Lang = 'spanish' then Result := 'es'
+  else if Lang = 'italian' then Result := 'it'
+  else if Lang = 'dutch' then Result := 'nl'
+  else if Lang = 'portuguese' then Result := 'pt'
+  else Result := 'en';
+end;
+
+procedure WriteLanguageConfig;
+var
+  ConfigDir, ConfigPath, Json: String;
+begin
+  ConfigDir := ExpandConstant('{userappdata}\{#MyAppName}');
+  ForceDirectories(ConfigDir);
+  ConfigPath := ConfigDir + '\config.json';
+  if not FileExists(ConfigPath) then
+  begin
+    Json := '{' + #13#10 + '  "language": "' + GetAppLangCode + '"' + #13#10 + '}';
+    SaveStringToFile(ConfigPath, Json, False);
+  end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    WriteLanguageConfig;
+end;

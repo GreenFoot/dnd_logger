@@ -14,10 +14,10 @@ except Exception:
 
 # PyInstaller: QWebEngine needs explicit paths to resources in frozen builds.
 if hasattr(sys, "_MEIPASS"):
-    _qt6_dir = os.path.join(sys._MEIPASS, "PySide6", "Qt6")
-    os.environ["QTWEBENGINE_RESOURCES_PATH"] = os.path.join(_qt6_dir, "resources")
-    os.environ["QTWEBENGINE_LOCALES_PATH"] = os.path.join(_qt6_dir, "translations", "qtwebengine_locales")
-    os.environ["QTWEBENGINEPROCESS_PATH"] = os.path.join(_qt6_dir, "bin", "QtWebEngineProcess.exe")
+    _pyside_dir = os.path.join(sys._MEIPASS, "PySide6")
+    os.environ["QTWEBENGINE_RESOURCES_PATH"] = os.path.join(_pyside_dir, "resources")
+    os.environ["QTWEBENGINE_LOCALES_PATH"] = os.path.join(_pyside_dir, "translations", "qtwebengine_locales")
+    os.environ["QTWEBENGINEPROCESS_PATH"] = os.path.join(_pyside_dir, "QtWebEngineProcess.exe")
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox"
 
 

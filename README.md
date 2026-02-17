@@ -1,14 +1,14 @@
 # D&D Logger
 
-A PyQt6 desktop application for recording, transcribing, and summarizing Dungeons & Dragons sessions. Features an embedded D&D Beyond browser, a quest log, a journal, and an AI-powered transcription/summarization pipeline using the Mistral API.
+A PySide6 desktop application for recording, transcribing, and summarizing Dungeons & Dragons sessions. Features an embedded D&D Beyond browser, a quest log, a journal, and an AI-powered transcription/summarization pipeline using the Mistral API.
 
-The UI is in French. D&D-specific terms remain in English.
+Available in 7 languages (English, French, German, Spanish, Italian, Dutch, Portuguese) with live switching. D&D-specific terms remain in English across all languages.
 
 ## Features
 
 - **Audio recording** of game sessions with pause/resume (WAV, converted to FLAC for transcription)
 - **AI transcription** via Mistral Voxtral with D&D-specific context bias and speaker diarization
-- **AI summarization** in epic French fantasy style, with context chaining for long sessions
+- **AI summarization** in epic fantasy style, with context chaining for long sessions
 - **AI quest extraction** from session summaries with inline diff preview for review
 - **Embedded D&D Beyond browser** with persistent login (cookies saved across sessions)
 - **Quest log** -- rich text editor with auto-save, section folding, and search (Ctrl+F)
@@ -16,7 +16,10 @@ The UI is in French. D&D-specific terms remain in English.
 - **Google Drive sync** -- share quest log, journal, and campaign settings across players via a shared Google Drive folder
 - **Text-to-speech** readback of summaries with animated overlay controls (play/pause/stop)
 - **Audio import** -- import existing audio files (FLAC, WAV, MP3, OGG, M4A) for transcription
-- **Dark fantasy theme** (Cinzel font, frost/aurora overlays)
+- **7 campaign themes** -- Icewind Dale, Curse of Strahd, Descent into Avernus, Tomb of Annihilation, Storm King's Thunder, Waterdeep Dragon Heist, Out of the Abyss -- with themed QSS, backgrounds, snow/particle overlays, and aurora shimmer effects
+- **Editable AI prompts** -- customize the summarization, condensation, and quest extraction prompts in Settings
+- **Multilingual UI** -- 7 languages with live switching (no restart required)
+- **Dark fantasy styling** (Cinzel font, gold filigree overlays, themed dialogs)
 
 ## Project Structure
 
@@ -30,7 +33,7 @@ dnd_logger/
 │   ├── app.py                 # QMainWindow -- splitter layout, menus, sync engine init
 │   ├── audio_recorder.py      # sounddevice InputStream -> queue -> writer thread -> WAV
 │   ├── transcriber.py         # Audio chunking (FLAC) + Mistral Voxtral API pipeline
-│   ├── summarizer.py          # Mistral chat summarization (epic French fantasy style)
+│   ├── summarizer.py          # Mistral chat summarization (epic fantasy style)
 │   ├── session_tab.py         # Record -> transcribe -> summarize UI tab
 │   ├── quest_log.py           # Rich text quest log with auto-save
 │   ├── journal.py             # Rich text journal editor
@@ -40,21 +43,38 @@ dnd_logger/
 │   ├── fold_gutter.py         # Fold toggle gutter widget for editors
 │   ├── diff_utils.py          # Shared inline diff highlighting utilities
 │   ├── web_panel.py           # QWebEngineView with persistent D&D Beyond profile
-│   ├── settings.py            # SettingsDialog + FirstRunWizard (API, Audio, Advanced, Drive)
+│   ├── settings.py            # SettingsDialog + FirstRunWizard (API, Audio, Advanced, Prompts, Drive)
+│   ├── themed_dialogs.py      # Themed QMessageBox/QInputDialog replacements
 │   ├── drive_credentials.py   # OAuth2 client config (gitignored, user-provided)
 │   ├── drive_auth.py          # Google OAuth2 flow, token persistence
 │   ├── drive_sync.py          # Google Drive sync engine (poll, upload, conflict detection)
 │   ├── sync_conflict_dialog.py # Conflict resolution UI (local vs remote vs merge)
-│   ├── tts_engine.py          # pyttsx3 French voice TTS
+│   ├── tts_engine.py          # pyttsx3 TTS engine
 │   ├── tts_overlay.py         # Animated TTS playback overlay (play/pause/stop)
-│   ├── snow_particles.py      # Snow particle overlay effect
-│   ├── frost_overlay.py       # Gold filigree / frost overlay
+│   ├── snow_particles.py      # Snow/particle and aurora shimmer overlays
+│   ├── frost_overlay.py       # Gold filigree corner overlay
+│   ├── i18n/                  # Internationalization module
+│   │   ├── __init__.py        # tr() lookup, set_language(), get_language()
+│   │   ├── en.py              # English translations (source of truth)
+│   │   ├── fr.py              # French
+│   │   ├── de.py              # German
+│   │   ├── es.py              # Spanish
+│   │   ├── it.py              # Italian
+│   │   ├── nl.py              # Dutch
+│   │   └── pt.py              # Portuguese
 │   └── utils.py               # Paths, config I/O (personal + shared split), helpers
 └── assets/
     ├── fonts/                 # Cinzel font family (.ttf)
-    ├── images/                # Icons, backgrounds, banners
+    ├── images/                # Icons, backgrounds, tab icons, banners, textures
     └── styles/
-        └── icewind.qss        # Dark fantasy Qt stylesheet
+        ├── theme_meta.json    # Theme metadata (palette, overlays, particle config)
+        ├── icewind_dale.qss   # Icewind Dale theme (default)
+        ├── curse_of_strahd.qss
+        ├── descent_into_avernus.qss
+        ├── tomb_of_annihilation.qss
+        ├── storm_kings_thunder.qss
+        ├── waterdeep_dragon_heist.qss
+        └── out_of_the_abyss.qss
 ```
 
 ## Requirements
@@ -65,8 +85,8 @@ dnd_logger/
 ### Python Dependencies
 
 ```
-PyQt6 >= 6.6.0
-PyQt6-WebEngine >= 6.6.0
+PySide6 >= 6.6.0
+PySide6-WebEngine >= 6.6.0           # note: included via PySide6-Addons on some installs
 sounddevice >= 0.4.6
 soundfile >= 0.12.1
 mistralai >= 1.0.0
@@ -184,7 +204,7 @@ The output is `installer_output/DnDLogger_Setup.exe`.
 - Creates a Start Menu entry with an uninstaller
 - Optionally creates a desktop shortcut
 - Offers to launch the app after installation
-- French language UI
+- Multilingual UI (follows app language setting)
 
 ### Install locations summary
 
@@ -205,8 +225,8 @@ To distribute the app, share **one** of the following:
 1. **Recording:** `sounddevice` InputStream captures audio via PortAudio callback into a queue, a writer thread writes to WAV in real time (constant memory usage)
 2. **Chunking:** If the recording exceeds 2.5 hours (configurable), it is split into FLAC chunks with 10-second overlap
 3. **Conversion:** WAV is converted to FLAC before upload (lossless, ~50-60% smaller)
-4. **Transcription:** Each chunk is uploaded to the Mistral Voxtral API with D&D context bias and French language setting. Retries on rate limits (429)
-5. **Summarization:** The transcript is sent to Mistral chat for summarization in epic French fantasy style. Transcripts exceeding 28k characters use two-stage summarization with context chaining
+4. **Transcription:** Each chunk is uploaded to the Mistral Voxtral API with D&D context bias. Retries on rate limits (429)
+5. **Summarization:** The transcript is sent to Mistral chat for summarization in epic fantasy style (language matches the app setting). Transcripts exceeding 28k characters use two-stage summarization with context chaining
 6. **Quest extraction:** Quests mentioned in the summary can be extracted and added to the quest log
 
 ## Configuration
@@ -232,7 +252,7 @@ Settings are split across two files:
 | `chunk_duration_minutes` | `60` | Max chunk duration before splitting |
 | `transcription_model` | `"voxtral-mini-latest"` | Mistral transcription model |
 | `summary_model` | `"mistral-large-latest"` | Mistral summarization model |
-| `language` | `"fr"` | Transcription language |
+| `language` | `"en"` | UI and AI prompt language (en/fr/de/es/it/nl/pt) |
 | `diarize` | `false` | Enable speaker diarization |
 | `context_bias` | *(D&D terms)* | Terms to bias transcription toward |
 
@@ -252,10 +272,10 @@ The app can sync the quest log, journal, and shared campaign settings across mul
 
 ### Usage
 
-1. Open **Settings > Google Drive** and click "Se connecter" -- a browser window opens for Google login
-2. Check **"Activer la synchronisation"** -- this creates a Drive folder for the active campaign
+1. Open **Settings > Google Drive** and click "Log in" -- a browser window opens for Google login
+2. Check **"Enable Google Drive sync"** -- this creates a Drive folder for the active campaign
 3. Share the campaign folder ID (shown in settings, copyable) with other players
-4. Other players use "Rejoindre via Google Drive" when creating a new campaign and paste the folder ID
+4. Other players use the "Join" option when creating a new campaign and paste the folder ID
 
 ### How it works
 

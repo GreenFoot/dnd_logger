@@ -55,9 +55,9 @@ def main():
 
         # Set app-wide icon (taskbar + all windows)
         # Prefer PNG — QIcon handles it more reliably than ICO in frozen builds
-        icon_path = resource_path("assets/images/icon.png")
+        icon_path = resource_path("assets/images/app/icon.png")
         if not os.path.exists(icon_path):
-            icon_path = resource_path("assets/images/icon.ico")
+            icon_path = resource_path("assets/images/app/icon.ico")
         if os.path.exists(icon_path):
             app.setWindowIcon(QIcon(icon_path))
 

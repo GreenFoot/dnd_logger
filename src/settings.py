@@ -444,7 +444,7 @@ class FirstRunWizard(QDialog):
         layout = QVBoxLayout(self)
 
         # Banner
-        banner_path = resource_path("assets/images/banner_dndlogger.png")
+        banner_path = resource_path("assets/images/app/banner_dndlogger.png")
         if os.path.exists(banner_path):
             banner_pix = QPixmap(banner_path)
             if not banner_pix.isNull():
@@ -508,10 +508,8 @@ class FirstRunWizard(QDialog):
 
     def _apply_theme(self):
         """Apply frost-themed background and overlays to the wizard."""
-        # Dimmed frost background
-        bg_path = resource_path("assets/images/frost_bg.png")
-        if not os.path.exists(bg_path):
-            bg_path = resource_path("assets/images/frost_bg_generated.png")
+        # Background
+        bg_path = resource_path("assets/images/backgrounds/bg_icewind_dale.png")
         if os.path.exists(bg_path):
             palette = self.palette()
             bg_pix = QPixmap(bg_path)

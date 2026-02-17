@@ -1,0 +1,372 @@
+{
+  "themes": {
+    "_fallback": {
+      "display_name": "Icewind Dale",
+      "qss_file": "icewind_dale.qss",
+      "palette": {
+        "bg_main": "#0a0f14",
+        "bg_panel": "#121a22",
+        "bg_hover": "#1a2533",
+        "border": "#253545",
+        "text_primary": "#d8e8f0",
+        "text_secondary": "#6a8a9a",
+        "accent_gold": "#d4b050",
+        "accent_blue": "#5a9bc8"
+      },
+      "overlays": {
+        "filigree_color": [
+          212,
+          176,
+          80,
+          100
+        ],
+        "particle_color": [
+          200,
+          235,
+          255
+        ],
+        "aurora_tones": [
+          [
+            10,
+            20,
+            30
+          ],
+          [
+            15,
+            25,
+            40
+          ],
+          [
+            12,
+            22,
+            35
+          ]
+        ]
+      }
+    },
+    "icewind_dale": {
+      "display_name": "Icewind Dale",
+      "qss_file": "icewind_dale.qss",
+      "palette": {
+        "bg_main": "#0a0f14",
+        "bg_panel": "#121a22",
+        "bg_hover": "#1a2533",
+        "border": "#253545",
+        "text_primary": "#d8e8f0",
+        "text_secondary": "#6a8a9a",
+        "accent_gold": "#d4b050",
+        "accent_blue": "#5a9bc8"
+      },
+      "overlays": {
+        "filigree_color": [
+          212,
+          176,
+          80,
+          100
+        ],
+        "particle_color": [
+          200,
+          235,
+          255
+        ],
+        "aurora_tones": [
+          [
+            10,
+            20,
+            30
+          ],
+          [
+            15,
+            25,
+            40
+          ],
+          [
+            12,
+            22,
+            35
+          ]
+        ],
+        "particle_type": "snow"
+      }
+    },
+    "curse_of_strahd": {
+      "display_name": "Curse of Strahd",
+      "qss_file": "curse_of_strahd.qss",
+      "palette": {
+        "bg_main": "#0a0a0f",
+        "bg_panel": "#12121a",
+        "bg_hover": "#1a1a28",
+        "border": "#252535",
+        "text_primary": "#d8c8b0",
+        "text_secondary": "#6a7a8a",
+        "accent_gold": "#b8956a",
+        "accent_blue": "#5a7a9a"
+      },
+      "overlays": {
+        "filigree_color": [
+          184,
+          149,
+          106,
+          100
+        ],
+        "particle_color": [
+          200,
+          180,
+          160
+        ],
+        "aurora_tones": [
+          [
+            15,
+            10,
+            20
+          ],
+          [
+            20,
+            15,
+            25
+          ],
+          [
+            10,
+            15,
+            20
+          ]
+        ],
+        "particle_type": "mist"
+      }
+    },
+    "descent_into_avernus": {
+      "display_name": "Descent into Avernus",
+      "qss_file": "descent_into_avernus.qss",
+      "palette": {
+        "bg_main": "#120a06",
+        "bg_panel": "#1e120a",
+        "bg_hover": "#2a1a0f",
+        "border": "#3d2514",
+        "text_primary": "#f5d5a8",
+        "text_secondary": "#a87a5a",
+        "accent_gold": "#d46a2a",
+        "accent_blue": "#8a4a3a"
+      },
+      "overlays": {
+        "filigree_color": [
+          212,
+          106,
+          42,
+          100
+        ],
+        "particle_color": [
+          255,
+          150,
+          50
+        ],
+        "aurora_tones": [
+          [
+            25,
+            10,
+            5
+          ],
+          [
+            35,
+            15,
+            5
+          ],
+          [
+            20,
+            12,
+            8
+          ]
+        ],
+        "particle_type": "embers"
+      }
+    },
+    "tomb_of_annihilation": {
+      "display_name": "Tomb of Annihilation",
+      "qss_file": "tomb_of_annihilation.qss",
+      "palette": {
+        "bg_main": "#0a0d0a",
+        "bg_panel": "#121812",
+        "bg_hover": "#1c241c",
+        "border": "#2a352a",
+        "text_primary": "#d8c8a8",
+        "text_secondary": "#6a7a6a",
+        "accent_gold": "#d4a017",
+        "accent_blue": "#5a9b8a"
+      },
+      "overlays": {
+        "filigree_color": [
+          212,
+          160,
+          23,
+          100
+        ],
+        "particle_color": [
+          180,
+          220,
+          150
+        ],
+        "aurora_tones": [
+          [
+            10,
+            20,
+            15
+          ],
+          [
+            15,
+            25,
+            20
+          ],
+          [
+            20,
+            15,
+            10
+          ]
+        ],
+        "particle_type": "spores"
+      }
+    },
+    "storm_kings_thunder": {
+      "display_name": "Storm King's Thunder",
+      "qss_file": "storm_kings_thunder.qss",
+      "palette": {
+        "bg_main": "#0a0d12",
+        "bg_panel": "#12161e",
+        "bg_hover": "#1a202c",
+        "border": "#252d3a",
+        "text_primary": "#d8e2f0",
+        "text_secondary": "#6a7a8a",
+        "accent_gold": "#a89042",
+        "accent_blue": "#4a90c2"
+      },
+      "overlays": {
+        "filigree_color": [
+          168,
+          144,
+          66,
+          100
+        ],
+        "particle_color": [
+          200,
+          230,
+          255
+        ],
+        "aurora_tones": [
+          [
+            10,
+            20,
+            30
+          ],
+          [
+            15,
+            25,
+            40
+          ],
+          [
+            12,
+            22,
+            35
+          ]
+        ],
+        "particle_type": "snow"
+      }
+    },
+    "waterdeep_dragon_heist": {
+      "display_name": "Waterdeep: Dragon Heist",
+      "qss_file": "waterdeep_dragon_heist.qss",
+      "palette": {
+        "bg_main": "#0a0a1a",
+        "bg_panel": "#121224",
+        "bg_hover": "#1a1a38",
+        "border": "#2a2a4a",
+        "text_primary": "#e8d8c0",
+        "text_secondary": "#6a7a8a",
+        "accent_gold": "#d4b860",
+        "accent_blue": "#5a7bc4"
+      },
+      "overlays": {
+        "filigree_color": [
+          212,
+          184,
+          96,
+          100
+        ],
+        "particle_color": [
+          230,
+          220,
+          200
+        ],
+        "aurora_tones": [
+          [
+            10,
+            15,
+            30
+          ],
+          [
+            20,
+            10,
+            40
+          ],
+          [
+            15,
+            20,
+            35
+          ]
+        ],
+        "particle_type": "dust"
+      }
+    },
+    "out_of_the_abyss": {
+      "display_name": "Out of the Abyss",
+      "qss_file": "out_of_the_abyss.qss",
+      "palette": {
+        "bg_main": "#0a0812",
+        "bg_panel": "#120e20",
+        "bg_hover": "#1a142e",
+        "border": "#251c3a",
+        "text_primary": "#d8c8ff",
+        "text_secondary": "#8a7a9a",
+        "accent_gold": "#8a5a9e",
+        "accent_blue": "#4a6b9e"
+      },
+      "overlays": {
+        "filigree_color": [
+          138,
+          90,
+          158,
+          100
+        ],
+        "particle_color": [
+          150,
+          180,
+          220
+        ],
+        "aurora_tones": [
+          [
+            15,
+            10,
+            30
+          ],
+          [
+            20,
+            15,
+            35
+          ],
+          [
+            10,
+            20,
+            25
+          ]
+        ],
+        "particle_type": "faerzress"
+      }
+    }
+  },
+  "campaign_associations": {
+    "Icewind Dale": "icewind_dale",
+    "Curse of Strahd": "curse_of_strahd",
+    "Descent into Avernus": "descent_into_avernus",
+    "Tomb of Annihilation": "tomb_of_annihilation",
+    "Storm King's Thunder": "storm_kings_thunder",
+    "Waterdeep: Dragon Heist": "waterdeep_dragon_heist",
+    "Out of the Abyss": "out_of_the_abyss"
+  }
+}

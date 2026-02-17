@@ -242,6 +242,7 @@ class DndBeyondBrowser(QWidget):
         self.btn_home.setFixedSize(30, 26)
 
         for btn in (self.btn_back, self.btn_forward, self.btn_refresh, self.btn_home):
+            btn.setObjectName("btn_toolbar")
             nav_layout.addWidget(btn)
         nav_layout.addStretch()
 

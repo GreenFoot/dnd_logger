@@ -1,5 +1,6 @@
 """DndLoggerApp — main window."""
 
+import json
 import logging
 import os
 import shutil
@@ -10,7 +11,9 @@ from src import __version__
 from PyQt6.QtCore import QSettings, QTimer, Qt
 from PyQt6.QtGui import (
     QAction,
+    QActionGroup,
     QBrush,
+    QColor,
     QFontDatabase,
     QIcon,
     QKeySequence,
@@ -20,6 +23,7 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QApplication,
+    QComboBox,
     QDialog,
     QDialogButtonBox,
     QGroupBox,
@@ -62,6 +66,46 @@ from .utils import (
     shared_config_path,
 )
 from .web_panel import DndBeyondBrowser
+
+
+class _ViewportBgPainter:
+    """Event filter that paints a scaled pixmap behind a QTextEdit viewport."""
+
+    def __init__(self, pixmap):
+        self._pixmap = pixmap
+        self._scaled = None
+        self._last_size = None
+
+    def eventFilter(self, obj, event):
+        from PyQt6.QtCore import QEvent
+        if event.type() == QEvent.Type.Paint:
+            size = obj.size()
+            if size != self._last_size:
+                self._scaled = self._pixmap.scaled(
+                    size, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                self._last_size = size
+            from PyQt6.QtGui import QPainter
+            painter = QPainter(obj)
+            painter.drawPixmap(0, 0, self._scaled)
+            painter.end()
+            # Don't consume — let QTextEdit paint text on top
+            return False
+        return False
+
+
+def _install_bg_painter(text_edit, pixmap):
+    """Install a background-image painter on a QTextEdit's viewport."""
+    from PyQt6.QtCore import QObject
+    vp = text_edit.viewport()
+    # Wrap in QObject so Qt event filter mechanism works
+    parent = text_edit
+    filter_obj = QObject(parent)
+    filter_obj.eventFilter = _ViewportBgPainter(pixmap).eventFilter
+    # Keep a reference so it isn't garbage-collected
+    text_edit._bg_painter = filter_obj
+    vp.installEventFilter(filter_obj)
 
 
 class CampaignCreationDialog(QDialog):
@@ -296,16 +340,20 @@ class DndLoggerApp(QMainWindow):
         self._migrate_to_campaigns()
         self._migrate_shared_config()
         self._ensure_campaign_exists()
+        self._current_theme_id = None
+        self._theme_meta = None
         self._load_icon()
         self._load_fonts()
-        self._load_stylesheet()
+        self._load_theme()
         self._migrate_journal()
         self._init_tts()
         self._build_ui()
         self._init_tts_overlay()
         self._init_sync_engine()
-        self._apply_backgrounds()
         self._add_decorative_overlays()
+        # Defer background application so it runs after the window is shown —
+        # QSS polish on first show() overrides palette set during __init__.
+        QTimer.singleShot(0, self._apply_backgrounds)
         self._build_menu()
         self._restore_geometry()
         self._check_first_run()
@@ -543,9 +591,9 @@ class DndLoggerApp(QMainWindow):
 
     def _load_icon(self):
         """Set the D20 window/taskbar icon."""
-        icon_path = resource_path("assets/images/icon.png")
+        icon_path = resource_path("assets/images/app/icon.png")
         if not os.path.exists(icon_path):
-            icon_path = resource_path("assets/images/icon.ico")
+            icon_path = resource_path("assets/images/app/icon.ico")
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
 
@@ -557,12 +605,199 @@ class DndLoggerApp(QMainWindow):
                 if fname.lower().endswith((".ttf", ".otf")):
                     QFontDatabase.addApplicationFont(os.path.join(fonts_dir, fname))
 
-    def _load_stylesheet(self):
-        """Load the QSS theme."""
-        qss_path = resource_path("assets/styles/icewind.qss")
+    # ── Theme system ─────────────────────────────────────────
+
+    # Keyword → theme_id mapping for fuzzy resolution (includes French equivalents)
+    _THEME_KEYWORDS = {
+        "icewind":       "icewind_dale",
+        "frostmaiden":   "icewind_dale",
+        "auril":         "icewind_dale",
+        "givre":         "icewind_dale",
+        "strahd":        "curse_of_strahd",
+        "barovia":       "curse_of_strahd",
+        "ravenloft":     "curse_of_strahd",
+        "avernus":       "descent_into_avernus",
+        "averné":        "descent_into_avernus",
+        "enfer":         "descent_into_avernus",
+        "zariel":        "descent_into_avernus",
+        "annihilation":  "tomb_of_annihilation",
+        "chult":         "tomb_of_annihilation",
+        "tombeau":       "tomb_of_annihilation",
+        "acererak":      "tomb_of_annihilation",
+        "storm":         "storm_kings_thunder",
+        "géant":         "storm_kings_thunder",
+        "thunder":       "storm_kings_thunder",
+        "waterdeep":     "waterdeep_dragon_heist",
+        "eauprofonde":   "waterdeep_dragon_heist",
+        "dragon heist":  "waterdeep_dragon_heist",
+        "abyss":         "out_of_the_abyss",
+        "abîme":         "out_of_the_abyss",
+        "underdark":     "out_of_the_abyss",
+        "outreterre":    "out_of_the_abyss",
+    }
+
+    def _load_theme_meta(self) -> dict:
+        """Load theme_meta.json if available."""
+        if self._theme_meta is not None:
+            return self._theme_meta
+        meta_path = resource_path("assets/styles/theme_meta.json")
+        if os.path.exists(meta_path):
+            try:
+                with open(meta_path, "r", encoding="utf-8") as f:
+                    self._theme_meta = json.load(f)
+            except (json.JSONDecodeError, OSError):
+                self._theme_meta = {}
+        else:
+            self._theme_meta = {}
+        return self._theme_meta
+
+    def _available_themes(self) -> dict:
+        """Return dict of {theme_id: theme_data} from meta."""
+        meta = self._load_theme_meta()
+        return {k: v for k, v in meta.get("themes", {}).items() if k != "_fallback"}
+
+    def _resolve_theme(self) -> str | None:
+        """Resolve theme for the active campaign using 3-tier priority.
+
+        1. Explicit choice in campaign config
+        2. Fuzzy keyword matching on campaign name
+        3. None (caller should show picker)
+        """
+        active = active_campaign_name(self._config)
+        available = self._available_themes()
+        if not available:
+            return None
+
+        # Tier 1: explicit choice stored in campaign config
+        camp_cfg = self._config.get("campaigns", {}).get(active, {})
+        explicit = camp_cfg.get("theme")
+        if explicit and explicit in available:
+            return explicit
+
+        # Tier 2: fuzzy keyword matching
+        name_lower = active.lower()
+        for keyword, theme_id in self._THEME_KEYWORDS.items():
+            if keyword in name_lower and theme_id in available:
+                return theme_id
+
+        # Tier 3: no match
+        return None
+
+    def _load_theme(self, theme_id: str | None = None):
+        """Load a theme by ID or auto-resolve. Falls back to icewind_dale.qss."""
+        if theme_id is None:
+            theme_id = self._resolve_theme()
+
+        # Invalidate cached meta so fresh data is used for overlay/image lookups
+        self._theme_meta = None
+        meta = self._load_theme_meta()
+        themes = meta.get("themes", {})
+
+        # Try loading the requested theme's QSS
+        if theme_id and theme_id in themes:
+            qss_file = themes[theme_id].get("qss_file", f"{theme_id}.qss")
+            qss_path = resource_path(f"assets/styles/{qss_file}")
+            if os.path.exists(qss_path):
+                with open(qss_path, "r", encoding="utf-8") as f:
+                    self.setStyleSheet(f.read())
+                self._current_theme_id = theme_id
+                return
+
+        # Fallback: use icewind_dale.qss
+        qss_path = resource_path("assets/styles/icewind_dale.qss")
         if os.path.exists(qss_path):
             with open(qss_path, "r", encoding="utf-8") as f:
                 self.setStyleSheet(f.read())
+        self._current_theme_id = theme_id or "icewind_dale"
+
+    def _show_theme_picker(self) -> str | None:
+        """Show a dialog to pick a theme. Returns theme_id or None."""
+        available = self._available_themes()
+        if not available:
+            return None
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Choisir un thème")
+        dlg.setMinimumWidth(350)
+        layout = QVBoxLayout(dlg)
+
+        label = QLabel("Aucun thème automatique trouvé pour cette campagne.\nChoisissez un thème visuel:")
+        layout.addWidget(label)
+
+        combo = QComboBox()
+        theme_ids = []
+        for tid, tdata in sorted(available.items(), key=lambda x: x[1].get("display_name", "")):
+            combo.addItem(tdata.get("display_name", tid))
+            theme_ids.append(tid)
+        layout.addWidget(combo)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        layout.addWidget(buttons)
+
+        if dlg.exec() == QDialog.DialogCode.Accepted and theme_ids:
+            return theme_ids[combo.currentIndex()]
+        return None
+
+    def _switch_theme(self, theme_id: str):
+        """Switch to a specific theme and save choice to campaign config."""
+        self._load_theme(theme_id)
+        self._apply_backgrounds()
+        self._update_session_icon()
+        self._update_overlay_colors()
+
+        # Save choice to campaign config
+        active = active_campaign_name(self._config)
+        if active:
+            self._config.setdefault("campaigns", {}).setdefault(active, {})["theme"] = theme_id
+            save_config(self._config)
+
+        self._rebuild_campaign_menu()
+
+    def _update_session_icon(self):
+        """Set the Session tab icon matching the current theme."""
+        tid = self._current_theme_id or "icewind_dale"
+        icon_path = resource_path(f"assets/images/tabs/tab_icon_session_{tid}.png")
+        if os.path.exists(icon_path):
+            self.right_tabs.setTabIcon(self._session_tab_index, QIcon(icon_path))
+
+    def _update_overlay_colors(self):
+        """Push theme overlay colors and particle type to all decorative overlays."""
+        meta = self._load_theme_meta()
+        themes = meta.get("themes", {})
+        theme_data = themes.get(self._current_theme_id, {})
+        overlays = theme_data.get("overlays", {})
+
+        # Filigree color
+        fc = overlays.get("filigree_color", [201, 168, 50, 100])
+        filigree_qcolor = QColor(*fc)
+        for attr in ("_journal_filigree", "_quest_filigree", "_session_filigree"):
+            overlay = getattr(self, attr, None)
+            if overlay:
+                overlay.set_color(filigree_qcolor)
+
+        # Particle type + color
+        snow = getattr(self.session_tab, "_snow_overlay", None)
+        if snow:
+            pt = overlays.get("particle_type", "snow")
+            snow.set_particle_type(pt)
+            pc = overlays.get("particle_color", [220, 240, 255])
+            snow.set_particle_color(pc)
+
+        # Aurora tones
+        at = overlays.get("aurora_tones", [[10, 25, 35], [20, 15, 45], [15, 20, 35]])
+        aurora = getattr(self.session_tab, "_aurora_overlay", None)
+        if aurora:
+            aurora.set_aurora_tones(at)
+
+        # Divider accent — use the theme's accent_gold equivalent
+        palette = theme_data.get("palette", {})
+        accent_hex = palette.get("accent_gold", "#c9a832")
+        accent_color = QColor(accent_hex)
+        self.session_tab.set_divider_accent(accent_color)
 
     def _init_tts(self):
         """Initialize a shared TTS engine for all widgets."""
@@ -645,10 +880,9 @@ class DndLoggerApp(QMainWindow):
 
     def _apply_backgrounds(self):
         """Apply background textures to widgets."""
-        # Main window background: prefer downloaded landscape, fall back to generated
-        bg_path = resource_path("assets/images/frost_bg.png")
-        if not os.path.exists(bg_path):
-            bg_path = resource_path("assets/images/frost_bg_generated.png")
+        # Main window background — theme-specific
+        tid = self._current_theme_id or "icewind_dale"
+        bg_path = resource_path(f"assets/images/backgrounds/bg_{tid}.png")
         if os.path.exists(bg_path):
             palette = self.palette()
             bg_pix = QPixmap(bg_path)
@@ -658,36 +892,19 @@ class DndLoggerApp(QMainWindow):
                 self.setAutoFillBackground(True)
 
         # Parchment texture on journal and quest log editors
-        parch_path = resource_path("assets/images/parchment_warm.png")
-        if not os.path.exists(parch_path):
-            parch_path = resource_path("assets/images/parchment_bg.png")
+        parch_path = resource_path("assets/images/textures/parchment_warm.png")
         if os.path.exists(parch_path):
             parch_pix = QPixmap(parch_path)
             if not parch_pix.isNull():
                 for editor in (self.journal.editor, self.quest_log.editor):
-                    p = editor.palette()
-                    p.setBrush(QPalette.ColorRole.Base, QBrush(parch_pix))
-                    editor.setPalette(p)
-                    editor.setAutoFillBackground(True)
-
-        # Summary texture (prefer processed over generated)
-        summary_path = resource_path("assets/images/summary_bg.png")
-        if not os.path.exists(summary_path):
-            summary_path = resource_path("assets/images/summary_bg_generated.png")
-        if os.path.exists(summary_path):
-            summary = self.session_tab.summary_display
-            p = summary.palette()
-            summary_pix = QPixmap(summary_path)
-            if not summary_pix.isNull():
-                p.setBrush(QPalette.ColorRole.Base, QBrush(summary_pix))
-                summary.setPalette(p)
-                summary.setAutoFillBackground(True)
+                    _install_bg_painter(editor, parch_pix)
 
     def _add_decorative_overlays(self):
         """Add gold filigree corner decorations to key panels."""
         self._journal_filigree = GoldFiligreeOverlay(self.journal)
         self._quest_filigree = GoldFiligreeOverlay(self.quest_log)
         self._session_filigree = GoldFiligreeOverlay(self.session_tab)
+        self._update_overlay_colors()
 
     def _build_ui(self):
         cname = active_campaign_name(self._config)
@@ -710,8 +927,7 @@ class DndLoggerApp(QMainWindow):
         self.quest_log.set_tts_engine(self._tts_engine)
 
         # Tab icons
-        quill_icon_path = resource_path("assets/images/tab_icon_questlog.png")
-        crystal_icon_path = resource_path("assets/images/tab_icon_session.png")
+        quill_icon_path = resource_path("assets/images/tabs/tab_icon_questlog.png")
 
         # Journal tab (first)
         if os.path.exists(quill_icon_path):
@@ -732,11 +948,9 @@ class DndLoggerApp(QMainWindow):
             quest_log_widget=self.quest_log,
             tts_engine=self._tts_engine,
         )
-
-        if os.path.exists(crystal_icon_path):
-            self.right_tabs.addTab(self.session_tab, QIcon(crystal_icon_path), "Session")
-        else:
-            self.right_tabs.addTab(self.session_tab, "Session")
+        self.right_tabs.addTab(self.session_tab, "Session")
+        self._session_tab_index = self.right_tabs.indexOf(self.session_tab)
+        self._update_session_icon()
 
         self.splitter.addWidget(self.right_tabs)
 
@@ -816,6 +1030,21 @@ class DndLoggerApp(QMainWindow):
         restore_action = QAction("Restaurer une campagne...", self)
         restore_action.triggered.connect(self._restore_campaign)
         self._campaign_menu.addAction(restore_action)
+
+        # Theme submenu
+        available = self._available_themes()
+        if available:
+            self._campaign_menu.addSeparator()
+            theme_menu = self._campaign_menu.addMenu("Thème")
+            theme_group = QActionGroup(theme_menu)
+            theme_group.setExclusive(True)
+            for tid, tdata in sorted(available.items(), key=lambda x: x[1].get("display_name", "")):
+                action = QAction(tdata.get("display_name", tid), theme_menu)
+                action.setCheckable(True)
+                action.setChecked(tid == self._current_theme_id)
+                action.triggered.connect(lambda checked, t=tid: self._switch_theme(t))
+                theme_group.addAction(action)
+                theme_menu.addAction(action)
 
     def _new_campaign(self):
         """Create a new campaign via the creation dialog."""
@@ -958,6 +1187,20 @@ class DndLoggerApp(QMainWindow):
 
         # Refresh child config
         self._refresh_config()
+
+        # Switch theme for new campaign
+        theme_id = self._resolve_theme()
+        if theme_id is None and self._available_themes():
+            theme_id = self._show_theme_picker()
+            if theme_id:
+                # Save the user's choice
+                self._config.setdefault("campaigns", {}).setdefault(name, {})["theme"] = theme_id
+                save_config(self._config)
+                self._config = load_config()
+        self._load_theme(theme_id)
+        self._apply_backgrounds()
+        self._update_session_icon()
+        self._update_overlay_colors()
 
         # Restart sync if campaign has it enabled
         self._init_sync_engine()

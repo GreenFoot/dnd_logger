@@ -41,6 +41,7 @@ a = Analysis(
         "google_auth_oauthlib",
         "google_auth_oauthlib.flow",
         "google_auth_httplib2",
+        "edge_tts",
         "src.i18n.en",
         "src.i18n.fr",
         "src.i18n.de",

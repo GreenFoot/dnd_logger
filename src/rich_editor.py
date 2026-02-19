@@ -264,7 +264,11 @@ class _SearchLineEdit(QLineEdit):
         self._editor_widget = None
 
     def set_editor_widget(self, editor_widget):
-        """Store a reference to the parent editor widget for key forwarding."""
+        """Store a reference to the parent editor widget for key forwarding.
+
+        Args:
+            editor_widget: The RichTextEditorWidget that owns this search field.
+        """
         self._editor_widget = editor_widget
 
     def keyPressEvent(self, event):

@@ -311,7 +311,11 @@ class DriveSyncEngine(QObject):
 
     @property
     def status(self) -> SyncStatus:
-        """Return the current sync status."""
+        """Return the current sync status.
+
+        Returns:
+            The current SyncStatus enum value.
+        """
         return self._status
 
     def _set_status(self, s: SyncStatus):

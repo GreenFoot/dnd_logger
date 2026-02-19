@@ -8,7 +8,13 @@ from .i18n import tr
 
 
 def information(parent, title, text):
-    """Show a themed information message box."""
+    """Show a themed information message box.
+
+    Args:
+        parent: Parent widget for the dialog.
+        title: Window title.
+        text: Message body text.
+    """
     box = QMessageBox(parent)
     box.setIcon(QMessageBox.Icon.Information)
     box.setWindowTitle(title)
@@ -17,7 +23,13 @@ def information(parent, title, text):
 
 
 def warning(parent, title, text):
-    """Show a themed warning message box."""
+    """Show a themed warning message box.
+
+    Args:
+        parent: Parent widget for the dialog.
+        title: Window title.
+        text: Message body text.
+    """
     box = QMessageBox(parent)
     box.setIcon(QMessageBox.Icon.Warning)
     box.setWindowTitle(title)
@@ -26,7 +38,13 @@ def warning(parent, title, text):
 
 
 def critical(parent, title, text):
-    """Show a themed critical error message box."""
+    """Show a themed critical error message box.
+
+    Args:
+        parent: Parent widget for the dialog.
+        title: Window title.
+        text: Message body text.
+    """
     box = QMessageBox(parent)
     box.setIcon(QMessageBox.Icon.Critical)
     box.setWindowTitle(title)
@@ -35,7 +53,16 @@ def critical(parent, title, text):
 
 
 def question(parent, title, text) -> bool:
-    """Return True if the user clicked Yes."""
+    """Show a themed yes/no question dialog.
+
+    Args:
+        parent: Parent widget for the dialog.
+        title: Window title.
+        text: Question body text.
+
+    Returns:
+        True if the user clicked Yes, False otherwise.
+    """
     box = QMessageBox(parent)
     box.setIcon(QMessageBox.Icon.Question)
     box.setWindowTitle(title)
@@ -48,7 +75,19 @@ def question(parent, title, text) -> bool:
 
 
 def get_item(parent, title, label, items, current=0, editable=False):
-    """Themed replacement for QInputDialog.getItem. Returns (text, ok)."""
+    """Themed replacement for QInputDialog.getItem.
+
+    Args:
+        parent: Parent widget for the dialog.
+        title: Window title.
+        label: Descriptive label above the combo box.
+        items: List of selectable string items.
+        current: Index of the initially selected item.
+        editable: Whether the combo box allows free-text input.
+
+    Returns:
+        Tuple of (selected_text, accepted) where accepted is True if OK was clicked.
+    """
     dlg = QDialog(parent)
     dlg.setWindowTitle(title)
     dlg.setMinimumWidth(320)

@@ -327,7 +327,11 @@ class SettingsDialog(QDialog):
         self.accept()
 
     def get_config(self) -> dict:
-        """Return the current configuration dictionary."""
+        """Return the current configuration dictionary.
+
+        Returns:
+            A copy of the settings configuration dict.
+        """
         return self._config
 
     # ── Prompts ────────────────────────────────────────────
@@ -662,5 +666,9 @@ class FirstRunWizard(QDialog):
         self.accept()
 
     def get_config(self) -> dict:
-        """Return the current configuration dictionary."""
+        """Return the current configuration dictionary.
+
+        Returns:
+            A copy of the settings configuration dict.
+        """
         return self._config

@@ -59,7 +59,11 @@ class FoldManager(QObject):
             self._scan_document()
 
     def regions(self) -> dict[int, FoldRegion]:
-        """Return the current fold regions, rescanning the document if needed."""
+        """Return the current fold regions, rescanning the document if needed.
+
+        Returns:
+            Mapping of start-block numbers to their FoldRegion objects.
+        """
         self._ensure_fresh()
         return self._regions
 

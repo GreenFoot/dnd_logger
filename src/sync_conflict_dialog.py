@@ -1,15 +1,6 @@
 """Sync conflict resolution dialog — merge local vs remote versions."""
 
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (
-    QDialog,
-    QDialogButtonBox,
-    QHBoxLayout,
-    QLabel,
-    QPushButton,
-    QTextEdit,
-    QVBoxLayout,
-)
+from PySide6.QtWidgets import QDialog, QHBoxLayout, QLabel, QPushButton, QTextEdit, QVBoxLayout
 
 from .diff_utils import apply_inline_diff, extract_html_without_deleted
 from .i18n import tr

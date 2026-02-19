@@ -62,6 +62,14 @@ STRINGS: dict[str, str] = {
         "pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib"
     ),
     "app.campaign.error_title": "Erreur",
+    # ── app.py — theme keyword matching (comma-separated) ──
+    "app.theme.kw.icewind_dale": "givre",
+    "app.theme.kw.curse_of_strahd": "",
+    "app.theme.kw.descent_into_avernus": "averné,enfer",
+    "app.theme.kw.tomb_of_annihilation": "tombeau",
+    "app.theme.kw.storm_kings_thunder": "géant",
+    "app.theme.kw.waterdeep_dragon_heist": "eauprofonde",
+    "app.theme.kw.out_of_the_abyss": "abîme,outreterre",
     # ── app.py — theme picker ───────────────────────────────
     "app.theme.title": "Choisir un thème",
     "app.theme.label": "Aucun thème automatique trouvé pour cette campagne.\nChoisissez un thème visuel:",
@@ -318,6 +326,19 @@ seront consignés ici pour la postérité.</em></p>
     "quest_extractor.no_quests": "(Aucune quête enregistrée)",
     "quest_extractor.dialog_title": "Mise à jour des quêtes",
     "quest_extractor.dialog_label": "Changements proposés — modifiez si nécessaire:",
+    # ── updater.py ─────────────────────────────────────────
+    "updater.error.no_installer": "Aucun installateur trouvé dans cette release.",
+    "updater.error.network": "Erreur réseau : {reason}",
+    # ── drive_sync.py ─────────────────────────────────────
+    "drive.error.init": "Erreur d'initialisation Drive: {error}",
+    "drive.error.session_expired": "Session Drive expirée. Reconnectez-vous dans les paramètres.",
+    "drive.error.upload": "Erreur d'upload ({filename}): {error}",
+    "drive.error.download": "Erreur de téléchargement ({filename}): {error}",
+    # ── web_panel.py ──────────────────────────────────────
+    "browser.tooltip.back": "Retour",
+    "browser.tooltip.forward": "Suivant",
+    "browser.tooltip.refresh": "Rafraichir",
+    "browser.tooltip.home": "Accueil D&D Beyond",
     # ── AI Prompts ──────────────────────────────────────────
     "prompt.summary_system": """\
 Tu es un chroniqueur épique des Royaumes Oubliés, specialisé dans la narration \

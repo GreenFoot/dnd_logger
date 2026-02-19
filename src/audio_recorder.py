@@ -10,8 +10,8 @@ import sounddevice as sd
 import soundfile as sf
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from .utils import ensure_dir, sessions_dir
 from .i18n import tr
+from .utils import ensure_dir, sessions_dir
 
 
 class AudioRecorder(QObject):
@@ -53,16 +53,21 @@ class AudioRecorder(QObject):
         self._pending_samples = 0
         self._pending_lock = threading.Lock()
 
+        self._sf = None
+
     @property
     def is_recording(self) -> bool:
+        """Return True if currently recording."""
         return self._is_recording
 
     @property
     def is_paused(self) -> bool:
+        """Return True if recording is paused."""
         return self._is_paused
 
     @property
     def wav_path(self) -> str | None:
+        """Return the path to the current WAV file, or None."""
         return self._wav_path
 
     def start_recording(self, device=None):
@@ -80,9 +85,7 @@ class AudioRecorder(QObject):
             self._wav_path = os.path.join(session_folder, "recording.wav")
 
             # Open soundfile for writing
-            self._sf = sf.SoundFile(
-                self._wav_path, mode="w", samplerate=sr, channels=ch, subtype="PCM_16"
-            )
+            self._sf = sf.SoundFile(self._wav_path, mode="w", samplerate=sr, channels=ch, subtype="PCM_16")
 
             # Clear queue
             while not self._queue.empty():
@@ -101,9 +104,7 @@ class AudioRecorder(QObject):
                 self._pending_samples = 0
 
             # Start writer thread
-            self._writer_thread = threading.Thread(
-                target=self._writer_loop, daemon=True
-            )
+            self._writer_thread = threading.Thread(target=self._writer_loop, daemon=True)
             self._writer_thread.start()
 
             # Determine device index
@@ -273,9 +274,14 @@ class AudioRecorder(QObject):
         try:
             for i, dev in enumerate(sd.query_devices()):
                 if dev["max_input_channels"] > 0:
-                    devices.append({"index": i, "name": dev["name"],
-                                    "channels": dev["max_input_channels"],
-                                    "sample_rate": dev["default_samplerate"]})
+                    devices.append(
+                        {
+                            "index": i,
+                            "name": dev["name"],
+                            "channels": dev["max_input_channels"],
+                            "sample_rate": dev["default_samplerate"],
+                        }
+                    )
         except Exception:
             pass
         return devices

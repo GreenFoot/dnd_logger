@@ -8,14 +8,14 @@ import os
 import threading
 import time
 
-from PySide6.QtCore import QMutex, QMutexLocker, QObject, QThread, QTimer, Signal
+from PySide6.QtCore import QObject, QThread, QTimer, Signal
 
+from .i18n import tr
 from .utils import (
     active_campaign_dir,
     active_campaign_name,
     campaign_drive_config,
     journal_path,
-    project_root,
     quest_log_path,
     shared_config_path,
 )
@@ -46,14 +46,15 @@ class SyncStatus(enum.Enum):
 
 class SyncDirection(enum.Enum):
     NONE = "none"
-    UP = "up"        # local changed → upload
-    DOWN = "down"    # remote changed → download
+    UP = "up"  # local changed → upload
+    DOWN = "down"  # remote changed → download
     CONFLICT = "conflict"  # both changed
 
 
 # ---------------------------------------------------------------------------
 # Drive API helpers (run in worker threads, never on the UI thread)
 # ---------------------------------------------------------------------------
+
 
 class DriveFolderManager:
     """Find or create campaign folders on Google Drive."""
@@ -75,9 +76,7 @@ class DriveFolderManager:
             f"name = '{name}' and mimeType = 'application/vnd.google-apps.folder' "
             f"and '{parent_id}' in parents and trashed = false"
         )
-        results = self._service.files().list(
-            q=query, spaces="drive", fields="files(id, name)", pageSize=1
-        ).execute()
+        results = self._service.files().list(q=query, spaces="drive", fields="files(id, name)", pageSize=1).execute()
         files = results.get("files", [])
         if files:
             return files[0]["id"]
@@ -114,18 +113,26 @@ class DriveFileManager:
             file_id = self._find_file_unlocked(remote_name)
 
             if file_id:
-                result = self._service.files().update(
-                    fileId=file_id,
-                    media_body=media,
-                    fields="id, modifiedTime, md5Checksum",
-                ).execute()
+                result = (
+                    self._service.files()
+                    .update(
+                        fileId=file_id,
+                        media_body=media,
+                        fields="id, modifiedTime, md5Checksum",
+                    )
+                    .execute()
+                )
             else:
                 metadata = {"name": remote_name, "parents": [self._folder_id]}
-                result = self._service.files().create(
-                    body=metadata,
-                    media_body=media,
-                    fields="id, modifiedTime, md5Checksum",
-                ).execute()
+                result = (
+                    self._service.files()
+                    .create(
+                        body=metadata,
+                        media_body=media,
+                        fields="id, modifiedTime, md5Checksum",
+                    )
+                    .execute()
+                )
                 self._file_id_cache[remote_name] = result["id"]
             return result
 
@@ -147,22 +154,21 @@ class DriveFileManager:
             file_id = self._find_file_unlocked(remote_name)
             if not file_id:
                 return None
-            return self._service.files().get(
-                fileId=file_id,
-                fields="id, modifiedTime, md5Checksum",
-            ).execute()
+            return (
+                self._service.files()
+                .get(
+                    fileId=file_id,
+                    fields="id, modifiedTime, md5Checksum",
+                )
+                .execute()
+            )
 
     def _find_file_unlocked(self, name: str) -> str | None:
         """Look up a file ID — caller must hold self._lock."""
         if name in self._file_id_cache:
             return self._file_id_cache[name]
-        query = (
-            f"name = '{name}' and '{self._folder_id}' in parents "
-            f"and trashed = false"
-        )
-        results = self._service.files().list(
-            q=query, spaces="drive", fields="files(id)", pageSize=1
-        ).execute()
+        query = f"name = '{name}' and '{self._folder_id}' in parents " f"and trashed = false"
+        results = self._service.files().list(q=query, spaces="drive", fields="files(id)", pageSize=1).execute()
         files = results.get("files", [])
         if files:
             self._file_id_cache[name] = files[0]["id"]
@@ -173,6 +179,7 @@ class DriveFileManager:
 # ---------------------------------------------------------------------------
 # Sync state persistence
 # ---------------------------------------------------------------------------
+
 
 def _sync_state_path(cfg: dict) -> str:
     return os.path.join(active_campaign_dir(cfg), _SYNC_STATE_FILE)
@@ -211,9 +218,10 @@ def _local_md5(filepath: str) -> str:
 # Worker objects for threaded Drive operations
 # ---------------------------------------------------------------------------
 
+
 class _UploadWorker(QObject):
-    finished = Signal(str, dict)   # filename, metadata
-    error = Signal(str, str)       # filename, error message
+    finished = Signal(str, dict)  # filename, metadata
+    error = Signal(str, str)  # filename, error message
 
     def __init__(self, file_mgr: DriveFileManager, local_path: str, remote_name: str):
         super().__init__()
@@ -222,6 +230,7 @@ class _UploadWorker(QObject):
         self._remote_name = remote_name
 
     def run(self):
+        """Upload the file to Google Drive."""
         try:
             meta = self._file_mgr.upload_file(self._local_path, self._remote_name)
             self.finished.emit(self._remote_name, meta)
@@ -231,6 +240,7 @@ class _UploadWorker(QObject):
 
 class _PollWorker(QObject):
     """Check remote metadata for all synced files."""
+
     finished = Signal(dict)  # {remote_name: metadata_or_None}
     error = Signal(str)
 
@@ -240,6 +250,7 @@ class _PollWorker(QObject):
         self._filenames = filenames
 
     def run(self):
+        """Poll remote metadata for all synced files."""
         try:
             results = {}
             for name in self._filenames:
@@ -253,7 +264,7 @@ class _PollWorker(QObject):
 
 
 class _DownloadWorker(QObject):
-    finished = Signal(str)   # remote_name
+    finished = Signal(str)  # remote_name
     error = Signal(str, str)
 
     def __init__(self, file_mgr: DriveFileManager, remote_name: str, local_path: str):
@@ -263,6 +274,7 @@ class _DownloadWorker(QObject):
         self._local_path = local_path
 
     def run(self):
+        """Download the file from Google Drive."""
         try:
             self._file_mgr.download_file(self._remote_name, self._local_path)
             self.finished.emit(self._remote_name)
@@ -273,6 +285,7 @@ class _DownloadWorker(QObject):
 # ---------------------------------------------------------------------------
 # Main sync engine
 # ---------------------------------------------------------------------------
+
 
 class DriveSyncEngine(QObject):
     """Orchestrates Google Drive sync for shared campaign files."""
@@ -295,10 +308,14 @@ class DriveSyncEngine(QObject):
         self._poll_timer.timeout.connect(self._poll_remote)
         self._upload_timers: dict[str, QTimer] = {}
         self._active_threads: list[tuple[QThread, QObject]] = []  # (thread, worker) prevent GC
-        self._mutex = QMutex()
 
     @property
     def status(self) -> SyncStatus:
+        """Return the current sync status.
+
+        Returns:
+            The current SyncStatus enum value.
+        """
         return self._status
 
     def _set_status(self, s: SyncStatus):
@@ -343,13 +360,14 @@ class DriveSyncEngine(QObject):
                     self._config["campaigns"][cname] = {}
                 self._config["campaigns"][cname]["drive_campaign_folder_id"] = folder_id
                 from .utils import save_config
+
                 save_config(self._config)
 
             self._file_mgr = DriveFileManager(self._service, folder_id)
             return True
         except Exception as e:
             log.exception("Failed to initialize Drive sync")
-            self.error_occurred.emit(f"Erreur d'initialisation Drive: {e}")
+            self.error_occurred.emit(tr("drive.error.init", error=e))
             return False
 
     def start(self):
@@ -434,10 +452,10 @@ class DriveSyncEngine(QObject):
         log.error("Upload failed for %s: %s", filename, error)
         if "invalid_grant" in error.lower() or "token" in error.lower():
             self._set_status(SyncStatus.ERROR)
-            self.error_occurred.emit("Session Drive expirée. Reconnectez-vous dans les paramètres.")
+            self.error_occurred.emit(tr("drive.error.session_expired"))
         else:
             self._set_status(SyncStatus.ERROR)
-            self.error_occurred.emit(f"Erreur d'upload ({filename}): {error}")
+            self.error_occurred.emit(tr("drive.error.upload", filename=filename, error=error))
 
     def _poll_remote(self):
         """Check remote file metadata and download if changed."""
@@ -574,7 +592,7 @@ class DriveSyncEngine(QObject):
         thread.wait()
         self._active_threads.remove(entry)
         log.error("Download failed for %s: %s", remote_name, error)
-        self.error_occurred.emit(f"Erreur de téléchargement ({remote_name}): {error}")
+        self.error_occurred.emit(tr("drive.error.download", filename=remote_name, error=error))
         if not self._active_threads:
             self._set_status(SyncStatus.ERROR)
 

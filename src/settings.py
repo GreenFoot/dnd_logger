@@ -2,7 +2,7 @@
 
 import os
 
-from PySide6.QtCore import QObject, QThread, Qt, Signal
+from PySide6.QtCore import QObject, Qt, QThread, Signal
 from PySide6.QtGui import QBrush, QPalette, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -24,16 +24,11 @@ from PySide6.QtWidgets import (
 
 from . import themed_dialogs as dlg
 from .audio_recorder import AudioRecorder
-from .frost_overlay import GoldFiligreeOverlay
+from .filigree_overlay import GoldFiligreeOverlay
 from .i18n import set_language, tr
-from .summarizer import get_default_summary_system, get_default_condense
 from .quest_extractor import get_default_quest_extraction
-from .utils import (
-    active_campaign_name,
-    campaign_drive_config,
-    resource_path,
-    save_config,
-)
+from .summarizer import get_default_condense, get_default_summary_system
+from .utils import active_campaign_name, campaign_drive_config, resource_path, save_config
 
 
 class SettingsDialog(QDialog):
@@ -43,6 +38,11 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self._config = dict(config)  # Work on a copy
         self._initial_language = config.get("language", "en")
+        self._current_prompt_index = 0
+        self._auth_thread = None
+        self._auth_worker = None
+        self._folder_thread = None
+        self._folder_worker = None
         self.setWindowTitle(tr("settings.title"))
         self._build_ui()
         self._populate()
@@ -235,11 +235,6 @@ class SettingsDialog(QDialog):
         drive_layout.addStretch()
         self.tabs.addTab(drive_tab, tr("settings.tab.drive"))
 
-        self._auth_thread = None
-        self._auth_worker = None
-        self._folder_thread = None
-        self._folder_worker = None
-
         layout.addWidget(self.tabs)
 
         # Buttons
@@ -332,6 +327,11 @@ class SettingsDialog(QDialog):
         self.accept()
 
     def get_config(self) -> dict:
+        """Return the current configuration dictionary.
+
+        Returns:
+            A copy of the settings configuration dict.
+        """
         return self._config
 
     # ── Prompts ────────────────────────────────────────────
@@ -507,7 +507,7 @@ class SettingsDialog(QDialog):
             from mistralai import Mistral
 
             client = Mistral(api_key=key)
-            result = client.models.list()
+            client.models.list()
             self.api_status.setText(tr("settings.api.test_success"))
             self.api_status.setStyleSheet("color: #7ec83a;")
         except Exception as e:
@@ -533,10 +533,10 @@ class SettingsDialog(QDialog):
             dlg.critical(self, tr("settings.audio.test_title"), tr("settings.audio.test_error", error=e))
 
 
-
 class _FolderWorker(QObject):
     """Resolve the Drive campaign folder ID in a background thread."""
-    finished = Signal(str)   # folder_id
+
+    finished = Signal(str)  # folder_id
     error = Signal(str)
 
     def __init__(self, campaign_name: str):
@@ -544,10 +544,12 @@ class _FolderWorker(QObject):
         self._campaign_name = campaign_name
 
     def run(self):
+        """Resolve or create the Drive campaign folder."""
         try:
+            from googleapiclient.discovery import build
+
             from .drive_auth import load_credentials
             from .drive_sync import DriveFolderManager
-            from googleapiclient.discovery import build
 
             creds = load_credentials()
             if not creds:
@@ -664,4 +666,9 @@ class FirstRunWizard(QDialog):
         self.accept()
 
     def get_config(self) -> dict:
+        """Return the current configuration dictionary.
+
+        Returns:
+            A copy of the settings configuration dict.
+        """
         return self._config

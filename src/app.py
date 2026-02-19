@@ -6,9 +6,7 @@ import os
 import shutil
 import subprocess
 
-from src import __version__
-
-from PySide6.QtCore import QSettings, QTimer, Qt
+from PySide6.QtCore import QSettings, Qt, QTimer
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
@@ -31,7 +29,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
-    QMenuBar,
     QProgressDialog,
     QPushButton,
     QSplitter,
@@ -39,19 +36,20 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from .frost_overlay import GoldFiligreeOverlay
+from src import __version__
+
+from . import themed_dialogs as dlg
+from .filigree_overlay import GoldFiligreeOverlay
+from .i18n import tr
 from .journal import JournalWidget
 from .quest_log import QuestLogWidget
 from .session_tab import SessionTab
 from .settings import FirstRunWizard, SettingsDialog
 from .tts_engine import create_tts_thread
 from .tts_overlay import TTSOverlay
-from . import themed_dialogs as dlg
-from .i18n import tr
 from .updater import start_update_check, start_update_download
 from .utils import (
     SHARED_CONFIG_KEYS,
-    active_campaign_dir,
     active_campaign_name,
     campaign_dir,
     campaign_drive_config,
@@ -77,16 +75,20 @@ class _ViewportBgPainter:
         self._last_size = None
 
     def eventFilter(self, obj, event):
+        """Paint scaled background pixmap on the viewport."""
         from PySide6.QtCore import QEvent
+
         if event.type() == QEvent.Type.Paint:
             size = obj.size()
             if size != self._last_size:
                 self._scaled = self._pixmap.scaled(
-                    size, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                    size,
+                    Qt.AspectRatioMode.KeepAspectRatioByExpanding,
                     Qt.TransformationMode.SmoothTransformation,
                 )
                 self._last_size = size
             from PySide6.QtGui import QPainter
+
             painter = QPainter(obj)
             painter.drawPixmap(0, 0, self._scaled)
             painter.end()
@@ -98,6 +100,7 @@ class _ViewportBgPainter:
 def _install_bg_painter(text_edit, pixmap):
     """Install a background-image painter on a QTextEdit's viewport."""
     from PySide6.QtCore import QObject
+
     vp = text_edit.viewport()
     # Wrap in QObject so Qt event filter mechanism works
     parent = text_edit
@@ -249,7 +252,8 @@ class CampaignCreationDialog(QDialog):
             self._auth_thread.start()
         except ImportError:
             dlg.critical(
-                self, tr("app.campaign.error_title"),
+                self,
+                tr("app.campaign.error_title"),
                 tr("app.campaign.drive_install_deps"),
             )
 
@@ -291,7 +295,7 @@ class CampaignCreationDialog(QDialog):
             QApplication.processEvents()
 
             service = build("drive", "v3", credentials=creds)
-            result = service.files().get(fileId=folder_id, fields="name").execute()
+            result = service.files().get(fileId=folder_id, fields="name").execute()  # pylint: disable=no-member
             folder_name = result.get("name", "").strip()
 
             if not folder_name:
@@ -319,11 +323,13 @@ class CampaignCreationDialog(QDialog):
         return self._campaign_name, self._drive_folder_id
 
     def reject(self):
+        """Block reject when force mode is active."""
         if self._force:
             return  # Can't close when force=True
         super().reject()
 
     def closeEvent(self, event):
+        """Ignore close event when force mode is active."""
         if self._force:
             event.ignore()
         else:
@@ -339,6 +345,8 @@ class DndLoggerApp(QMainWindow):
         self._migrate_to_campaigns()
         self._migrate_shared_config()
         self._ensure_campaign_exists()
+        self._sync_engine = None
+        self._progress_dlg = None
         self._current_theme_id = None
         self._theme_meta = None
         self._load_icon()
@@ -372,9 +380,14 @@ class DndLoggerApp(QMainWindow):
         if os.path.isdir(campaigns_root):
             # Clean up obsolete flat keys that may linger from before migration
             dirty = False
-            for old_key in ('drive_sync_enabled', 'drive_campaign_name',
-                            'drive_campaign_folder_id', 'sessions_dir',
-                            'quest_log_path', 'journal_path'):
+            for old_key in (
+                "drive_sync_enabled",
+                "drive_campaign_name",
+                "drive_campaign_folder_id",
+                "sessions_dir",
+                "quest_log_path",
+                "journal_path",
+            ):
                 if old_key in self._config:
                     del self._config[old_key]
                     dirty = True
@@ -397,9 +410,11 @@ class DndLoggerApp(QMainWindow):
 
         # Move files
         movable_files = [
-            "quest_log.html", "quest_log.html.bak",
+            "quest_log.html",
+            "quest_log.html.bak",
             "quest_log.html.pre_migration.bak",
-            "journal.html", "journal.html.bak",
+            "journal.html",
+            "journal.html.bak",
             "shared_config.json",
             "drive_sync_state.json",
         ]
@@ -415,7 +430,7 @@ class DndLoggerApp(QMainWindow):
 
         # Restructure config: move Drive keys into campaigns dict
         old_sync_enabled = self._config.pop("drive_sync_enabled", False)
-        old_campaign_name = self._config.pop("drive_campaign_name", "")
+        self._config.pop("drive_campaign_name", "")
         old_folder_id = self._config.pop("drive_campaign_folder_id", "")
         self._config.pop("sessions_dir", None)
         self._config.pop("quest_log_path", None)
@@ -441,6 +456,7 @@ class DndLoggerApp(QMainWindow):
         shared = {k: v for k, v in self._config.items() if k in SHARED_CONFIG_KEYS}
         if shared:
             from .utils import save_shared_config
+
             save_shared_config(shared, self._config)
 
     def _ensure_campaign_exists(self):
@@ -488,6 +504,7 @@ class DndLoggerApp(QMainWindow):
     def _init_sync_engine(self):
         """Initialize Google Drive sync if enabled and credentials exist."""
         import logging
+
         _log = logging.getLogger("dndlogger.sync")
 
         self._sync_engine = None
@@ -513,9 +530,7 @@ class DndLoggerApp(QMainWindow):
             # Connect signals BEFORE initialize so errors are visible
             self._sync_engine.remote_file_updated.connect(self._on_remote_file_updated)
             self._sync_engine.conflict_detected.connect(self._on_conflict_detected)
-            self._sync_engine.error_occurred.connect(
-                lambda msg: self.statusBar().showMessage(msg, 8000)
-            )
+            self._sync_engine.error_occurred.connect(lambda msg: self.statusBar().showMessage(msg, 8000))
             self._sync_engine.status_changed.connect(self._on_sync_status_changed)
 
             if not self._sync_engine.initialize(creds):
@@ -542,6 +557,7 @@ class DndLoggerApp(QMainWindow):
             return
         basename = os.path.basename(file_path)
         from .drive_sync import SYNCABLE_FILES
+
         if basename in SYNCABLE_FILES:
             self._sync_engine.trigger_upload(basename)
 
@@ -576,6 +592,7 @@ class DndLoggerApp(QMainWindow):
             self._sync_status_label.setText("")
             return
         from .drive_sync import SyncStatus
+
         labels = {
             SyncStatus.DISABLED: (tr("app.sync.disabled"), "#8899aa"),
             SyncStatus.IDLE: (tr("app.sync.idle"), "#7ec83a"),
@@ -606,33 +623,25 @@ class DndLoggerApp(QMainWindow):
 
     # ── Theme system ─────────────────────────────────────────
 
-    # Keyword → theme_id mapping for fuzzy resolution (includes French equivalents)
-    _THEME_KEYWORDS = {
-        "icewind":       "icewind_dale",
-        "frostmaiden":   "icewind_dale",
-        "auril":         "icewind_dale",
-        "givre":         "icewind_dale",
-        "strahd":        "curse_of_strahd",
-        "barovia":       "curse_of_strahd",
-        "ravenloft":     "curse_of_strahd",
-        "avernus":       "descent_into_avernus",
-        "averné":        "descent_into_avernus",
-        "enfer":         "descent_into_avernus",
-        "zariel":        "descent_into_avernus",
-        "annihilation":  "tomb_of_annihilation",
-        "chult":         "tomb_of_annihilation",
-        "tombeau":       "tomb_of_annihilation",
-        "acererak":      "tomb_of_annihilation",
-        "storm":         "storm_kings_thunder",
-        "géant":         "storm_kings_thunder",
-        "thunder":       "storm_kings_thunder",
-        "waterdeep":     "waterdeep_dragon_heist",
-        "eauprofonde":   "waterdeep_dragon_heist",
-        "dragon heist":  "waterdeep_dragon_heist",
-        "abyss":         "out_of_the_abyss",
-        "abîme":         "out_of_the_abyss",
-        "underdark":     "out_of_the_abyss",
-        "outreterre":    "out_of_the_abyss",
+    # Universal D&D proper-noun keywords → theme_id (language-independent)
+    _THEME_KEYWORDS_BASE = {
+        "icewind": "icewind_dale",
+        "frostmaiden": "icewind_dale",
+        "auril": "icewind_dale",
+        "strahd": "curse_of_strahd",
+        "barovia": "curse_of_strahd",
+        "ravenloft": "curse_of_strahd",
+        "avernus": "descent_into_avernus",
+        "zariel": "descent_into_avernus",
+        "annihilation": "tomb_of_annihilation",
+        "chult": "tomb_of_annihilation",
+        "acererak": "tomb_of_annihilation",
+        "storm": "storm_kings_thunder",
+        "thunder": "storm_kings_thunder",
+        "waterdeep": "waterdeep_dragon_heist",
+        "dragon heist": "waterdeep_dragon_heist",
+        "abyss": "out_of_the_abyss",
+        "underdark": "out_of_the_abyss",
     }
 
     def _load_theme_meta(self) -> dict:
@@ -673,9 +682,17 @@ class DndLoggerApp(QMainWindow):
         if explicit and explicit in available:
             return explicit
 
-        # Tier 2: fuzzy keyword matching
+        # Tier 2: fuzzy keyword matching (base + i18n-provided keywords)
         name_lower = active.lower()
-        for keyword, theme_id in self._THEME_KEYWORDS.items():
+        keywords = dict(self._THEME_KEYWORDS_BASE)
+        for theme_id in set(self._THEME_KEYWORDS_BASE.values()):
+            extra = tr(f"app.theme.kw.{theme_id}")
+            if extra and extra != f"app.theme.kw.{theme_id}":
+                for kw in extra.split(","):
+                    kw = kw.strip()
+                    if kw:
+                        keywords[kw] = theme_id
+        for keyword, theme_id in keywords.items():
             if keyword in name_lower and theme_id in available:
                 return theme_id
 
@@ -730,9 +747,7 @@ class DndLoggerApp(QMainWindow):
             theme_ids.append(tid)
         layout.addWidget(combo)
 
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(dlg.accept)
         buttons.rejected.connect(dlg.reject)
         layout.addWidget(buttons)
@@ -830,7 +845,9 @@ class DndLoggerApp(QMainWindow):
     def _stop_tts(self):
         """Stop TTS playback on Escape key, unless a search bar is open."""
         from PySide6.QtWidgets import QApplication
+
         from .rich_editor import _SearchLineEdit
+
         focused = QApplication.focusWidget()
         if isinstance(focused, _SearchLineEdit):
             focused._editor_widget._close_search()
@@ -1066,14 +1083,14 @@ class DndLoggerApp(QMainWindow):
             return
 
         name, ok = dlg.get_item(
-            self, tr("app.campaign.delete_title"),
-            tr("app.campaign.delete_label"), campaigns, 0, False
+            self, tr("app.campaign.delete_title"), tr("app.campaign.delete_label"), campaigns, 0, False
         )
         if not ok:
             return
 
         if not dlg.question(
-            self, tr("app.campaign.delete_confirm_title"),
+            self,
+            tr("app.campaign.delete_confirm_title"),
             tr("app.campaign.delete_confirm", name=name),
         ):
             return
@@ -1118,17 +1135,13 @@ class DndLoggerApp(QMainWindow):
         if not os.path.isdir(trash_dir):
             dlg.information(self, tr("app.campaign.restore_title"), tr("app.campaign.restore_none"))
             return
-        trashed = sorted(
-            d for d in os.listdir(trash_dir)
-            if os.path.isdir(os.path.join(trash_dir, d))
-        )
+        trashed = sorted(d for d in os.listdir(trash_dir) if os.path.isdir(os.path.join(trash_dir, d)))
         if not trashed:
             dlg.information(self, tr("app.campaign.restore_title"), tr("app.campaign.restore_none"))
             return
 
         name, ok = dlg.get_item(
-            self, tr("app.campaign.restore_title"),
-            tr("app.campaign.restore_label"), trashed, 0, False
+            self, tr("app.campaign.restore_title"), tr("app.campaign.restore_label"), trashed, 0, False
         )
         if not ok:
             return
@@ -1171,8 +1184,9 @@ class DndLoggerApp(QMainWindow):
         self.setWindowTitle(f"{name} \u2014 DnD Logger v{__version__}")
 
         # Switch editor files
-        from .quest_log import _default_quest_log_html
         from .journal import _default_journal_html
+        from .quest_log import _default_quest_log_html
+
         self.quest_log.switch_file(
             quest_log_path(self._config),
             _default_quest_log_html(name),
@@ -1224,7 +1238,7 @@ class DndLoggerApp(QMainWindow):
     def _open_settings(self):
         old_lang = self._config.get("language", "en")
         drive_cfg = campaign_drive_config(self._config)
-        was_sync_enabled = drive_cfg.get("drive_sync_enabled", False)
+        drive_cfg.get("drive_sync_enabled", False)
         dlg = SettingsDialog(self._config, self)
         if dlg.exec():
             self._config = dlg.get_config()
@@ -1258,12 +1272,9 @@ class DndLoggerApp(QMainWindow):
         self._build_menu()
 
         # Tab titles
-        self.right_tabs.setTabText(
-            self.right_tabs.indexOf(self.journal), tr("app.tab.journal"))
-        self.right_tabs.setTabText(
-            self.right_tabs.indexOf(self.quest_log), tr("app.tab.quest_log"))
-        self.right_tabs.setTabText(
-            self.right_tabs.indexOf(self.session_tab), tr("app.tab.session"))
+        self.right_tabs.setTabText(self.right_tabs.indexOf(self.journal), tr("app.tab.journal"))
+        self.right_tabs.setTabText(self.right_tabs.indexOf(self.quest_log), tr("app.tab.quest_log"))
+        self.right_tabs.setTabText(self.right_tabs.indexOf(self.session_tab), tr("app.tab.session"))
 
         # Child widgets
         self.session_tab.retranslate_ui()
@@ -1299,7 +1310,8 @@ class DndLoggerApp(QMainWindow):
         self._update_worker.no_update.connect(self._on_no_update)
         self._update_worker.error.connect(
             lambda msg: dlg.warning(
-                self, tr("app.update.title"),
+                self,
+                tr("app.update.title"),
                 tr("app.update.check_error", msg=msg),
             )
         )
@@ -1329,6 +1341,7 @@ class DndLoggerApp(QMainWindow):
 
         if body:
             from PySide6.QtWidgets import QTextEdit
+
             details_text = QTextEdit()
             details_text.setReadOnly(True)
             details_text.setPlainText(body)
@@ -1338,10 +1351,7 @@ class DndLoggerApp(QMainWindow):
             btn_details = QPushButton(tr("app.update.btn_details") + " ▸")
             btn_details.setFlat(True)
             btn_details.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn_details.setStyleSheet(
-                "text-align: left; padding: 0; border: none; "
-                "color: #5a9bc8; font-size: 12px;"
-            )
+            btn_details.setStyleSheet("text-align: left; padding: 0; border: none; " "color: #5a9bc8; font-size: 12px;")
 
             def _toggle_details():
                 visible = not details_text.isVisible()
@@ -1371,7 +1381,8 @@ class DndLoggerApp(QMainWindow):
 
     def _on_no_update(self):
         dlg.information(
-            self, tr("app.update.title"),
+            self,
+            tr("app.update.title"),
             tr("app.update.no_update", version=__version__),
         )
 
@@ -1391,9 +1402,7 @@ class DndLoggerApp(QMainWindow):
         self._cleanup_download_thread()
         self._download_thread, self._download_worker = start_update_download(url)
 
-        self._progress_dlg = QProgressDialog(
-            tr("app.update.downloading"), tr("app.update.btn_cancel"), 0, 100, self
-        )
+        self._progress_dlg = QProgressDialog(tr("app.update.downloading"), tr("app.update.btn_cancel"), 0, 100, self)
         self._progress_dlg.setWindowTitle(tr("app.update.title"))
         self._progress_dlg.setWindowModality(Qt.WindowModality.WindowModal)
         self._progress_dlg.setMinimumDuration(0)
@@ -1409,7 +1418,11 @@ class DndLoggerApp(QMainWindow):
             self._progress_dlg.setMaximum(total)
             self._progress_dlg.setValue(downloaded)
             self._progress_dlg.setLabelText(
-                tr("app.update.download_progress", downloaded=format_file_size(downloaded), total=format_file_size(total))
+                tr(
+                    "app.update.download_progress",
+                    downloaded=format_file_size(downloaded),
+                    total=format_file_size(total),
+                )
             )
         else:
             self._progress_dlg.setMaximum(0)
@@ -1421,14 +1434,15 @@ class DndLoggerApp(QMainWindow):
         self._progress_dlg.close()
         self._cleanup_download_thread()
         if dlg.question(
-            self, tr("app.update.title"),
+            self,
+            tr("app.update.title"),
             tr("app.update.download_done"),
         ):
-            CREATE_NEW_PROCESS_GROUP = 0x00000200
-            DETACHED_PROCESS = 0x00000008
+            create_new_process_group = 0x00000200
+            detached_process = 0x00000008
             subprocess.Popen(
                 [path, "/SILENT", "/RESTARTAPPLICATIONS"],
-                creationflags=DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
+                creationflags=detached_process | create_new_process_group,
                 close_fds=True,
             )
             self.close()
@@ -1437,7 +1451,8 @@ class DndLoggerApp(QMainWindow):
         self._progress_dlg.close()
         self._cleanup_download_thread()
         dlg.warning(
-            self, tr("app.update.title"),
+            self,
+            tr("app.update.title"),
             tr("app.update.download_error", msg=msg),
         )
 

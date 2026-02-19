@@ -1,6 +1,5 @@
 """Audio chunking and Mistral Voxtral transcription pipeline."""
 
-import math
 import os
 import re
 import time
@@ -8,7 +7,6 @@ import time
 import soundfile as sf
 from PySide6.QtCore import QObject, QThread, Signal
 
-from .utils import load_config
 from .i18n import tr
 
 
@@ -59,7 +57,7 @@ class AudioChunker:
 
 def _transcribe_file(client, chunk_path: str, config: dict, retries: int = 3) -> str:
     """Transcribe a single audio file using Mistral Voxtral API with retry logic."""
-    _BIAS_VALID = re.compile(r"^[a-zA-Z0-9_-]+$")
+    _BIAS_VALID = re.compile(r"^[a-zA-Z0-9_-]+$")  # pylint: disable=invalid-name
     raw_bias = config.get("context_bias", [])
     context_bias = []
     for b in raw_bias:
@@ -103,7 +101,7 @@ def _transcribe_file(client, chunk_path: str, config: dict, retries: int = 3) ->
             if "401" in err_str:
                 raise RuntimeError(tr("transcriber.error.invalid_key"))
             if "429" in err_str and attempt < retries - 1:
-                wait = 15 * (2 ** attempt)  # 15s, 30s, 60s
+                wait = 15 * (2**attempt)  # 15s, 30s, 60s
                 time.sleep(wait)
                 continue
             if attempt == retries - 1:
@@ -172,6 +170,7 @@ class LiveTranscriptionWorker(QObject):
         self._config = config
 
     def run(self):
+        """Transcribe a single audio chunk and emit the result."""
         try:
             from mistralai import Mistral
 

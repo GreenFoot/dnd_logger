@@ -62,6 +62,14 @@ STRINGS: dict[str, str] = {
         "pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib"
     ),
     "app.campaign.error_title": "Error",
+    # ── app.py — theme keyword matching (comma-separated) ──
+    "app.theme.kw.icewind_dale": "",
+    "app.theme.kw.curse_of_strahd": "",
+    "app.theme.kw.descent_into_avernus": "",
+    "app.theme.kw.tomb_of_annihilation": "",
+    "app.theme.kw.storm_kings_thunder": "",
+    "app.theme.kw.waterdeep_dragon_heist": "",
+    "app.theme.kw.out_of_the_abyss": "",
     # ── app.py — theme picker ───────────────────────────────
     "app.theme.title": "Choose a theme",
     "app.theme.label": "No automatic theme found for this campaign.\nChoose a visual theme:",
@@ -318,6 +326,19 @@ will be recorded here for posterity.</em></p>
     "quest_extractor.no_quests": "(No quests recorded)",
     "quest_extractor.dialog_title": "Quest update",
     "quest_extractor.dialog_label": "Proposed changes — edit if needed:",
+    # ── updater.py ─────────────────────────────────────────
+    "updater.error.no_installer": "No installer found in this release.",
+    "updater.error.network": "Network error: {reason}",
+    # ── drive_sync.py ─────────────────────────────────────
+    "drive.error.init": "Drive initialization error: {error}",
+    "drive.error.session_expired": "Drive session expired. Reconnect in settings.",
+    "drive.error.upload": "Upload error ({filename}): {error}",
+    "drive.error.download": "Download error ({filename}): {error}",
+    # ── web_panel.py ──────────────────────────────────────
+    "browser.tooltip.back": "Back",
+    "browser.tooltip.forward": "Forward",
+    "browser.tooltip.refresh": "Refresh",
+    "browser.tooltip.home": "D&D Beyond Home",
     # ── AI Prompts ──────────────────────────────────────────
     "prompt.summary_system": """\
 You are an epic chronicler of the Forgotten Realms, specializing in narrating \

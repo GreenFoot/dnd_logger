@@ -37,7 +37,7 @@ class TTSEngine(QObject):
     VOICE = "fr-FR-RemyMultilingualNeural"
 
     # Split on sentence-ending punctuation followed by whitespace, or on newlines
-    _SENTENCE_RE = re.compile(r'(?<=[.!?…])\s+|\n+')
+    _SENTENCE_RE = re.compile(r"(?<=[.!?…])\s+|\n+")
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -52,6 +52,7 @@ class TTSEngine(QObject):
         """Check that edge-tts is importable. Call from worker thread."""
         try:
             import edge_tts  # noqa: F401
+
             self._winmm = ctypes.windll.winmm
             self._is_available = True
             self.available.emit(True)
@@ -61,14 +62,17 @@ class TTSEngine(QObject):
 
     @property
     def is_available(self) -> bool:
+        """Return whether the TTS engine is ready."""
         return self._is_available
 
     @property
     def is_speaking(self) -> bool:
+        """Return whether audio is currently playing."""
         return self._playing
 
     @property
     def is_paused(self) -> bool:
+        """Return whether playback is paused."""
         return self._paused
 
     def _clean_text(self, text: str) -> str:
@@ -113,6 +117,7 @@ class TTSEngine(QObject):
     def _generate_audio(self, sentence: str, path: str):
         """Generate MP3 for a single sentence (blocking network call)."""
         import edge_tts
+
         communicate = edge_tts.Communicate(sentence, self.VOICE)
         asyncio.run(communicate.save(path))
 

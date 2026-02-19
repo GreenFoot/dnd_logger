@@ -1,8 +1,8 @@
 """Quest Log — structured quest tracker, inherits from RichTextEditorWidget."""
 
+from .i18n import tr
 from .rich_editor import RichTextEditorWidget
 from .utils import active_campaign_name, quest_log_path
-from .i18n import tr
 
 
 def _default_quest_log_html(campaign_name: str) -> str:

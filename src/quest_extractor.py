@@ -3,14 +3,7 @@
 import re
 
 from PySide6.QtCore import QObject, QThread, Signal
-from PySide6.QtGui import QTextCursor
-from PySide6.QtWidgets import (
-    QDialog,
-    QDialogButtonBox,
-    QLabel,
-    QTextEdit,
-    QVBoxLayout,
-)
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QTextEdit, QVBoxLayout
 
 from .diff_utils import apply_inline_diff, extract_html_without_deleted
 from .i18n import tr
@@ -24,6 +17,7 @@ def _get_extraction_prompt() -> str:
 
 # Module-level alias used by settings.py for prompt defaults
 def get_default_quest_extraction() -> str:
+    """Return the default quest extraction prompt text for settings defaults."""
     return _get_extraction_prompt()
 
 
@@ -46,8 +40,7 @@ class QuestExtractorWorker(QObject):
     completed = Signal(str)  # quest update HTML
     error = Signal(str)
 
-    def __init__(self, summary_html: str, current_quests: str, config: dict,
-                 campaign_name: str = ""):
+    def __init__(self, summary_html: str, current_quests: str, config: dict, campaign_name: str = ""):
         super().__init__()
         self._summary = summary_html
         self._current_quests = current_quests
@@ -55,6 +48,7 @@ class QuestExtractorWorker(QObject):
         self._campaign_name = campaign_name
 
     def run(self):
+        """Call Mistral API to extract quest updates from the session summary."""
         try:
             from mistralai import Mistral
 
@@ -120,10 +114,7 @@ class QuestProposalDialog(QDialog):
         self.editor.setAcceptRichText(True)
         layout.addWidget(self.editor, stretch=1)
 
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel
-        )
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
@@ -136,13 +127,14 @@ class QuestProposalDialog(QDialog):
 
 
 def start_quest_extraction(
-    summary_html: str, current_quests: str, config: dict,
+    summary_html: str,
+    current_quests: str,
+    config: dict,
     campaign_name: str = "",
 ) -> tuple[QThread, QuestExtractorWorker]:
     """Create a quest extraction worker in a new thread."""
     thread = QThread()
-    worker = QuestExtractorWorker(summary_html, current_quests, config,
-                                  campaign_name=campaign_name)
+    worker = QuestExtractorWorker(summary_html, current_quests, config, campaign_name=campaign_name)
     worker.moveToThread(thread)
     thread.started.connect(worker.run)
     worker.completed.connect(thread.quit)

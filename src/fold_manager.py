@@ -1,14 +1,15 @@
 """FoldManager — fold region scanning and state management for rich text editors."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from PySide6.QtCore import QObject
-from PySide6.QtGui import QTextBlock, QTextDocument
+from PySide6.QtGui import QTextDocument
 
 
 @dataclass
 class FoldRegion:
     """A foldable region spanning from start_block to end_block (inclusive)."""
+
     start: int
     end: int
     level: int
@@ -32,9 +33,14 @@ class FoldManager(QObject):
         3: {1, 2, 3},
     }
 
-    def __init__(self, document: QTextDocument, heading_detector,
-                 foldable_heading_levels: set[int] | None = None,
-                 fold_by_default: bool = False, parent=None):
+    def __init__(
+        self,
+        document: QTextDocument,
+        heading_detector,
+        foldable_heading_levels: set[int] | None = None,
+        fold_by_default: bool = False,
+        parent=None,
+    ):
         super().__init__(parent)
         self._doc = document
         self._detect_heading = heading_detector
@@ -53,6 +59,11 @@ class FoldManager(QObject):
             self._scan_document()
 
     def regions(self) -> dict[int, FoldRegion]:
+        """Return the current fold regions, rescanning the document if needed.
+
+        Returns:
+            Mapping of start-block numbers to their FoldRegion objects.
+        """
         self._ensure_fresh()
         return self._regions
 
@@ -83,7 +94,9 @@ class FoldManager(QObject):
             if end_block > bnum:
                 is_folded = old_folded.get(bnum, self._fold_by_default)
                 new_regions[bnum] = FoldRegion(
-                    start=bnum, end=end_block, level=level,
+                    start=bnum,
+                    end=end_block,
+                    level=level,
                     is_folded=is_folded,
                 )
 
@@ -107,7 +120,9 @@ class FoldManager(QObject):
                 if last_child > bnum:
                     is_folded = old_folded.get(bnum, self._fold_by_default)
                     new_regions[bnum] = FoldRegion(
-                        start=bnum, end=last_child, level=10 + indent,
+                        start=bnum,
+                        end=last_child,
+                        level=10 + indent,
                         is_folded=is_folded,
                     )
             block = block.next()
@@ -127,9 +142,7 @@ class FoldManager(QObject):
         if region is None:
             return
         region.is_folded = not region.is_folded
-        self._set_block_visibility(
-            region.start + 1, region.end, visible=not region.is_folded
-        )
+        self._set_block_visibility(region.start + 1, region.end, visible=not region.is_folded)
 
     def fold_at(self, block_num: int):
         """Fold the region at block_num (no-op if already folded)."""
@@ -158,6 +171,7 @@ class FoldManager(QObject):
                 self._set_block_visibility(r.start + 1, r.end, visible=True)
 
     def fold_all(self):
+        """Fold every region in the document."""
         self._ensure_fresh()
         for r in self._regions.values():
             if not r.is_folded:
@@ -165,6 +179,7 @@ class FoldManager(QObject):
                 self._set_block_visibility(r.start + 1, r.end, visible=False)
 
     def unfold_all(self):
+        """Unfold every region in the document."""
         self._ensure_fresh()
         for r in self._regions.values():
             if r.is_folded:

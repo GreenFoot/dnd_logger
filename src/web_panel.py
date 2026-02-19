@@ -13,15 +13,9 @@ from PySide6.QtWebEngineCore import (
     QWebEngineUrlRequestInterceptor,
 )
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWidgets import (
-    QApplication,
-    QHBoxLayout,
-    QPushButton,
-    QStyle,
-    QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
+from .i18n import tr
 from .utils import browser_data_dir, load_config, save_config
 
 log = logging.getLogger("dndlogger.web")
@@ -93,6 +87,7 @@ class _NoBrotliInterceptor(QWebEngineUrlRequestInterceptor):
     """Strip Brotli from Accept-Encoding to work around PyInstaller decompression bug."""
 
     def interceptRequest(self, info):
+        """Strip Brotli from Accept-Encoding header."""
         info.setHttpHeader(b"Accept-Encoding", b"gzip, deflate")
         log.debug("Intercepted request: %s", info.requestUrl().toString()[:120])
 
@@ -104,6 +99,7 @@ class _BrowserPage(QWebEnginePage):
         super().__init__(profile, parent)
 
     def createWindow(self, window_type):
+        """Redirect popup windows back into this page."""
         return self
 
     def javaScriptConsoleMessage(self, level, message, line, source):
@@ -119,6 +115,7 @@ class DndBeyondBrowser(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._page = None
         self._setup_profile()
         self._build_ui()
 
@@ -220,25 +217,25 @@ class DndBeyondBrowser(QWidget):
         self.btn_back = QPushButton()
         self.btn_back.setIcon(_make_icon(_icon_back, color=icon_color))
         self.btn_back.setIconSize(QSize(18, 18))
-        self.btn_back.setToolTip("Retour")
+        self.btn_back.setToolTip(tr("browser.tooltip.back"))
         self.btn_back.setFixedSize(30, 26)
 
         self.btn_forward = QPushButton()
         self.btn_forward.setIcon(_make_icon(_icon_forward, color=icon_color))
         self.btn_forward.setIconSize(QSize(18, 18))
-        self.btn_forward.setToolTip("Suivant")
+        self.btn_forward.setToolTip(tr("browser.tooltip.forward"))
         self.btn_forward.setFixedSize(30, 26)
 
         self.btn_refresh = QPushButton()
         self.btn_refresh.setIcon(_make_icon(_icon_refresh, color=icon_color))
         self.btn_refresh.setIconSize(QSize(18, 18))
-        self.btn_refresh.setToolTip("Rafraichir")
+        self.btn_refresh.setToolTip(tr("browser.tooltip.refresh"))
         self.btn_refresh.setFixedSize(30, 26)
 
         self.btn_home = QPushButton()
         self.btn_home.setIcon(_make_icon(_icon_home, color=icon_color))
         self.btn_home.setIconSize(QSize(18, 18))
-        self.btn_home.setToolTip("Accueil D&D Beyond")
+        self.btn_home.setToolTip(tr("browser.tooltip.home"))
         self.btn_home.setFixedSize(30, 26)
 
         for btn in (self.btn_back, self.btn_forward, self.btn_refresh, self.btn_home):

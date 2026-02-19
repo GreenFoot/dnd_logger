@@ -1,0 +1,13 @@
+[MASTER]
+disable=all
+enable=missing-function-docstring,invalid-name,undefined-variable,used-before-assignment,no-member,attribute-defined-outside-init
+
+[BASIC]
+module-naming-style=snake_case
+method-naming-style=snake_case
+function-naming-style=snake_case
+variable-naming-style=snake_case
+argument-naming-style=snake_case
+attr-naming-style=snake_case
+const-naming-style=UPPER_CASE
+good-names=i,j,k,_,eventFilter,paintEvent,closeEvent,sizeHint,mousePressEvent,mouseMoveEvent,leaveEvent,showEvent,keyPressEvent,interceptRequest,createWindow,javaScriptConsoleMessage

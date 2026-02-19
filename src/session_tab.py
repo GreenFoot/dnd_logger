@@ -7,8 +7,8 @@ import time
 from datetime import datetime
 
 import soundfile as sf
-from PySide6.QtCore import QRectF, Qt, QTimer
-from PySide6.QtGui import QAction, QColor, QPainter
+from PySide6.QtCore import QRectF, QSize, Qt, QTimer
+from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -85,6 +85,34 @@ class _ThinDivider(QWidget):
 def _make_divider() -> QWidget:
     """Create a thin gold divider widget (standalone helper)."""
     return _ThinDivider()
+
+
+def _make_tts_icon(size: int = 20) -> QIcon:
+    """Draw a speaker icon with sound waves for TTS playback."""
+    pix = QPixmap(size, size)
+    pix.fill(QColor(0, 0, 0, 0))
+    p = QPainter(pix)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    gold = QColor(212, 175, 55)
+    p.setPen(QPen(gold, 1.6))
+    cy = size // 2
+
+    # Speaker back plate
+    p.drawLine(2, cy - 2, 5, cy - 2)
+    p.drawLine(2, cy + 2, 5, cy + 2)
+    p.drawLine(2, cy - 2, 2, cy + 2)
+
+    # Speaker cone
+    p.drawLine(5, cy - 2, 9, cy - 5)
+    p.drawLine(5, cy + 2, 9, cy + 5)
+    p.drawLine(9, cy - 5, 9, cy + 5)
+
+    # Sound wave arcs
+    p.drawArc(11, cy - 4, 4, 8, -45 * 16, 90 * 16)
+    p.drawArc(14, cy - 6, 5, 12, -45 * 16, 90 * 16)
+
+    p.end()
+    return QIcon(pix)
 
 
 class PostRecordingDialog(QDialog):
@@ -277,7 +305,9 @@ class SessionTab(QWidget):
         self._summary_label.setObjectName("subheading")
         summary_header.addWidget(self._summary_label)
 
-        self.btn_tts = QPushButton("\U0001f50a")
+        self.btn_tts = QPushButton()
+        self.btn_tts.setIcon(_make_tts_icon())
+        self.btn_tts.setIconSize(QSize(18, 18))
         self.btn_tts.setToolTip(tr("session.btn.tts_tooltip"))
         self.btn_tts.setFixedWidth(36)
         self.btn_tts.setEnabled(False)

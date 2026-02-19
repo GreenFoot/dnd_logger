@@ -103,7 +103,7 @@ def _transcribe_file(client, chunk_path: str, config: dict, retries: int = 3) ->
             if "401" in err_str:
                 raise RuntimeError(tr("transcriber.error.invalid_key"))
             if "429" in err_str and attempt < retries - 1:
-                wait = 2 ** (attempt + 1)
+                wait = 15 * (2 ** attempt)  # 15s, 30s, 60s
                 time.sleep(wait)
                 continue
             if attempt == retries - 1:

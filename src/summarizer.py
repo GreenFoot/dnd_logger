@@ -1,6 +1,7 @@
 """Summarization via Mistral chat API with epic fantasy style."""
 
 import re
+import time
 
 from PySide6.QtCore import QObject, QThread, Signal
 
@@ -79,6 +80,18 @@ def get_default_condense() -> str:
     return _get_condense_prompt()
 
 
+def _call_with_retry(fn, retries=3, base_delay=15):
+    """Call fn() with retry and exponential backoff on 429 rate limit."""
+    for attempt in range(retries):
+        try:
+            return fn()
+        except Exception as e:
+            if "429" in str(e) and attempt < retries - 1:
+                time.sleep(base_delay * (2 ** attempt))  # 15s, 30s, 60s
+                continue
+            raise
+
+
 class SummarizerWorker(QObject):
     """Runs summarization in a QThread via Mistral chat API."""
 
@@ -118,7 +131,7 @@ class SummarizerWorker(QObject):
 
             system_prompt = self._config.get("prompt_summary_system") or _get_system_prompt()
 
-            response = client.chat.complete(
+            response = _call_with_retry(lambda: client.chat.complete(
                 model=model,
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -126,7 +139,7 @@ class SummarizerWorker(QObject):
                 ],
                 temperature=0.2,
                 max_tokens=8000,
-            )
+            ))
 
             summary = response.choices[0].message.content
             # Strip markdown code fences the model sometimes wraps around HTML
@@ -145,12 +158,12 @@ class SummarizerWorker(QObject):
         condensed_parts = []
         for chunk in chunks:
             prompt = condense_template.format(text=chunk)
-            response = client.chat.complete(
+            response = _call_with_retry(lambda: client.chat.complete(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.0,
                 max_tokens=12000,
-            )
+            ))
             condensed_parts.append(response.choices[0].message.content)
         return "\n\n".join(condensed_parts)
 

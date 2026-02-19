@@ -332,6 +332,19 @@ class SessionTab(QWidget):
         action_layout.addWidget(self.btn_more)
         layout.addLayout(action_layout)
 
+    def _update_action_button(self):
+        """Set btn_transcribe text and click handler based on transcript state."""
+        try:
+            self.btn_transcribe.clicked.disconnect()
+        except RuntimeError:
+            pass
+        if self._current_transcript:
+            self.btn_transcribe.setText(tr("session.btn.summarize"))
+            self.btn_transcribe.clicked.connect(self._start_summarization)
+        else:
+            self.btn_transcribe.setText(tr("session.btn.transcribe"))
+            self.btn_transcribe.clicked.connect(self._start_transcription)
+
     def _connect_signals(self):
         self.btn_record.clicked.connect(self._on_record_btn_clicked)
         self.btn_stop.clicked.connect(self._stop_recording)
@@ -494,6 +507,7 @@ class SessionTab(QWidget):
                 self.status_label.setText(tr("session.status.ready_rerecord"))
                 self.duration_label.setText("00:00:00")
             else:
+                self._update_action_button()
                 self.btn_transcribe.setEnabled(True)
                 self._act_save_audio.setEnabled(True)
                 self.status_label.setText(tr("session.status.saved"))
@@ -531,6 +545,7 @@ class SessionTab(QWidget):
             return
 
         self._current_wav_path = dest_path
+        self._update_action_button()
         self.btn_transcribe.setEnabled(True)
         self._act_save_audio.setEnabled(True)
 
@@ -684,7 +699,7 @@ class SessionTab(QWidget):
             self._do_final_live_transcription()
 
     def _finalize_live_transcription(self):
-        """Combine all live transcript parts and proceed to summarization."""
+        """Combine all live transcript parts into final transcript."""
         full_text = "\n\n".join(self._live_transcript_parts)
         self._current_transcript = full_text
         self.transcript_display.setPlainText(full_text)
@@ -697,12 +712,12 @@ class SessionTab(QWidget):
                 f.write(full_text)
 
         self._act_save_audio.setEnabled(True)
+        self._update_action_button()
         self.btn_transcribe.setEnabled(True)
 
         if full_text.strip():
             self.status_label.setText(tr("session.status.transcription_done"))
             self.status_label.setStyleSheet("color: #d4af37;")
-            self._start_summarization()
         else:
             self.status_label.setText(tr("session.status.no_text"))
             self.status_label.setStyleSheet("color: #7ec8e3;")
@@ -719,11 +734,17 @@ class SessionTab(QWidget):
         self._current_transcript = full_text
         self.transcript_display.setPlainText(full_text)
         self.status_label.setText(tr("session.status.transcription_done"))
-        self._start_summarization()
+        self.status_label.setStyleSheet("color: #d4af37;")
+        self._update_action_button()
+        self.btn_transcribe.setEnabled(True)
 
     # --- Summarization ---
 
     def _start_summarization(self):
+        self.btn_transcribe.setEnabled(False)
+        self.status_label.setText(tr("session.status.summarizing"))
+        self.status_label.setStyleSheet("color: #d4af37;")
+
         # Combine journal (narrative flow) and quest log (active quest state)
         journal_context = ""
         if self._journal:
@@ -756,6 +777,7 @@ class SessionTab(QWidget):
         self._act_copy.setEnabled(True)
         self.btn_add_journal.setEnabled(True)
         self.btn_update_quests.setEnabled(True)
+        self._update_action_button()
         self.btn_transcribe.setEnabled(True)
         self._act_save_audio.setEnabled(bool(self._current_wav_path or self._recorder.wav_path))
         if self._tts_engine.is_available:
@@ -845,7 +867,8 @@ class SessionTab(QWidget):
         self.btn_record.setEnabled(True)
         self.btn_stop.setEnabled(False)
         has_audio = bool(self._current_wav_path or self._recorder.wav_path)
-        self.btn_transcribe.setEnabled(has_audio)
+        self._update_action_button()
+        self.btn_transcribe.setEnabled(has_audio or bool(self._current_transcript))
         self._act_save_audio.setEnabled(has_audio)
         self.btn_update_quests.setEnabled(bool(self._current_summary))
 
@@ -913,7 +936,7 @@ class SessionTab(QWidget):
         self.summary_display.setPlaceholderText(tr("session.placeholder.summary"))
 
         # Action buttons
-        self.btn_transcribe.setText(tr("session.btn.transcribe"))
+        self._update_action_button()
         self.btn_add_journal.setText(tr("session.btn.add_journal"))
         self.btn_update_quests.setText(tr("session.btn.update_quests"))
 

@@ -4,12 +4,13 @@ import json
 import logging
 import os
 import tempfile
-import urllib.request
 import urllib.error
+import urllib.request
 
 from PySide6.QtCore import QObject, QThread, Signal
 
 from . import __version__
+from .i18n import tr
 
 log = logging.getLogger(__name__)
 
@@ -40,11 +41,11 @@ class UpdateCheckWorker(QObject):
     error = Signal(str)
 
     def run(self):
+        """Check GitHub for a newer release and emit the result."""
         try:
             req = urllib.request.Request(
                 _API_URL,
-                headers={"Accept": "application/vnd.github.v3+json",
-                         "User-Agent": "DnDLogger-Updater"},
+                headers={"Accept": "application/vnd.github.v3+json", "User-Agent": "DnDLogger-Updater"},
             )
             with urllib.request.urlopen(req, timeout=10) as resp:
                 data = json.loads(resp.read().decode())
@@ -68,13 +69,13 @@ class UpdateCheckWorker(QObject):
                     break
 
             if not download_url:
-                self.error.emit("Aucun installateur trouvé dans cette release.")
+                self.error.emit(tr("updater.error.no_installer"))
                 return
 
             self.update_available.emit(tag, name, download_url, body)
 
         except urllib.error.URLError as e:
-            self.error.emit(f"Erreur réseau : {e.reason}")
+            self.error.emit(tr("updater.error.network", reason=e.reason))
         except Exception as e:
             self.error.emit(str(e))
 
@@ -86,7 +87,7 @@ class UpdateDownloadWorker(QObject):
     """Download an installer asset in chunks."""
 
     progress = Signal(int, int)  # downloaded, total
-    completed = Signal(str)      # local file path
+    completed = Signal(str)  # local file path
     error = Signal(str)
 
     def __init__(self, url: str):
@@ -96,9 +97,11 @@ class UpdateDownloadWorker(QObject):
         self._tmp_path = ""
 
     def cancel(self):
+        """Request cancellation of the download."""
         self._cancelled = True
 
     def run(self):
+        """Download the installer asset in chunks and emit progress."""
         try:
             req = urllib.request.Request(
                 self._url,
@@ -106,9 +109,7 @@ class UpdateDownloadWorker(QObject):
             )
             with urllib.request.urlopen(req, timeout=30) as resp:
                 total = int(resp.headers.get("Content-Length", 0))
-                tmp = tempfile.NamedTemporaryFile(
-                    suffix=".exe", delete=False, dir=tempfile.gettempdir()
-                )
+                tmp = tempfile.NamedTemporaryFile(suffix=".exe", delete=False, dir=tempfile.gettempdir())
                 self._tmp_path = tmp.name
 
                 downloaded = 0

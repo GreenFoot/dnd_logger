@@ -49,6 +49,7 @@ class TTSOverlay(QWidget):
         """Show overlay and start animation."""
         if not self.isVisible():
             from PySide6.QtWidgets import QApplication
+
             self._prev_focus = QApplication.focusWidget()
         self._paused = False
         self._tick = 0
@@ -78,6 +79,7 @@ class TTSOverlay(QWidget):
     # ── Event handling ────────────────────────────────
 
     def keyPressEvent(self, event):
+        """Handle Space (pause/resume) and Escape (stop) keys."""
         if event.key() == Qt.Key.Key_Space:
             self.pause_toggled.emit()
         elif event.key() == Qt.Key.Key_Escape:
@@ -86,12 +88,14 @@ class TTSOverlay(QWidget):
             super().keyPressEvent(event)
 
     def eventFilter(self, obj, event):
+        """Resize overlay when parent widget resizes."""
         if obj == self.parentWidget() and event.type() == QEvent.Type.Resize:
             if self.isVisible():
                 self._sync_geometry()
         return False
 
     def paintEvent(self, event):
+        """Draw the semi-transparent overlay with sound-wave animation."""
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
 
@@ -112,8 +116,7 @@ class TTSOverlay(QWidget):
         p.drawPath(card)
 
         # Sound-wave bars
-        total_bw = (self._BAR_COUNT * self._BAR_WIDTH
-                     + (self._BAR_COUNT - 1) * self._BAR_GAP)
+        total_bw = self._BAR_COUNT * self._BAR_WIDTH + (self._BAR_COUNT - 1) * self._BAR_GAP
         bx_start = (w - total_bw) / 2
         bars_cy = cy + 55
 
@@ -133,8 +136,7 @@ class TTSOverlay(QWidget):
         sf.setBold(True)
         p.setFont(sf)
         label = tr("tts.status.paused") if self._paused else tr("tts.status.playing")
-        p.drawText(QRectF(cx, cy + 85, card_w, 24),
-                   Qt.AlignmentFlag.AlignCenter, label)
+        p.drawText(QRectF(cx, cy + 85, card_w, 24), Qt.AlignmentFlag.AlignCenter, label)
 
         # Control hints
         p.setPen(QColor(160, 155, 145))
@@ -142,8 +144,7 @@ class TTSOverlay(QWidget):
         p.setFont(hf)
         pause_hint = tr("tts.hint.resume") if self._paused else tr("tts.hint.pause")
         hints = f"{pause_hint}  |  {tr('tts.hint.stop')}"
-        p.drawText(QRectF(cx, cy + 118, card_w, 20),
-                   Qt.AlignmentFlag.AlignCenter, hints)
+        p.drawText(QRectF(cx, cy + 118, card_w, 20), Qt.AlignmentFlag.AlignCenter, hints)
 
         p.end()
 
@@ -158,7 +159,7 @@ class TTSOverlay(QWidget):
         self._tick += 1
         for i in range(self._BAR_COUNT):
             phase = i * 0.9
-            self._bar_heights[i] = self._BAR_MIN_H + (
-                self._BAR_MAX_H - self._BAR_MIN_H
-            ) * (0.5 + 0.5 * math.sin(self._tick * 0.15 + phase))
+            self._bar_heights[i] = self._BAR_MIN_H + (self._BAR_MAX_H - self._BAR_MIN_H) * (
+                0.5 + 0.5 * math.sin(self._tick * 0.15 + phase)
+            )
         self.update()

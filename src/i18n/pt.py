@@ -62,6 +62,14 @@ STRINGS: dict[str, str] = {
         "pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib"
     ),
     "app.campaign.error_title": "Erro",
+    # ── app.py — theme keyword matching (comma-separated) ──
+    "app.theme.kw.icewind_dale": "gelo",
+    "app.theme.kw.curse_of_strahd": "maldição",
+    "app.theme.kw.descent_into_avernus": "inferno,descida",
+    "app.theme.kw.tomb_of_annihilation": "tumba,aniquilação",
+    "app.theme.kw.storm_kings_thunder": "tempestade,gigante,trovão",
+    "app.theme.kw.waterdeep_dragon_heist": "",
+    "app.theme.kw.out_of_the_abyss": "abismo,subterrâneo",
     # ── app.py — theme picker ───────────────────────────────
     "app.theme.title": "Escolher um tema",
     "app.theme.label": "Nenhum tema automático encontrado para esta campanha.\nEscolha um tema visual:",
@@ -85,9 +93,7 @@ STRINGS: dict[str, str] = {
     "app.update.download_progress": "A transferir... {downloaded} / {total}",
     "app.update.download_progress_unknown": "A transferir... {downloaded}",
     "app.update.download_done": (
-        "Transferência concluída.\n"
-        "A aplicação será encerrada para instalar a atualização.\n\n"
-        "Continuar?"
+        "Transferência concluída.\n" "A aplicação será encerrada para instalar a atualização.\n\n" "Continuar?"
     ),
     "app.update.download_error": "Erro durante a transferência.\n{msg}",
     "app.update.btn_cancel": "Cancelar",

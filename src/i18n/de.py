@@ -62,6 +62,14 @@ STRINGS: dict[str, str] = {
         "pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib"
     ),
     "app.campaign.error_title": "Fehler",
+    # ── app.py — theme keyword matching (comma-separated) ──
+    "app.theme.kw.icewind_dale": "eiswind,frost",
+    "app.theme.kw.curse_of_strahd": "fluch",
+    "app.theme.kw.descent_into_avernus": "hölle,abstieg",
+    "app.theme.kw.tomb_of_annihilation": "vernichtung,grab",
+    "app.theme.kw.storm_kings_thunder": "donner,riese",
+    "app.theme.kw.waterdeep_dragon_heist": "drachenraub",
+    "app.theme.kw.out_of_the_abyss": "abgrund",
     # ── app.py — theme picker ───────────────────────────────
     "app.theme.title": "Design auswaehlen",
     "app.theme.label": "Kein automatisches Design fuer diese Kampagne gefunden.\nVisuelles Design auswaehlen:",
@@ -85,9 +93,7 @@ STRINGS: dict[str, str] = {
     "app.update.download_progress": "Herunterladen... {downloaded} / {total}",
     "app.update.download_progress_unknown": "Herunterladen... {downloaded}",
     "app.update.download_done": (
-        "Download abgeschlossen.\n"
-        "Die Anwendung wird geschlossen, um das Update zu installieren.\n\n"
-        "Fortfahren?"
+        "Download abgeschlossen.\n" "Die Anwendung wird geschlossen, um das Update zu installieren.\n\n" "Fortfahren?"
     ),
     "app.update.download_error": "Fehler beim Herunterladen.\n{msg}",
     "app.update.btn_cancel": "Abbrechen",

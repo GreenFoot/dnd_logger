@@ -4,9 +4,9 @@ from datetime import datetime
 
 from PySide6.QtGui import QTextCursor
 
+from .i18n import tr
 from .rich_editor import RichTextEditorWidget
 from .utils import active_campaign_name, journal_path
-from .i18n import tr
 
 
 def _default_journal_html(campaign_name: str) -> str:

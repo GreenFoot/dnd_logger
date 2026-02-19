@@ -6,16 +6,24 @@ import shutil
 
 from PySide6.QtCore import QPoint, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import (
-    QBrush, QColor, QFont, QIcon, QKeySequence, QPainter, QPen, QPixmap,
-    QPolygon, QShortcut, QTextCharFormat, QTextCursor, QTextBlock,
+    QBrush,
+    QColor,
+    QFont,
+    QIcon,
+    QKeySequence,
+    QPainter,
+    QPen,
+    QPixmap,
+    QPolygon,
+    QShortcut,
+    QTextBlock,
+    QTextCharFormat,
+    QTextCursor,
 )
-from PySide6.QtWidgets import (
-    QComboBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTextEdit,
-    QVBoxLayout, QWidget,
-)
+from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTextEdit, QVBoxLayout, QWidget
 
+from .fold_gutter import GUTTER_WIDTH, FoldGutterWidget
 from .fold_manager import FoldManager
-from .fold_gutter import FoldGutterWidget, GUTTER_WIDTH
 from .i18n import tr
 
 
@@ -72,11 +80,15 @@ def _make_fold_icon(size: int = 18) -> QIcon:
     p.setBrush(QBrush(gold))
     # Right-pointing triangle (folded)
     cx, cy = 7, size // 2
-    p.drawPolygon(QPolygon([
-        QPoint(cx - 3, cy - 4),
-        QPoint(cx - 3, cy + 4),
-        QPoint(cx + 4, cy),
-    ]))
+    p.drawPolygon(
+        QPolygon(
+            [
+                QPoint(cx - 3, cy - 4),
+                QPoint(cx - 3, cy + 4),
+                QPoint(cx + 4, cy),
+            ]
+        )
+    )
     # Two short lines to the right (collapsed content)
     p.setPen(QPen(gold, 1.2))
     p.drawLine(cx + 6, cy - 2, size - 2, cy - 2)
@@ -96,11 +108,15 @@ def _make_unfold_icon(size: int = 18) -> QIcon:
     p.setBrush(QBrush(gold))
     # Down-pointing triangle (expanded)
     cx, cy = 7, size // 2
-    p.drawPolygon(QPolygon([
-        QPoint(cx - 4, cy - 3),
-        QPoint(cx + 4, cy - 3),
-        QPoint(cx, cy + 4),
-    ]))
+    p.drawPolygon(
+        QPolygon(
+            [
+                QPoint(cx - 4, cy - 3),
+                QPoint(cx + 4, cy - 3),
+                QPoint(cx, cy + 4),
+            ]
+        )
+    )
     # Three short lines to the right (expanded content)
     p.setPen(QPen(gold, 1.2))
     p.drawLine(cx + 6, cy - 4, size - 2, cy - 4)
@@ -172,7 +188,7 @@ class _FoldableTextEdit(QTextEdit):
         if bl and bl.lineCount() > 0:
             rel_x = doc_x - rect.left()
             rel_y = doc_y - rect.top()
-            line = bl.lineAt(bl.lineCount() - 1)          # fallback: last line
+            line = bl.lineAt(bl.lineCount() - 1)  # fallback: last line
             for i in range(bl.lineCount()):
                 candidate = bl.lineAt(i)
                 if rel_y < candidate.y() + candidate.height():
@@ -190,6 +206,7 @@ class _FoldableTextEdit(QTextEdit):
     # -- mouse overrides ------------------------------------------------
 
     def mousePressEvent(self, event):
+        """Handle left-click with fold-aware cursor positioning."""
         if event.button() == Qt.MouseButton.LeftButton and self._any_hidden():
             cursor = self._visible_hit_test(event.pos())
             if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
@@ -206,6 +223,7 @@ class _FoldableTextEdit(QTextEdit):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
+        """Extend selection using fold-aware hit test during drag."""
         if self._fold_selecting and (event.buttons() & Qt.MouseButton.LeftButton):
             cursor = self._visible_hit_test(event.pos())
             tc = QTextCursor(self.document())
@@ -217,14 +235,16 @@ class _FoldableTextEdit(QTextEdit):
             return
         super().mouseMoveEvent(event)
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event):  # pylint: disable=invalid-name
+        """End fold-aware selection on left-button release."""
         if self._fold_selecting and event.button() == Qt.MouseButton.LeftButton:
             self._fold_selecting = False
             event.accept()
             return
         super().mouseReleaseEvent(event)
 
-    def mouseDoubleClickEvent(self, event):
+    def mouseDoubleClickEvent(self, event):  # pylint: disable=invalid-name
+        """Select word under cursor using fold-aware hit test."""
         if event.button() == Qt.MouseButton.LeftButton and self._any_hidden():
             cursor = self._visible_hit_test(event.pos())
             cursor.select(QTextCursor.SelectionType.WordUnderCursor)
@@ -239,10 +259,16 @@ class _FoldableTextEdit(QTextEdit):
 class _SearchLineEdit(QLineEdit):
     """QLineEdit that forwards Escape and Shift+Enter to the owner editor."""
 
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._editor_widget = None
+
     def set_editor_widget(self, editor_widget):
+        """Store a reference to the parent editor widget for key forwarding."""
         self._editor_widget = editor_widget
 
     def keyPressEvent(self, event):
+        """Forward Escape and Shift+Enter to the editor widget."""
         if event.key() == Qt.Key.Key_Escape:
             self._editor_widget._close_search()
             return
@@ -261,10 +287,15 @@ class RichTextEditorWidget(QWidget):
 
     file_saved = Signal(str)  # emitted after save() with the file path
 
-    def __init__(self, file_path: str, default_html: str,
-                 editor_object_name: str = "rich_editor",
-                 foldable_heading_levels: set[int] | None = None,
-                 fold_by_default: bool = False, parent=None):
+    def __init__(
+        self,
+        file_path: str,
+        default_html: str,
+        editor_object_name: str = "rich_editor",
+        foldable_heading_levels: set[int] | None = None,
+        fold_by_default: bool = False,
+        parent=None,
+    ):
         super().__init__(parent)
         self._path = file_path
         self._default_html = default_html
@@ -273,6 +304,7 @@ class RichTextEditorWidget(QWidget):
         self._fold_by_default = fold_by_default
         self._save_timer = None
         self._tts_engine = None
+        self._search_index = -1
         self._build_ui()
         self._load()
 
@@ -334,7 +366,9 @@ class RichTextEditorWidget(QWidget):
         self.btn_underline.setCheckable(True)
 
         self.heading_combo = QComboBox()
-        self.heading_combo.addItems([tr("editor.heading.normal"), tr("editor.heading.h1"), tr("editor.heading.h2"), tr("editor.heading.h3")])
+        self.heading_combo.addItems(
+            [tr("editor.heading.normal"), tr("editor.heading.h1"), tr("editor.heading.h2"), tr("editor.heading.h3")]
+        )
         self.heading_combo.setFixedWidth(110)
 
         self.btn_fold_all = QPushButton()
@@ -352,12 +386,17 @@ class RichTextEditorWidget(QWidget):
         self.btn_save.setIconSize(QSize(16, 16))
         self.btn_save.setObjectName("btn_primary")
 
-        for w in (self.btn_bold, self.btn_italic, self.btn_underline,
-                  self.btn_fold_all, self.btn_unfold_all):
+        for w in (self.btn_bold, self.btn_italic, self.btn_underline, self.btn_fold_all, self.btn_unfold_all):
             w.setObjectName("btn_editor_toolbar")
-        for w in (self.btn_bold, self.btn_italic, self.btn_underline,
-                  self.heading_combo, self.btn_fold_all, self.btn_unfold_all,
-                  self.btn_save):
+        for w in (
+            self.btn_bold,
+            self.btn_italic,
+            self.btn_underline,
+            self.heading_combo,
+            self.btn_fold_all,
+            self.btn_unfold_all,
+            self.btn_save,
+        ):
             tb_layout.addWidget(w)
         tb_layout.addStretch()
 
@@ -377,9 +416,11 @@ class RichTextEditorWidget(QWidget):
 
         # Fold manager + gutter
         self._fold_mgr = FoldManager(
-            self.editor.document(), self._detect_heading_level,
+            self.editor.document(),
+            self._detect_heading_level,
             foldable_heading_levels=self._foldable_heading_levels,
-            fold_by_default=self._fold_by_default, parent=self,
+            fold_by_default=self._fold_by_default,
+            parent=self,
         )
         self._fold_gutter = FoldGutterWidget(self.editor, self._fold_mgr)
 
@@ -412,8 +453,7 @@ class RichTextEditorWidget(QWidget):
         self._search_close.setFixedSize(28, 28)
         self._search_close.setToolTip(tr("editor.search.close_tooltip"))
 
-        for w in (self._search_input, self._search_prev, self._search_next,
-                  self._search_count, self._search_close):
+        for w in (self._search_input, self._search_prev, self._search_next, self._search_count, self._search_close):
             sb_layout.addWidget(w)
 
         layout.addWidget(self._search_bar)
@@ -599,6 +639,7 @@ class RichTextEditorWidget(QWidget):
         cursor.mergeCharFormat(fmt)
         # Set heading level on block format for fast detection
         from PySide6.QtGui import QTextBlockFormat
+
         block_fmt = QTextBlockFormat()
         block_fmt.setHeadingLevel(index)
         cursor.mergeBlockFormat(block_fmt)
@@ -683,6 +724,7 @@ class RichTextEditorWidget(QWidget):
         selection = self.editor.textCursor().selectedText()
         if selection and self._tts_engine and self._tts_engine.is_available:
             from PySide6.QtGui import QAction
+
             menu.addSeparator()
             tts_action = QAction(tr("editor.tts.read_selection"), menu)
             tts_action.triggered.connect(lambda: self._speak_selection())
@@ -722,10 +764,14 @@ class RichTextEditorWidget(QWidget):
         idx = self.heading_combo.currentIndex()
         self.heading_combo.blockSignals(True)
         self.heading_combo.clear()
-        self.heading_combo.addItems([
-            tr("editor.heading.normal"), tr("editor.heading.h1"),
-            tr("editor.heading.h2"), tr("editor.heading.h3"),
-        ])
+        self.heading_combo.addItems(
+            [
+                tr("editor.heading.normal"),
+                tr("editor.heading.h1"),
+                tr("editor.heading.h2"),
+                tr("editor.heading.h3"),
+            ]
+        )
         self.heading_combo.setCurrentIndex(idx)
         self.heading_combo.blockSignals(False)
 

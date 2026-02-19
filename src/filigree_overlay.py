@@ -32,13 +32,16 @@ class GoldFiligreeOverlay(QWidget):
         self.update()
 
     def eventFilter(self, obj, event):
+        """Resize overlay to match parent when parent is resized."""
         from PySide6.QtCore import QEvent
+
         if obj is self.parent() and event.type() == QEvent.Type.Resize:
             self.setGeometry(self.parent().rect())
             self.raise_()
         return False
 
     def paintEvent(self, event):
+        """Draw gold L-bracket lines at the four corners."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
@@ -70,6 +73,7 @@ class GoldFiligreeOverlay(QWidget):
         painter.end()
 
     def showEvent(self, event):
+        """Sync geometry with parent when the overlay becomes visible."""
         super().showEvent(event)
         if self.parent():
             self.setGeometry(self.parent().rect())

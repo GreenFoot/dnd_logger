@@ -29,9 +29,7 @@ class FoldGutterWidget(QWidget):
 
         # Track scroll and layout changes to repaint
         self._editor.verticalScrollBar().valueChanged.connect(self.update)
-        self._editor.document().documentLayout().documentSizeChanged.connect(
-            self._on_layout_changed
-        )
+        self._editor.document().documentLayout().documentSizeChanged.connect(self._on_layout_changed)
         self._editor.document().contentsChanged.connect(self.update)
 
         # Track editor resize to reposition gutter
@@ -50,12 +48,15 @@ class FoldGutterWidget(QWidget):
         self.update()
 
     def sizeHint(self):
+        """Return the preferred size for the gutter widget."""
         from PySide6.QtCore import QSize
+
         return QSize(GUTTER_WIDTH, 0)
 
     # ── Painting ──────────────────────────────────────────
 
     def paintEvent(self, event):
+        """Paint fold indicator triangles for each foldable region."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
@@ -96,18 +97,22 @@ class FoldGutterWidget(QWidget):
 
             if region.is_folded:
                 # Right-pointing triangle ▶
-                tri = QPolygon([
-                    QPoint(6, int(cy) - 5),
-                    QPoint(6, int(cy) + 5),
-                    QPoint(14, int(cy)),
-                ])
+                tri = QPolygon(
+                    [
+                        QPoint(6, int(cy) - 5),
+                        QPoint(6, int(cy) + 5),
+                        QPoint(14, int(cy)),
+                    ]
+                )
             else:
                 # Down-pointing triangle ▼
-                tri = QPolygon([
-                    QPoint(5, int(cy) - 4),
-                    QPoint(15, int(cy) - 4),
-                    QPoint(10, int(cy) + 4),
-                ])
+                tri = QPolygon(
+                    [
+                        QPoint(5, int(cy) - 4),
+                        QPoint(15, int(cy) - 4),
+                        QPoint(10, int(cy) + 4),
+                    ]
+                )
 
             painter.drawPolygon(tri)
 
@@ -116,6 +121,7 @@ class FoldGutterWidget(QWidget):
     # ── Mouse interaction ─────────────────────────────────
 
     def mousePressEvent(self, event):
+        """Toggle the fold region when a gutter triangle is clicked."""
         if event.button() == Qt.MouseButton.LeftButton:
             block_num = self._block_at_y(event.pos().y())
             if block_num is not None and block_num in self._fold_mgr.regions():
@@ -124,6 +130,7 @@ class FoldGutterWidget(QWidget):
                 self._editor.viewport().update()
 
     def mouseMoveEvent(self, event):
+        """Update the hovered fold indicator on mouse movement."""
         block_num = self._block_at_y(event.pos().y())
         old = self._hovered_block
         if block_num is not None and block_num in self._fold_mgr.regions():
@@ -134,6 +141,7 @@ class FoldGutterWidget(QWidget):
             self.update()
 
     def leaveEvent(self, event):
+        """Clear the hover highlight when the mouse leaves the gutter."""
         if self._hovered_block is not None:
             self._hovered_block = None
             self.update()
@@ -147,6 +155,7 @@ class FoldGutterWidget(QWidget):
                 if region and region.is_folded:
                     count = region.end - region.start
                     from PySide6.QtWidgets import QToolTip
+
                     s = "s" if count > 1 else ""
                     QToolTip.showText(
                         event.globalPos(),

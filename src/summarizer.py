@@ -37,23 +37,25 @@ def _resolve_prompt(prompt_template: str) -> str:
     Runtime placeholders like {text}, {campaign_name}, {summary} etc. are
     left untouched so they can be filled later at actual usage time.
     """
-    return prompt_template.format_map(_PartialFormatMap(
-        language_name=tr("prompt.language_name"),
-        section_major_events=tr("prompt.section.major_events"),
-        section_combat=tr("prompt.section.combat"),
-        section_decisions=tr("prompt.section.decisions"),
-        section_mysteries=tr("prompt.section.mysteries"),
-        section_active_quests=tr("prompt.section.active_quests"),
-        section_clues=tr("prompt.section.clues"),
-        section_completed_quests=tr("prompt.section.completed_quests"),
-        quest_origin=tr("prompt.quest.origin"),
-        quest_objective=tr("prompt.quest.objective"),
-        quest_progress=tr("prompt.quest.progress"),
-        quest_next_step=tr("prompt.quest.next_step"),
-        quest_npcs=tr("prompt.quest.npcs"),
-        quest_giver=tr("prompt.quest.giver"),
-        quest_resolution=tr("prompt.quest.resolution"),
-    ))
+    return prompt_template.format_map(
+        _PartialFormatMap(
+            language_name=tr("prompt.language_name"),
+            section_major_events=tr("prompt.section.major_events"),
+            section_combat=tr("prompt.section.combat"),
+            section_decisions=tr("prompt.section.decisions"),
+            section_mysteries=tr("prompt.section.mysteries"),
+            section_active_quests=tr("prompt.section.active_quests"),
+            section_clues=tr("prompt.section.clues"),
+            section_completed_quests=tr("prompt.section.completed_quests"),
+            quest_origin=tr("prompt.quest.origin"),
+            quest_objective=tr("prompt.quest.objective"),
+            quest_progress=tr("prompt.quest.progress"),
+            quest_next_step=tr("prompt.quest.next_step"),
+            quest_npcs=tr("prompt.quest.npcs"),
+            quest_giver=tr("prompt.quest.giver"),
+            quest_resolution=tr("prompt.quest.resolution"),
+        )
+    )
 
 
 def _get_system_prompt() -> str:
@@ -73,10 +75,12 @@ def _get_condense_prompt() -> str:
 
 # Module-level aliases used by settings.py for prompt defaults
 def get_default_summary_system() -> str:
+    """Return the default system prompt for the summary settings UI."""
     return _get_system_prompt()
 
 
 def get_default_condense() -> str:
+    """Return the default condense prompt for the summary settings UI."""
     return _get_condense_prompt()
 
 
@@ -87,7 +91,7 @@ def _call_with_retry(fn, retries=3, base_delay=15):
             return fn()
         except Exception as e:
             if "429" in str(e) and attempt < retries - 1:
-                time.sleep(base_delay * (2 ** attempt))  # 15s, 30s, 60s
+                time.sleep(base_delay * (2**attempt))  # 15s, 30s, 60s
                 continue
             raise
 
@@ -131,15 +135,17 @@ class SummarizerWorker(QObject):
 
             system_prompt = self._config.get("prompt_summary_system") or _get_system_prompt()
 
-            response = _call_with_retry(lambda: client.chat.complete(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_msg},
-                ],
-                temperature=0.2,
-                max_tokens=8000,
-            ))
+            response = _call_with_retry(
+                lambda: client.chat.complete(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_msg},
+                    ],
+                    temperature=0.2,
+                    max_tokens=8000,
+                )
+            )
 
             summary = response.choices[0].message.content
             # Strip markdown code fences the model sometimes wraps around HTML
@@ -158,12 +164,14 @@ class SummarizerWorker(QObject):
         condensed_parts = []
         for chunk in chunks:
             prompt = condense_template.format(text=chunk)
-            response = _call_with_retry(lambda: client.chat.complete(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.0,
-                max_tokens=12000,
-            ))
+            response = _call_with_retry(
+                lambda: client.chat.complete(
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.0,
+                    max_tokens=12000,
+                )
+            )
             condensed_parts.append(response.choices[0].message.content)
         return "\n\n".join(condensed_parts)
 

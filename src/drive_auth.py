@@ -1,6 +1,5 @@
 """Google Drive OAuth2 authentication helpers."""
 
-import json
 import logging
 import os
 
@@ -63,7 +62,7 @@ def get_user_email(creds) -> str:
         from googleapiclient.discovery import build
 
         service = build("oauth2", "v2", credentials=creds)
-        info = service.userinfo().get().execute()
+        info = service.userinfo().get().execute()  # pylint: disable=no-member
         return info.get("email", "")
     except Exception:
         return ""
@@ -76,6 +75,7 @@ class DriveAuthWorker(QObject):
     auth_failed = Signal(str)
 
     def run(self):
+        """Run the OAuth2 installed-app flow."""
         try:
             from google_auth_oauthlib.flow import InstalledAppFlow
 

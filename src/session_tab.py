@@ -7,18 +7,15 @@ import time
 from datetime import datetime
 
 import soundfile as sf
-
-from PySide6.QtCore import Qt, QRectF, QTimer
+from PySide6.QtCore import QRectF, Qt, QTimer
 from PySide6.QtGui import QAction, QColor, QPainter
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
-    QDialogButtonBox,
     QFileDialog,
     QHBoxLayout,
     QLabel,
     QMenu,
-    QMessageBox,
     QProgressBar,
     QPushButton,
     QTextEdit,
@@ -28,12 +25,12 @@ from PySide6.QtWidgets import (
 )
 
 from .audio_recorder import AudioRecorder
+from .i18n import tr
 from .quest_extractor import QuestProposalDialog, start_quest_extraction
 from .snow_particles import AuroraShimmerOverlay, SnowParticleOverlay
-from .summarizer import SummarizerWorker, start_summarization
-from .transcriber import TranscriptionWorker, start_live_transcription, start_transcription
+from .summarizer import start_summarization
+from .transcriber import start_live_transcription, start_transcription
 from .utils import active_campaign_name, ensure_dir, format_duration, format_file_size, sessions_dir
-from .i18n import tr
 
 
 class _ThinDivider(QWidget):
@@ -52,6 +49,7 @@ class _ThinDivider(QWidget):
         self.update()
 
     def paintEvent(self, event):
+        """Draw a thin accent line with a center diamond ornament."""
         from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen
 
         painter = QPainter(self)
@@ -145,6 +143,7 @@ class _VerticalDotsButton(QToolButton):
     _DOT_SPACING = 8
 
     def paintEvent(self, event):
+        """Paint three vertical dots over the default QToolButton background."""
         # Let QToolButton paint background / border via QSS
         super().paintEvent(event)
         p = QPainter(self)
@@ -155,10 +154,14 @@ class _VerticalDotsButton(QToolButton):
         cx = self.width() / 2
         cy = self.height() / 2
         for offset in (-self._DOT_SPACING, 0, self._DOT_SPACING):
-            p.drawEllipse(QRectF(
-                cx - self._DOT_RADIUS, cy + offset - self._DOT_RADIUS,
-                self._DOT_RADIUS * 2, self._DOT_RADIUS * 2,
-            ))
+            p.drawEllipse(
+                QRectF(
+                    cx - self._DOT_RADIUS,
+                    cy + offset - self._DOT_RADIUS,
+                    self._DOT_RADIUS * 2,
+                    self._DOT_RADIUS * 2,
+                )
+            )
         p.end()
 
 
@@ -636,9 +639,7 @@ class SessionTab(QWidget):
         self._live_tx_pending = True
         self._is_final_live_chunk = False
 
-        self._live_tx_thread, self._live_tx_worker = start_live_transcription(
-            flac_path, self._config
-        )
+        self._live_tx_thread, self._live_tx_worker = start_live_transcription(flac_path, self._config)
         self._live_tx_worker.completed.connect(self._on_live_tx_done)
         self._live_tx_worker.error.connect(self._on_live_tx_error)
         self._live_tx_thread.start()
@@ -654,9 +655,7 @@ class SessionTab(QWidget):
             self._is_final_live_chunk = True
             self._live_tx_pending = True
 
-            self._live_tx_thread, self._live_tx_worker = start_live_transcription(
-                remaining, self._config
-            )
+            self._live_tx_thread, self._live_tx_worker = start_live_transcription(remaining, self._config)
             self._live_tx_worker.completed.connect(self._on_live_tx_done)
             self._live_tx_worker.error.connect(self._on_live_tx_error)
             self._live_tx_thread.start()
@@ -680,9 +679,7 @@ class SessionTab(QWidget):
         else:
             count = len(self._live_transcript_parts)
             s = "s" if count > 1 else ""
-            self.status_label.setText(
-                tr("session.status.segments_transcribed", count=count, s=s)
-            )
+            self.status_label.setText(tr("session.status.segments_transcribed", count=count, s=s))
             self.status_label.setStyleSheet("color: #ff6b6b;")
 
     def _on_live_tx_error(self, msg: str):
@@ -811,7 +808,9 @@ class SessionTab(QWidget):
         self.btn_update_quests.setEnabled(False)
 
         self._quest_thread, self._quest_worker = start_quest_extraction(
-            self._current_summary, current_quests, self._config,
+            self._current_summary,
+            current_quests,
+            self._config,
             campaign_name=active_campaign_name(self._config),
         )
         self._quest_worker.completed.connect(self._on_quest_extraction_done)

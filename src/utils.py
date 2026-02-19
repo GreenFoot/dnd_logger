@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import sys
-from pathlib import Path
 
 log = logging.getLogger(__name__)
 
@@ -211,6 +210,7 @@ def load_config() -> dict:
 
     # Initialize i18n from config language
     from . import i18n
+
     i18n.set_language(cfg.get("language", "en"))
 
     return cfg

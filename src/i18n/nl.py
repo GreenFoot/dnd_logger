@@ -62,6 +62,14 @@ STRINGS: dict[str, str] = {
         "pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib"
     ),
     "app.campaign.error_title": "Fout",
+    # ── app.py — theme keyword matching (comma-separated) ──
+    "app.theme.kw.icewind_dale": "ijswind,vorst",
+    "app.theme.kw.curse_of_strahd": "vloek",
+    "app.theme.kw.descent_into_avernus": "hel,afdaling",
+    "app.theme.kw.tomb_of_annihilation": "graf,vernietiging",
+    "app.theme.kw.storm_kings_thunder": "storm,reus,donder",
+    "app.theme.kw.waterdeep_dragon_heist": "drakenroof",
+    "app.theme.kw.out_of_the_abyss": "afgrond,onderwereld",
     # ── app.py — theme picker ───────────────────────────────
     "app.theme.title": "Kies een thema",
     "app.theme.label": "Geen automatisch thema gevonden voor deze campagne.\nKies een visueel thema:",

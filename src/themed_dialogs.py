@@ -1,22 +1,14 @@
 """Themed dialog helpers — instance-based so they inherit the app's QSS."""
 
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (
-    QComboBox,
-    QDialog,
-    QHBoxLayout,
-    QLabel,
-    QMessageBox,
-    QPushButton,
-    QVBoxLayout,
-)
+from PySide6.QtWidgets import QComboBox, QDialog, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout
 
 from .i18n import tr
 
-
 # ── Message boxes ────────────────────────────────────────
 
+
 def information(parent, title, text):
+    """Show a themed information message box."""
     box = QMessageBox(parent)
     box.setIcon(QMessageBox.Icon.Information)
     box.setWindowTitle(title)
@@ -25,6 +17,7 @@ def information(parent, title, text):
 
 
 def warning(parent, title, text):
+    """Show a themed warning message box."""
     box = QMessageBox(parent)
     box.setIcon(QMessageBox.Icon.Warning)
     box.setWindowTitle(title)
@@ -33,6 +26,7 @@ def warning(parent, title, text):
 
 
 def critical(parent, title, text):
+    """Show a themed critical error message box."""
     box = QMessageBox(parent)
     box.setIcon(QMessageBox.Icon.Critical)
     box.setWindowTitle(title)
@@ -46,13 +40,12 @@ def question(parent, title, text) -> bool:
     box.setIcon(QMessageBox.Icon.Question)
     box.setWindowTitle(title)
     box.setText(text)
-    box.setStandardButtons(
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-    )
+    box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
     return box.exec() == QMessageBox.StandardButton.Yes
 
 
 # ── Item picker (replaces QInputDialog.getItem) ─────────
+
 
 def get_item(parent, title, label, items, current=0, editable=False):
     """Themed replacement for QInputDialog.getItem. Returns (text, ok)."""

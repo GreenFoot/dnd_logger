@@ -16,14 +16,23 @@ from PySide6.QtCore import QRectF, Qt, QTimer
 from PySide6.QtGui import QColor, QPainter, QPen, QRadialGradient
 from PySide6.QtWidgets import QWidget
 
-
 # ── Base particle ─────────────────────────────────────────
+
 
 class BaseParticle:
     """Abstract particle with position, size, opacity, and fade-in logic."""
 
-    __slots__ = ("x", "y", "size", "speed", "opacity", "fade_in", "active",
-                 "_extra")
+    __slots__ = ("x", "y", "size", "speed", "opacity", "fade_in", "active", "_extra")
+
+    def __init__(self):
+        """Initialize base particle attributes to defaults."""
+        self.x = 0.0
+        self.y = 0.0
+        self.size = 0.0
+        self.speed = 0.0
+        self.opacity = 0.0
+        self.fade_in = True
+        self.active = False
 
     def reset(self, width, height, start_top=True):
         """Reinitialize to a random starting state."""
@@ -47,11 +56,12 @@ class BaseParticle:
 
 # ── Snow (Icewind Dale / Storm King) ─────────────────────
 
+
 class SnowParticle(BaseParticle):
-    __slots__ = ("x", "y", "size", "speed", "opacity", "fade_in", "active",
-                 "drift_phase", "drift_amp")
+    __slots__ = ("x", "y", "size", "speed", "opacity", "fade_in", "active", "drift_phase", "drift_amp")
 
     def __init__(self, width, height):
+        super().__init__()
         self.drift_phase = 0.0
         self.drift_amp = 0.0
         self.reset(width, height, start_top=False)
@@ -92,34 +102,30 @@ class SnowParticle(BaseParticle):
             pen = QPen(color, 1.0)
             painter.setPen(pen)
             painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.drawLine(QRectF(cx - hs, cy, cx + hs, cy).topLeft(),
-                             QRectF(cx - hs, cy, cx + hs, cy).bottomRight())
-            painter.drawLine(QRectF(cx, cy - hs, cx, cy + hs).topLeft(),
-                             QRectF(cx, cy - hs, cx, cy + hs).bottomRight())
+            painter.drawLine(QRectF(cx - hs, cy, cx + hs, cy).topLeft(), QRectF(cx - hs, cy, cx + hs, cy).bottomRight())
+            painter.drawLine(QRectF(cx, cy - hs, cx, cy + hs).topLeft(), QRectF(cx, cy - hs, cx, cy + hs).bottomRight())
             painter.setPen(Qt.PenStyle.NoPen)
             core = QColor(255, 255, 255, int(self.opacity * 140))
             painter.setBrush(core)
             cs = self.size * 0.25
             painter.drawEllipse(QRectF(cx - cs / 2, cy - cs / 2, cs, cs))
         else:
-            painter.drawEllipse(QRectF(self.x - self.size / 2,
-                                       self.y - self.size / 2,
-                                       self.size, self.size))
+            painter.drawEllipse(QRectF(self.x - self.size / 2, self.y - self.size / 2, self.size, self.size))
             if self.size > 3:
                 core = QColor(255, 255, 255, int(self.opacity * 140))
                 painter.setBrush(core)
                 cs = self.size * 0.3
-                painter.drawEllipse(QRectF(self.x - cs / 2,
-                                           self.y - cs / 2, cs, cs))
+                painter.drawEllipse(QRectF(self.x - cs / 2, self.y - cs / 2, cs, cs))
 
 
 # ── Embers (Descent into Avernus) ────────────────────────
 
+
 class EmberParticle(BaseParticle):
-    __slots__ = ("x", "y", "size", "speed", "opacity", "fade_in", "active",
-                 "wobble_phase", "wobble_amp", "glow_size")
+    __slots__ = ("x", "y", "size", "speed", "opacity", "fade_in", "active", "wobble_phase", "wobble_amp", "glow_size")
 
     def __init__(self, width, height):
+        super().__init__()
         self.wobble_phase = 0.0
         self.wobble_amp = 0.0
         self.glow_size = 0.0
@@ -172,11 +178,12 @@ class EmberParticle(BaseParticle):
 
 # ── Mist (Curse of Strahd) ───────────────────────────────
 
+
 class MistParticle(BaseParticle):
-    __slots__ = ("x", "y", "size", "speed", "opacity", "fade_in", "active",
-                 "drift_dir", "pulse_phase", "max_opacity")
+    __slots__ = ("x", "y", "size", "speed", "opacity", "fade_in", "active", "drift_dir", "pulse_phase", "max_opacity")
 
     def __init__(self, width, height):
+        super().__init__()
         self.drift_dir = 0.0
         self.pulse_phase = 0.0
         self.max_opacity = 0.0
@@ -223,17 +230,17 @@ class MistParticle(BaseParticle):
         painter.setBrush(grad)
         hs = self.size / 2
         # Ellipse wider than tall for misty look
-        painter.drawEllipse(QRectF(self.x - hs * 1.5, self.y - hs * 0.6,
-                                    self.size * 1.5, self.size * 0.6))
+        painter.drawEllipse(QRectF(self.x - hs * 1.5, self.y - hs * 0.6, self.size * 1.5, self.size * 0.6))
 
 
 # ── Spores (Tomb of Annihilation) ────────────────────────
 
+
 class SporeParticle(BaseParticle):
-    __slots__ = ("x", "y", "size", "speed", "opacity", "fade_in", "active",
-                 "dx", "dy", "pulse_phase", "brightness")
+    __slots__ = ("x", "y", "size", "speed", "opacity", "fade_in", "active", "dx", "dy", "pulse_phase", "brightness")
 
     def __init__(self, width, height):
+        super().__init__()
         self.dx = 0.0
         self.dy = 0.0
         self.pulse_phase = 0.0
@@ -292,17 +299,17 @@ class SporeParticle(BaseParticle):
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(color)
         hs = self.size / 2
-        painter.drawEllipse(QRectF(self.x - hs, self.y - hs,
-                                    self.size, self.size))
+        painter.drawEllipse(QRectF(self.x - hs, self.y - hs, self.size, self.size))
 
 
 # ── Dust (Waterdeep: Dragon Heist) ───────────────────────
 
+
 class DustParticle(BaseParticle):
-    __slots__ = ("x", "y", "size", "speed", "opacity", "fade_in", "active",
-                 "drift_phase")
+    __slots__ = ("x", "y", "size", "speed", "opacity", "fade_in", "active", "drift_phase")
 
     def __init__(self, width, height):
+        super().__init__()
         self.drift_phase = 0.0
         self.reset(width, height, start_top=False)
 
@@ -334,17 +341,29 @@ class DustParticle(BaseParticle):
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(color)
         hs = self.size / 2
-        painter.drawEllipse(QRectF(self.x - hs, self.y - hs,
-                                    self.size, self.size))
+        painter.drawEllipse(QRectF(self.x - hs, self.y - hs, self.size, self.size))
 
 
 # ── Faerzress (Out of the Abyss) ─────────────────────────
 
+
 class FaerzressParticle(BaseParticle):
-    __slots__ = ("x", "y", "size", "speed", "opacity", "fade_in", "active",
-                 "pulse_phase", "pulse_speed", "glow_radius", "base_opacity")
+    __slots__ = (
+        "x",
+        "y",
+        "size",
+        "speed",
+        "opacity",
+        "fade_in",
+        "active",
+        "pulse_phase",
+        "pulse_speed",
+        "glow_radius",
+        "base_opacity",
+    )
 
     def __init__(self, width, height):
+        super().__init__()
         self.pulse_phase = 0.0
         self.pulse_speed = 0.0
         self.glow_radius = 0.0
@@ -402,22 +421,20 @@ class FaerzressParticle(BaseParticle):
 
         # Bright inner core
         core_alpha = int(self.opacity * 180)
-        core = QColor(min(255, r + 60), min(255, g + 60), min(255, b + 60),
-                       core_alpha)
+        core = QColor(min(255, r + 60), min(255, g + 60), min(255, b + 60), core_alpha)
         painter.setBrush(core)
         hs = self.size / 2
-        painter.drawEllipse(QRectF(self.x - hs, self.y - hs,
-                                    self.size, self.size))
+        painter.drawEllipse(QRectF(self.x - hs, self.y - hs, self.size, self.size))
 
 
 # ── Particle type registry ────────────────────────────────
 
 PARTICLE_TYPES = {
-    "snow":      (SnowParticle, 12),
-    "embers":    (EmberParticle, 10),
-    "mist":      (MistParticle, 5),
-    "spores":    (SporeParticle, 18),
-    "dust":      (DustParticle, 15),
+    "snow": (SnowParticle, 12),
+    "embers": (EmberParticle, 10),
+    "mist": (MistParticle, 5),
+    "spores": (SporeParticle, 18),
+    "dust": (DustParticle, 15),
     "faerzress": (FaerzressParticle, 8),
 }
 
@@ -426,18 +443,19 @@ DEFAULT_PARTICLE_TYPE = "snow"
 
 # ── Overlay widget ────────────────────────────────────────
 
+
 class SnowParticleOverlay(QWidget):
     """Lightweight overlay that renders themed particles across the parent widget.
 
     Starts/stops with recording. Particle type determines physics + rendering.
     """
 
-    def __init__(self, parent=None, num_particles=12, particle_color=None,
-                 particle_type=None):
+    def __init__(self, parent=None, num_particles=12, particle_color=None, particle_type=None):
         super().__init__(parent)
         self._particle_type = particle_type or DEFAULT_PARTICLE_TYPE
         self._particle_class, default_count = PARTICLE_TYPES.get(
-            self._particle_type, PARTICLE_TYPES[DEFAULT_PARTICLE_TYPE])
+            self._particle_type, PARTICLE_TYPES[DEFAULT_PARTICLE_TYPE]
+        )
         self._num_particles = num_particles if num_particles != 12 else default_count
         self._particles = []
         self._running = False
@@ -469,17 +487,18 @@ class SnowParticleOverlay(QWidget):
             self.start()
 
     def start(self):
+        """Spawn particles and begin the animation timer."""
         if self._running:
             return
         self._running = True
         w, h = self.width() or 400, self.height() or 600
-        self._particles = [self._particle_class(w, h)
-                           for _ in range(self._num_particles)]
+        self._particles = [self._particle_class(w, h) for _ in range(self._num_particles)]
         self._timer.start()
         self.show()
         self.raise_()
 
     def stop(self):
+        """Stop the animation and clear all particles."""
         self._running = False
         self._timer.stop()
         self._particles.clear()
@@ -490,7 +509,9 @@ class SnowParticleOverlay(QWidget):
         self._particle_color = tuple(rgb)
 
     def eventFilter(self, obj, event):
+        """Resize overlay to match parent on parent resize events."""
         from PySide6.QtCore import QEvent
+
         if obj is self.parent() and event.type() == QEvent.Type.Resize:
             self.setGeometry(self.parent().rect())
             self.raise_()
@@ -505,6 +526,7 @@ class SnowParticleOverlay(QWidget):
         self.update()
 
     def paintEvent(self, event):
+        """Draw all active particles onto the overlay."""
         if not self._particles:
             return
         painter = QPainter(self)
@@ -515,6 +537,7 @@ class SnowParticleOverlay(QWidget):
         painter.end()
 
     def showEvent(self, event):
+        """Sync overlay geometry to parent when shown."""
         super().showEvent(event)
         if self.parent():
             self.setGeometry(self.parent().rect())
@@ -522,6 +545,7 @@ class SnowParticleOverlay(QWidget):
 
 
 # ── Aurora shimmer (unchanged) ────────────────────────────
+
 
 class AuroraShimmerOverlay(QWidget):
     """Subtle background color shimmer during recording.
@@ -548,6 +572,7 @@ class AuroraShimmerOverlay(QWidget):
             parent.installEventFilter(self)
 
     def start(self):
+        """Begin the aurora color-cycling animation."""
         if self._running:
             return
         self._running = True
@@ -557,6 +582,7 @@ class AuroraShimmerOverlay(QWidget):
         self.raise_()
 
     def stop(self):
+        """Stop the aurora animation and hide the overlay."""
         self._running = False
         self._timer.stop()
         self.hide()
@@ -566,7 +592,9 @@ class AuroraShimmerOverlay(QWidget):
         self._aurora_tones = tones
 
     def eventFilter(self, obj, event):
+        """Resize overlay to match parent on parent resize events."""
         from PySide6.QtCore import QEvent
+
         if obj is self.parent() and event.type() == QEvent.Type.Resize:
             self.setGeometry(self.parent().rect())
         return False
@@ -578,6 +606,7 @@ class AuroraShimmerOverlay(QWidget):
         self.update()
 
     def paintEvent(self, event):
+        """Render the radial aurora gradient across the overlay."""
         if not self._running:
             return
 
@@ -618,6 +647,7 @@ class AuroraShimmerOverlay(QWidget):
         painter.end()
 
     def showEvent(self, event):
+        """Sync overlay geometry to parent when shown."""
         super().showEvent(event)
         if self.parent():
             self.setGeometry(self.parent().rect())

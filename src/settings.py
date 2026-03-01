@@ -28,7 +28,12 @@ from .filigree_overlay import GoldFiligreeOverlay
 from .i18n import set_language, tr
 from .quest_extractor import get_default_quest_extraction
 from .summarizer import get_default_condense, get_default_summary_system
-from .utils import active_campaign_name, campaign_drive_config, resource_path, save_config
+from .utils import (
+    active_campaign_name,
+    campaign_drive_config,
+    resource_path,
+    save_config,
+)
 
 
 class SettingsDialog(QDialog):
@@ -44,10 +49,10 @@ class SettingsDialog(QDialog):
         self._folder_thread = None
         self._folder_worker = None
         self.setWindowTitle(tr("settings.title"))
+        self.setMinimumWidth(840)
         self._build_ui()
         self._populate()
         self.tabs.setStyleSheet("QTabBar::tab { padding: 8px 14px; }")
-        self.adjustSize()
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
@@ -570,7 +575,7 @@ class FirstRunWizard(QDialog):
         super().__init__(parent)
         self._config = config
         self.setWindowTitle(tr("wizard.title"))
-        self.setMinimumSize(520, 440)
+        self.setMinimumSize(620, 440)
         self._build_ui()
         self._apply_theme()
 
@@ -584,7 +589,7 @@ class FirstRunWizard(QDialog):
             if not banner_pix.isNull():
                 banner_label = QLabel()
                 banner_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                banner_label.setPixmap(banner_pix.scaledToWidth(480, Qt.TransformationMode.SmoothTransformation))
+                banner_label.setPixmap(banner_pix.scaledToWidth(597, Qt.TransformationMode.SmoothTransformation))
                 layout.addWidget(banner_label)
                 layout.addSpacing(8)
         else:

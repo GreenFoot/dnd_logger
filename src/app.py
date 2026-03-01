@@ -606,12 +606,20 @@ class DndLoggerApp(QMainWindow):
         self._sync_status_label.setStyleSheet(f"color: {color}; padding: 0 8px;")
 
     def _load_icon(self):
-        """Set the D20 window/taskbar icon."""
-        icon_path = resource_path("assets/images/app/icon.png")
-        if not os.path.exists(icon_path):
-            icon_path = resource_path("assets/images/app/icon.ico")
-        if os.path.exists(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
+        """Set the D20 window/taskbar icon with multiple sizes for crisp display."""
+        icon = QIcon()
+        for size in (16, 24, 32, 48, 64, 128, 256):
+            path = resource_path(f"assets/images/app/icon_{size}.png")
+            if os.path.exists(path):
+                icon.addPixmap(QPixmap(path))
+        if icon.isNull():
+            for fallback in ("assets/images/app/icon.png", "assets/images/app/icon.ico"):
+                path = resource_path(fallback)
+                if os.path.exists(path):
+                    icon = QIcon(path)
+                    break
+        if not icon.isNull():
+            self.setWindowIcon(icon)
 
     def _load_fonts(self):
         """Load custom fonts from assets."""
@@ -908,7 +916,7 @@ class DndLoggerApp(QMainWindow):
                 self.setAutoFillBackground(True)
 
         # Parchment texture on journal and quest log editors
-        parch_path = resource_path("assets/images/textures/parchment_warm.png")
+        parch_path = resource_path("assets/images/textures/parchment.png")
         if os.path.exists(parch_path):
             parch_pix = QPixmap(parch_path)
             if not parch_pix.isNull():
@@ -943,17 +951,17 @@ class DndLoggerApp(QMainWindow):
         self.quest_log.set_tts_engine(self._tts_engine)
 
         # Tab icons
-        quill_icon_path = resource_path("assets/images/tabs/tab_icon_questlog.png")
+        feather_icon_path = resource_path("assets/images/tabs/tab_icon_feather.png")
 
         # Journal tab (first)
-        if os.path.exists(quill_icon_path):
-            self.right_tabs.addTab(self.journal, QIcon(quill_icon_path), tr("app.tab.journal"))
+        if os.path.exists(feather_icon_path):
+            self.right_tabs.addTab(self.journal, QIcon(feather_icon_path), tr("app.tab.journal"))
         else:
             self.right_tabs.addTab(self.journal, tr("app.tab.journal"))
 
         # Quest Log tab (second)
-        if os.path.exists(quill_icon_path):
-            self.right_tabs.addTab(self.quest_log, QIcon(quill_icon_path), tr("app.tab.quest_log"))
+        if os.path.exists(feather_icon_path):
+            self.right_tabs.addTab(self.quest_log, QIcon(feather_icon_path), tr("app.tab.quest_log"))
         else:
             self.right_tabs.addTab(self.quest_log, tr("app.tab.quest_log"))
 

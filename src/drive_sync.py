@@ -417,17 +417,17 @@ class DriveSyncEngine(QObject):
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
         entry = (thread, worker)
-        worker.finished.connect(lambda fn, meta, e=entry: self._on_upload_done(fn, meta, e))
-        worker.error.connect(lambda fn, err, e=entry: self._on_upload_error(fn, err, e))
+        worker.finished.connect(lambda fn, meta, e=entry: self._on_upload_done(fn, meta))
+        worker.error.connect(lambda fn, err, e=entry: self._on_upload_error(fn, err))
+        # quit thread after worker signals; quit() is thread-safe
+        worker.finished.connect(lambda *_: thread.quit())
+        worker.error.connect(lambda *_: thread.quit())
+        # clean up from the main thread once the QThread has actually stopped
+        thread.finished.connect(lambda e=entry: self._retire_thread(e))
         self._active_threads.append(entry)
         thread.start()
 
-    def _on_upload_done(self, filename: str, metadata: dict, entry: tuple):
-        thread, _worker = entry
-        thread.quit()
-        thread.wait()
-        self._active_threads.remove(entry)
-
+    def _on_upload_done(self, filename: str, metadata: dict):
         # Update sync state
         local_path = self._local_path_for(filename)
         self._sync_state[filename] = {
@@ -439,16 +439,7 @@ class DriveSyncEngine(QObject):
         _save_sync_state(self._sync_state, self._config)
         log.info("Uploaded %s to Drive", filename)
 
-        if not self._active_threads:
-            self._set_status(SyncStatus.IDLE)
-            self.sync_completed.emit()
-
-    def _on_upload_error(self, filename: str, error: str, entry: tuple):
-        thread, _worker = entry
-        thread.quit()
-        thread.wait()
-        self._active_threads.remove(entry)
-
+    def _on_upload_error(self, filename: str, error: str):
         log.error("Upload failed for %s: %s", filename, error)
         if "invalid_grant" in error.lower() or "token" in error.lower():
             self._set_status(SyncStatus.ERROR)
@@ -470,16 +461,15 @@ class DriveSyncEngine(QObject):
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
         entry = (thread, worker)
-        worker.finished.connect(lambda results, e=entry: self._on_poll_done(results, e))
-        worker.error.connect(lambda err, e=entry: self._on_poll_error(err, e))
+        worker.finished.connect(lambda results, e=entry: self._on_poll_done(results))
+        worker.error.connect(lambda err, e=entry: self._on_poll_error(err))
+        worker.finished.connect(lambda *_: thread.quit())
+        worker.error.connect(lambda *_: thread.quit())
+        thread.finished.connect(lambda e=entry: self._retire_thread(e))
         self._active_threads.append(entry)
         thread.start()
 
-    def _on_poll_done(self, results: dict, entry: tuple):
-        thread, _worker = entry
-        thread.quit()
-        thread.wait()
-        self._active_threads.remove(entry)
+    def _on_poll_done(self, results: dict):
         log.info("Poll done: %s", {k: ("exists" if v else "missing") for k, v in results.items()})
 
         for remote_name, remote_meta in results.items():
@@ -497,12 +487,7 @@ class DriveSyncEngine(QObject):
             elif direction == SyncDirection.UP:
                 self._do_upload(remote_name)
 
-    def _on_poll_error(self, error: str, entry: tuple):
-        thread, _worker = entry
-        thread.quit()
-        thread.wait()
-        self._active_threads.remove(entry)
-
+    def _on_poll_error(self, error: str):
         if "timeout" in error.lower() or "connection" in error.lower():
             self._set_status(SyncStatus.OFFLINE)
         else:
@@ -558,17 +543,15 @@ class DriveSyncEngine(QObject):
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
         entry = (thread, worker)
-        worker.finished.connect(lambda fn, e=entry: self._on_download_done(fn, e))
-        worker.error.connect(lambda fn, err, e=entry: self._on_download_error(fn, err, e))
+        worker.finished.connect(lambda fn, e=entry: self._on_download_done(fn))
+        worker.error.connect(lambda fn, err, e=entry: self._on_download_error(fn, err))
+        worker.finished.connect(lambda *_: thread.quit())
+        worker.error.connect(lambda *_: thread.quit())
+        thread.finished.connect(lambda e=entry: self._retire_thread(e))
         self._active_threads.append(entry)
         thread.start()
 
-    def _on_download_done(self, remote_name: str, entry: tuple):
-        thread, _worker = entry
-        thread.quit()
-        thread.wait()
-        self._active_threads.remove(entry)
-
+    def _on_download_done(self, remote_name: str):
         local_path = self._local_path_for(remote_name)
         remote_meta = self._file_mgr.get_remote_metadata(remote_name)
         self._sync_state[remote_name] = {
@@ -582,19 +565,27 @@ class DriveSyncEngine(QObject):
 
         self.remote_file_updated.emit(remote_name)
 
-        if not self._active_threads:
-            self._set_status(SyncStatus.IDLE)
-            self.sync_completed.emit()
-
-    def _on_download_error(self, remote_name: str, error: str, entry: tuple):
-        thread, _worker = entry
-        thread.quit()
-        thread.wait()
-        self._active_threads.remove(entry)
+    def _on_download_error(self, remote_name: str, error: str):
         log.error("Download failed for %s: %s", remote_name, error)
         self.error_occurred.emit(tr("drive.error.download", filename=remote_name, error=error))
+
+    def _retire_thread(self, entry: tuple):
+        """Remove a finished thread/worker pair from the active list.
+
+        Connected to QThread.finished, which fires on the main thread
+        after the worker thread has fully stopped — safe to call wait().
+        """
+        thread, _worker = entry
+        thread.wait()  # Now safe: called from main thread on an already-finished thread
+        try:
+            self._active_threads.remove(entry)
+        except ValueError:
+            return
+        # If no more threads running, finalise status
         if not self._active_threads:
-            self._set_status(SyncStatus.ERROR)
+            if self._status == SyncStatus.SYNCING:
+                self._set_status(SyncStatus.IDLE)
+                self.sync_completed.emit()
 
     def _handle_conflict(self, remote_name: str):
         """Handle a conflict by downloading remote content to a temp file, then emitting signal."""

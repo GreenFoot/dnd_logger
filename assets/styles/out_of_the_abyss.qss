@@ -322,7 +322,7 @@ QTextEdit, QPlainTextEdit {
 
 /* Journal Editor */
 QTextEdit#journal_editor {
-    background-color: #100a18;
+    background-color: #141008;
     border: 1px solid #2a203a;
     border-left: 3px solid #8a5a9e;
     border-radius: 6px;
@@ -333,7 +333,7 @@ QTextEdit#journal_editor {
 
 /* Quest Log Editor */
 QTextEdit#quest_log_editor {
-    background-color: #100a18;
+    background-color: #141008;
     border: 1px solid #2a203a;
     border-left: 3px solid #8a5a9e;
     border-radius: 6px;

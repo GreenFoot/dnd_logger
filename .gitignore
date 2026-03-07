@@ -27,5 +27,8 @@ __pycache__/
 # Logs
 *.log
 
+# Feature plans
+plan/
+
 # Windows artifacts
 nul

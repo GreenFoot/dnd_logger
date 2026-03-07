@@ -11,10 +11,14 @@ from PySide6.QtCore import QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QDialog,
+    QDialogButtonBox,
     QFileDialog,
     QHBoxLayout,
     QLabel,
+    QListWidget,
+    QListWidgetItem,
     QMenu,
     QProgressBar,
     QPushButton,
@@ -30,7 +34,13 @@ from .quest_extractor import QuestProposalDialog, start_quest_extraction
 from .snow_particles import AuroraShimmerOverlay, SnowParticleOverlay
 from .summarizer import start_summarization
 from .transcriber import start_live_transcription, start_transcription
-from .utils import active_campaign_name, ensure_dir, format_duration, format_file_size, sessions_dir
+from .utils import (
+    active_campaign_name,
+    ensure_dir,
+    format_duration,
+    format_file_size,
+    sessions_dir,
+)
 
 
 class _ThinDivider(QWidget):
@@ -216,6 +226,9 @@ class SessionTab(QWidget):
         self._pulse_timer = None
         self._pulse_state = 0
 
+        # Re-summarize past session state
+        self._resummarize_heading = None  # heading text to replace in journal, or None to append
+
         # Live transcription state
         self._live_transcript_parts = []
         self._last_live_transcription = 0.0
@@ -348,6 +361,7 @@ class SessionTab(QWidget):
         self._act_import = self._more_menu.addAction(tr("session.menu.import_audio"))
         self._act_save_audio = self._more_menu.addAction(tr("session.menu.save_audio"))
         self._act_save_audio.setEnabled(False)
+        self._act_resummarize = self._more_menu.addAction(tr("session.menu.resummarize_past"))
         self._more_menu.addSeparator()
         self._act_copy = self._more_menu.addAction(tr("session.menu.copy_summary"))
         self._act_copy.setEnabled(False)
@@ -389,6 +403,7 @@ class SessionTab(QWidget):
         # Overflow menu actions
         self._act_import.triggered.connect(self._import_audio)
         self._act_save_audio.triggered.connect(self._save_audio)
+        self._act_resummarize.triggered.connect(self._show_resummarize_dialog)
         self._act_copy.triggered.connect(self._copy_summary)
 
         self._recorder.recording_started.connect(self._on_recording_started)
@@ -820,8 +835,16 @@ class SessionTab(QWidget):
 
     def _add_to_journal(self):
         if self._current_summary and self._journal:
-            self._journal.append_summary(self._current_summary)
-            self.status_label.setText(tr("session.status.added_journal"))
+            if self._resummarize_heading:
+                replaced = self._journal.replace_section(self._resummarize_heading, self._current_summary)
+                if replaced:
+                    self.status_label.setText(tr("session.status.replaced_journal"))
+                else:
+                    self._journal.append_summary(self._current_summary)
+                    self.status_label.setText(tr("session.status.added_journal"))
+            else:
+                self._journal.append_summary(self._current_summary)
+                self.status_label.setText(tr("session.status.added_journal"))
             self.status_label.setStyleSheet("color: #d4af37;")
             self.btn_add_journal.setEnabled(False)
 
@@ -883,6 +906,110 @@ class SessionTab(QWidget):
         if self._current_summary and self._tts_engine and self._tts_engine.is_available:
             self.btn_tts.setEnabled(False)
             self._tts_engine.speak_requested.emit(self._current_summary)
+
+    def _show_resummarize_dialog(self):
+        """Show a dialog to pick a past session and re-summarize it."""
+        session_base = sessions_dir(self._config)
+        if not os.path.isdir(session_base):
+            self.status_label.setText(tr("session.resummarize.no_sessions"))
+            self.status_label.setStyleSheet("color: #ff6b6b;")
+            return
+
+        # Discover sessions with transcripts
+        sessions = []
+        for name in os.listdir(session_base):
+            if not name.startswith("session_"):
+                continue
+            folder = os.path.join(session_base, name)
+            if not os.path.isdir(folder):
+                continue
+            transcript = os.path.join(folder, "transcript.txt")
+            if not os.path.isfile(transcript):
+                continue
+            # Parse datetime from folder name: session_YYYYMMDD_HHMMSS[_suffix]
+            parts = name.split("_")
+            if len(parts) < 3:
+                continue
+            try:
+                dt = datetime.strptime(f"{parts[1]}_{parts[2]}", "%Y%m%d_%H%M%S")
+            except ValueError:
+                continue
+            suffix = "_".join(parts[3:]) if len(parts) > 3 else ""
+            sessions.append((dt, name, folder, transcript, suffix))
+
+        sessions.sort(key=lambda x: x[0], reverse=True)
+
+        if not sessions:
+            self.status_label.setText(tr("session.resummarize.no_sessions"))
+            self.status_label.setStyleSheet("color: #ff6b6b;")
+            return
+
+        # Build dialog
+        dlg = QDialog(self)
+        dlg.setWindowTitle(tr("session.resummarize.title"))
+        dlg.setMinimumWidth(350)
+        layout = QVBoxLayout(dlg)
+
+        session_list = QListWidget()
+        for dt, name, folder, transcript, suffix in sessions:
+            date_str = dt.strftime("%d/%m/%Y - %H:%M")
+            label = date_str
+            if suffix:
+                label += f" ({suffix})"
+            item = QListWidgetItem(label)
+            item.setData(Qt.ItemDataRole.UserRole, (dt, transcript))
+            session_list.addItem(item)
+        session_list.setCurrentRow(0)
+        layout.addWidget(session_list)
+
+        # Replace journal entry option with heading picker
+        replace_cb = QCheckBox(tr("session.resummarize.replace_journal"))
+        replace_cb.setChecked(True)
+        layout.addWidget(replace_cb)
+
+        from PySide6.QtWidgets import QComboBox
+
+        heading_combo = QComboBox()
+        headings = self._journal.get_session_headings() if self._journal else []
+        for h in headings:
+            heading_combo.addItem(h)
+        heading_combo.setVisible(replace_cb.isChecked() and len(headings) > 0)
+        replace_cb.toggled.connect(lambda checked: heading_combo.setVisible(checked and len(headings) > 0))
+        layout.addWidget(heading_combo)
+
+        if not headings:
+            replace_cb.setChecked(False)
+            replace_cb.setEnabled(False)
+
+        buttons = QDialogButtonBox()
+        buttons.addButton(tr("session.resummarize.btn"), QDialogButtonBox.ButtonRole.AcceptRole)
+        buttons.addButton(QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        layout.addWidget(buttons)
+
+        # Double-click to accept
+        session_list.itemDoubleClicked.connect(dlg.accept)
+
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        selected = session_list.currentItem()
+        if not selected:
+            return
+
+        _dt, transcript_path = selected.data(Qt.ItemDataRole.UserRole)
+        self._resummarize_heading = heading_combo.currentText() if replace_cb.isChecked() else None
+
+        # Load transcript and start summarization
+        with open(transcript_path, "r", encoding="utf-8") as f:
+            self._current_transcript = f.read()
+
+        self.transcript_display.setPlainText(self._current_transcript)
+        self.summary_display.clear()
+        self._current_summary = ""
+        self._update_action_button()
+        self._start_summarization()
 
     def _on_error(self, msg: str):
         self.status_label.setText(msg)
@@ -976,6 +1103,7 @@ class SessionTab(QWidget):
         # Overflow menu actions
         self._act_import.setText(tr("session.menu.import_audio"))
         self._act_save_audio.setText(tr("session.menu.save_audio"))
+        self._act_resummarize.setText(tr("session.menu.resummarize_past"))
         self._act_copy.setText(tr("session.menu.copy_summary"))
 
     def update_config(self, config: dict):

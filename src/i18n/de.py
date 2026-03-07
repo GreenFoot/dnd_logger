@@ -208,7 +208,13 @@ STRINGS: dict[str, str] = {
     "session.btn.more_tooltip": "Weitere Optionen",
     "session.menu.import_audio": "Audio importieren",
     "session.menu.save_audio": "Audio speichern",
+    "session.menu.resummarize_past": "Vergangene Sitzung neu zusammenfassen",
     "session.menu.copy_summary": "Zusammenfassung kopieren",
+    "session.resummarize.title": "Vergangene Sitzung neu zusammenfassen",
+    "session.resummarize.no_sessions": "Keine vergangenen Sitzungen mit Transkripten gefunden.",
+    "session.resummarize.replace_journal": "Journaleintrag ersetzen",
+    "session.resummarize.btn": "Neu zusammenfassen",
+    "session.status.replaced_journal": "Journaleintrag ersetzt.",
     "session.tts.read_selection": "Auswahl vorlesen",
     # ── session_tab.py — PostRecordingDialog ────────────────
     "session.post.title": "Aufnahme abgeschlossen",

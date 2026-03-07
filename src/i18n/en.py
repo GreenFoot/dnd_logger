@@ -208,7 +208,13 @@ STRINGS: dict[str, str] = {
     "session.btn.more_tooltip": "More options",
     "session.menu.import_audio": "Import audio",
     "session.menu.save_audio": "Save audio",
+    "session.menu.resummarize_past": "Re-summarize past session",
     "session.menu.copy_summary": "Copy summary",
+    "session.resummarize.title": "Re-summarize a past session",
+    "session.resummarize.no_sessions": "No past sessions with transcripts found.",
+    "session.resummarize.replace_journal": "Replace journal entry",
+    "session.resummarize.btn": "Re-summarize",
+    "session.status.replaced_journal": "Journal entry replaced.",
     "session.tts.read_selection": "Read selection",
     # ── session_tab.py — PostRecordingDialog ────────────────
     "session.post.title": "Recording complete",

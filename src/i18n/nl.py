@@ -208,7 +208,13 @@ STRINGS: dict[str, str] = {
     "session.btn.more_tooltip": "Meer opties",
     "session.menu.import_audio": "Audio importeren",
     "session.menu.save_audio": "Audio opslaan",
+    "session.menu.resummarize_past": "Eerdere sessie opnieuw samenvatten",
     "session.menu.copy_summary": "Samenvatting kopiëren",
+    "session.resummarize.title": "Eerdere sessie opnieuw samenvatten",
+    "session.resummarize.no_sessions": "Geen eerdere sessies met transcripties gevonden.",
+    "session.resummarize.replace_journal": "Dagboekvermelding vervangen",
+    "session.resummarize.btn": "Opnieuw samenvatten",
+    "session.status.replaced_journal": "Dagboekvermelding vervangen.",
     "session.tts.read_selection": "Selectie voorlezen",
     # ── session_tab.py — PostRecordingDialog ────────────────
     "session.post.title": "Opname voltooid",

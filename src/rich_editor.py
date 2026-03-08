@@ -20,7 +20,16 @@ from PySide6.QtGui import (
     QTextCharFormat,
     QTextCursor,
 )
-from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTextEdit, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 from .fold_gutter import GUTTER_WIDTH, FoldGutterWidget
 from .fold_manager import FoldManager

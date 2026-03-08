@@ -145,6 +145,8 @@ STRINGS: dict[str, str] = {
     "settings.prompts.hint.summary_system": "Variáveis: nenhuma (prompt de sistema fixo)",
     "settings.prompts.hint.condense": "Variáveis: {text}",
     "settings.prompts.hint.quest_extraction": "Variáveis: {campaign_name}, {current_quests}, {summary}",
+    "settings.prompts.campaign_assistant_label": "Assistente de campanha",
+    "settings.prompts.hint.campaign_assistant": "Variáveis: {language_name}, {quest_log_text}, {journal_text}",
     "settings.drive.account_group": "Conta Google",
     "settings.drive.status_label": "Estado:",
     "settings.drive.not_connected": "Não ligado",
@@ -619,4 +621,31 @@ Resumo da sessão:
     "prompt.quest.giver": "Quest giver",
     "prompt.quest.resolution": "Resolução",
     "prompt.language_name": "português",
+    # ── campaign_assistant.py ────────────────────────────
+    "assistant.menu_action": "Perguntar sobre a campanha...",
+    "assistant.dialog.title": "Perguntar sobre a sua campanha",
+    "assistant.placeholder": "Faça uma pergunta sobre a sua campanha...",
+    "assistant.btn_ask": "Perguntar",
+    "assistant.thinking": "A pensar...",
+    "assistant.error.no_api_key": "Configure a sua chave API Mistral nas Definições.",
+    "assistant.error.generic": "Erro: {error}",
+    "assistant.error.no_campaign": "Nenhuma campanha ativa selecionada.",
+    "prompt.campaign_assistant": """\
+És um assistente de campanha de D&D. Responde à pergunta do DM baseando-te \
+APENAS no diário de campanha e no quest log fornecidos abaixo. Sê específico — \
+cita datas de sessão e nomes de NPCs quando relevante. Se a informação não \
+estiver no contexto fornecido, diz-lo claramente.
+IMPORTANTE: NÃO uses qualquer conhecimento externo sobre aventuras publicadas \
+de D&D, módulos ou cenários de campanha. Refere-te apenas a eventos, NPCs e \
+locais que apareçam no diário e quest log fornecidos. Isto é crítico para \
+evitar spoilers da campanha.
+Responde em {language_name}.
+Formata a tua resposta em HTML com tags <p>, <strong>, <em>, <ul>/<li>.
+
+## Quest Log
+{quest_log_text}
+
+## Diário de campanha
+{journal_text}
+""",
 }

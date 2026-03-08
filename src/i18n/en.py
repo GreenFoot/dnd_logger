@@ -145,6 +145,8 @@ STRINGS: dict[str, str] = {
     "settings.prompts.hint.summary_system": "Variables: none (fixed system prompt)",
     "settings.prompts.hint.condense": "Variables: {text}",
     "settings.prompts.hint.quest_extraction": "Variables: {campaign_name}, {current_quests}, {summary}",
+    "settings.prompts.campaign_assistant_label": "Campaign Assistant",
+    "settings.prompts.hint.campaign_assistant": "Variables: {language_name}, {quest_log_text}, {journal_text}",
     "settings.drive.account_group": "Google Account",
     "settings.drive.status_label": "Status:",
     "settings.drive.not_connected": "Not connected",
@@ -632,4 +634,31 @@ Session summary:
     "prompt.quest.giver": "Quest giver",
     "prompt.quest.resolution": "Resolution",
     "prompt.language_name": "English",
+    # ── campaign_assistant.py ────────────────────────────
+    "assistant.menu_action": "Ask about campaign...",
+    "assistant.dialog.title": "Ask about your campaign",
+    "assistant.placeholder": "Ask a question about your campaign...",
+    "assistant.btn_ask": "Ask",
+    "assistant.thinking": "Thinking...",
+    "assistant.error.no_api_key": "Please configure your Mistral API key in Settings.",
+    "assistant.error.generic": "Error: {error}",
+    "assistant.error.no_campaign": "No active campaign selected.",
+    "prompt.campaign_assistant": """\
+You are a D&D campaign assistant. Answer the DM's question based ONLY on the \
+campaign journal and quest log provided below. Be specific — cite session dates \
+and NPC names when relevant. If the information is not in the provided context, \
+say so clearly.
+IMPORTANT: Do NOT use any external knowledge about published D&D adventures, \
+modules, or campaign settings. Only reference events, NPCs, and locations that \
+appear in the provided journal and quest log. This is critical to avoid spoiling \
+the campaign.
+Answer in {language_name}.
+Format your response in HTML with <p>, <strong>, <em>, <ul>/<li> tags.
+
+## Quest Log
+{quest_log_text}
+
+## Campaign Journal
+{journal_text}
+""",
 }

@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from . import themed_dialogs as dlg
 from .audio_recorder import AudioRecorder
+from .campaign_assistant import get_default_campaign_assistant
 from .filigree_overlay import GoldFiligreeOverlay
 from .i18n import set_language, tr
 from .quest_extractor import get_default_quest_extraction
@@ -146,6 +147,11 @@ class SettingsDialog(QDialog):
             ("prompt_summary_system", tr("settings.prompts.summary_system_label"), get_default_summary_system),
             ("prompt_condense", tr("settings.prompts.condense_label"), get_default_condense),
             ("prompt_quest_extraction", tr("settings.prompts.quest_extraction_label"), get_default_quest_extraction),
+            (
+                "prompt_campaign_assistant",
+                tr("settings.prompts.campaign_assistant_label"),
+                get_default_campaign_assistant,
+            ),
         ]
         for _key, label, _default_fn in self._prompt_keys:
             self.prompt_combo.addItem(label)
@@ -345,6 +351,7 @@ class SettingsDialog(QDialog):
         "prompt_summary_system": "settings.prompts.hint.summary_system",
         "prompt_condense": "settings.prompts.hint.condense",
         "prompt_quest_extraction": "settings.prompts.hint.quest_extraction",
+        "prompt_campaign_assistant": "settings.prompts.hint.campaign_assistant",
     }
 
     def _on_prompt_selected(self, index: int):

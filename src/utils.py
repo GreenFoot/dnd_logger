@@ -20,6 +20,7 @@ SHARED_CONFIG_KEYS = {
     "prompt_summary_system",
     "prompt_condense",
     "prompt_quest_extraction",
+    "prompt_campaign_assistant",
 }
 
 _DEFAULT_CONFIG = {
@@ -39,6 +40,7 @@ _DEFAULT_CONFIG = {
     "prompt_summary_system": "",
     "prompt_condense": "",
     "prompt_quest_extraction": "",
+    "prompt_campaign_assistant": "",
     "context_bias": [
         "Dungeons & Dragons",
         "D&D",

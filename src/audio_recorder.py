@@ -1,5 +1,6 @@
 """Audio recorder using sounddevice with streaming architecture."""
 
+import ctypes
 import os
 import queue
 import threading
@@ -29,6 +30,11 @@ class AudioRecorder(QObject):
     _SENTINEL = None  # signals writer thread to stop
     _SILENCE_THRESHOLD = 0.01  # RMS below this counts as silence
     _SILENCE_BLOCKS = 30  # consecutive silent blocks needed (~1.5s at 50ms/block)
+
+    # Windows SetThreadExecutionState flags to keep screen awake
+    _ES_CONTINUOUS = 0x80000000
+    _ES_SYSTEM_REQUIRED = 0x00000001
+    _ES_DISPLAY_REQUIRED = 0x00000002
 
     def __init__(self, config: dict, parent=None):
         super().__init__(parent)
@@ -126,6 +132,7 @@ class AudioRecorder(QObject):
             self._is_paused = False
             self._elapsed = 0
             self._timer.start()
+            self._keep_screen_awake(True)
             self.recording_started.emit()
 
         except Exception as e:
@@ -189,6 +196,7 @@ class AudioRecorder(QObject):
                 pass
             self._sf = None
 
+        self._keep_screen_awake(False)
         path = self._wav_path
         self.recording_stopped.emit(path)
         return path
@@ -266,6 +274,18 @@ class AudioRecorder(QObject):
             self._sf = None
         self._is_recording = False
         self._is_paused = False
+        self._keep_screen_awake(False)
+
+    def _keep_screen_awake(self, keep_awake: bool):
+        """Prevent or allow the display to sleep using Windows API."""
+        try:
+            if keep_awake:
+                flags = self._ES_CONTINUOUS | self._ES_SYSTEM_REQUIRED | self._ES_DISPLAY_REQUIRED
+            else:
+                flags = self._ES_CONTINUOUS
+            ctypes.windll.kernel32.SetThreadExecutionState(flags)
+        except Exception:
+            pass
 
     @staticmethod
     def list_devices() -> list[dict]:

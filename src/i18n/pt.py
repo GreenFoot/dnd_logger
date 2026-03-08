@@ -134,6 +134,7 @@ STRINGS: dict[str, str] = {
     "settings.advanced.chunk_label": "Duração máxima do segmento:",
     "settings.advanced.bias_label": "Contexto D&D (bias):",
     "settings.advanced.bias_placeholder": "Termos D&D (um por linha)...",
+    "settings.advanced.themed_cursors": "Usar cursores temáticos nos editores",
     "settings.advanced.language_label": "Idioma:",
     "settings.advanced.restart_required": "Idioma alterado. Por favor, reinicie a aplicação.",
     "settings.advanced.restart_title": "Reinício necessário",

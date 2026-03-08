@@ -770,6 +770,7 @@ class DndLoggerApp(QMainWindow):
         self._apply_backgrounds()
         self._update_session_icon()
         self._update_overlay_colors()
+        self._update_themed_cursors()
 
         # Save choice to campaign config
         active = active_campaign_name(self._config)
@@ -820,6 +821,19 @@ class DndLoggerApp(QMainWindow):
         accent_hex = palette.get("accent_gold", "#c9a832")
         accent_color = QColor(accent_hex)
         self.session_tab.set_divider_accent(accent_color)
+
+    def _update_themed_cursors(self):
+        """Apply or remove themed gauntlet cursor app-wide based on settings."""
+        from PySide6.QtWidgets import QApplication
+
+        from .themed_cursor import create_gauntlet_cursor
+
+        # Remove any previous override before (re)applying
+        while QApplication.overrideCursor() is not None:
+            QApplication.restoreOverrideCursor()
+
+        if self._config.get("themed_cursors", True):
+            QApplication.setOverrideCursor(create_gauntlet_cursor())
 
     def _init_tts(self):
         """Initialize a shared TTS engine for all widgets."""
@@ -933,6 +947,7 @@ class DndLoggerApp(QMainWindow):
         self._quest_filigree = GoldFiligreeOverlay(self.quest_log)
         self._session_filigree = GoldFiligreeOverlay(self.session_tab)
         self._update_overlay_colors()
+        self._update_themed_cursors()
 
     def _build_ui(self):
         cname = active_campaign_name(self._config)
@@ -1231,6 +1246,7 @@ class DndLoggerApp(QMainWindow):
         self._apply_backgrounds()
         self._update_session_icon()
         self._update_overlay_colors()
+        self._update_themed_cursors()
 
         # Restart sync if campaign has it enabled
         self._init_sync_engine()
@@ -1296,6 +1312,7 @@ class DndLoggerApp(QMainWindow):
         if dlg.exec():
             self._config = dlg.get_config()
             self._refresh_config()
+            self._update_themed_cursors()
 
             # Live language switch — retranslate all UI if language changed
             new_lang = self._config.get("language", "en")

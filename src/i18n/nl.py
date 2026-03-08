@@ -145,6 +145,8 @@ STRINGS: dict[str, str] = {
     "settings.prompts.hint.summary_system": "Variabelen: geen (vast systeemprompt)",
     "settings.prompts.hint.condense": "Variabelen: {text}",
     "settings.prompts.hint.quest_extraction": "Variabelen: {campaign_name}, {current_quests}, {summary}",
+    "settings.prompts.campaign_assistant_label": "Campagne-assistent",
+    "settings.prompts.hint.campaign_assistant": "Variabelen: {language_name}, {quest_log_text}, {journal_text}",
     "settings.drive.account_group": "Google-account",
     "settings.drive.status_label": "Status:",
     "settings.drive.not_connected": "Niet verbonden",
@@ -622,4 +624,31 @@ Sessiesamenvatting:
     "prompt.quest.giver": "Questgever",
     "prompt.quest.resolution": "Afloop",
     "prompt.language_name": "Nederlands",
+    # ── campaign_assistant.py ────────────────────────────
+    "assistant.menu_action": "Vraag over campagne...",
+    "assistant.dialog.title": "Vraag over uw campagne",
+    "assistant.placeholder": "Stel een vraag over uw campagne...",
+    "assistant.btn_ask": "Vraag",
+    "assistant.thinking": "Nadenken...",
+    "assistant.error.no_api_key": "Configureer uw Mistral API-sleutel in Instellingen.",
+    "assistant.error.generic": "Fout: {error}",
+    "assistant.error.no_campaign": "Geen actieve campagne geselecteerd.",
+    "prompt.campaign_assistant": """\
+Je bent een D&D-campagne-assistent. Beantwoord de vraag van de DM uitsluitend \
+op basis van het campagnedagboek en quest log hieronder. Wees specifiek — noem \
+sessiedata en NPC-namen wanneer relevant. Als de informatie niet in de verstrekte \
+context staat, zeg dit dan duidelijk.
+BELANGRIJK: Gebruik GEEN externe kennis over gepubliceerde D&D-avonturen, modules \
+of campagnewerelden. Verwijs alleen naar gebeurtenissen, NPC's en locaties die \
+voorkomen in het verstrekte dagboek en quest log. Dit is cruciaal om spoilers \
+van de campagne te voorkomen.
+Antwoord in het {language_name}.
+Formatteer je antwoord in HTML met <p>, <strong>, <em>, <ul>/<li> tags.
+
+## Quest Log
+{quest_log_text}
+
+## Campagnedagboek
+{journal_text}
+""",
 }

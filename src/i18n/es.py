@@ -145,6 +145,8 @@ STRINGS: dict[str, str] = {
     "settings.prompts.hint.summary_system": "Variables: ninguna (prompt de sistema fijo)",
     "settings.prompts.hint.condense": "Variables: {text}",
     "settings.prompts.hint.quest_extraction": "Variables: {campaign_name}, {current_quests}, {summary}",
+    "settings.prompts.campaign_assistant_label": "Asistente de campaña",
+    "settings.prompts.hint.campaign_assistant": "Variables: {language_name}, {quest_log_text}, {journal_text}",
     "settings.drive.account_group": "Cuenta de Google",
     "settings.drive.status_label": "Estado:",
     "settings.drive.not_connected": "No conectado",
@@ -620,4 +622,31 @@ Resumen de la sesión:
     "prompt.quest.giver": "Quien la dio",
     "prompt.quest.resolution": "Resolución",
     "prompt.language_name": "español",
+    # ── campaign_assistant.py ────────────────────────────
+    "assistant.menu_action": "Preguntar sobre la campaña...",
+    "assistant.dialog.title": "Preguntar sobre tu campaña",
+    "assistant.placeholder": "Haz una pregunta sobre tu campaña...",
+    "assistant.btn_ask": "Preguntar",
+    "assistant.thinking": "Pensando...",
+    "assistant.error.no_api_key": "Configura tu clave API de Mistral en Configuración.",
+    "assistant.error.generic": "Error: {error}",
+    "assistant.error.no_campaign": "No hay campaña activa seleccionada.",
+    "prompt.campaign_assistant": """\
+Eres un asistente de campaña de D&D. Responde a la pregunta del DM basándote \
+ÚNICAMENTE en el diario de campaña y el quest log proporcionados a continuación. \
+Sé específico — cita fechas de sesión y nombres de NPC cuando sea relevante. \
+Si la información no está en el contexto proporcionado, dilo claramente.
+IMPORTANTE: NO uses ningún conocimiento externo sobre aventuras publicadas de D&D, \
+módulos o ambientaciones de campaña. Solo haz referencia a eventos, NPCs y lugares \
+que aparezcan en el diario y quest log proporcionados. Esto es crítico para evitar \
+spoilers de la campaña.
+Responde en {language_name}.
+Formatea tu respuesta en HTML con etiquetas <p>, <strong>, <em>, <ul>/<li>.
+
+## Quest Log
+{quest_log_text}
+
+## Diario de campaña
+{journal_text}
+""",
 }

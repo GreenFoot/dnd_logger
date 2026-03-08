@@ -1029,6 +1029,13 @@ class DndLoggerApp(QMainWindow):
         record_action.triggered.connect(self._toggle_recording)
         session_menu.addAction(record_action)
 
+        session_menu.addSeparator()
+
+        assistant_action = QAction(tr("assistant.menu_action"), self)
+        assistant_action.setShortcut(QKeySequence("Ctrl+Shift+F"))
+        assistant_action.triggered.connect(self._open_campaign_assistant)
+        session_menu.addAction(assistant_action)
+
     def _rebuild_campaign_menu(self):
         """Rebuild the Campaign menu with current campaigns."""
         self._campaign_menu.clear()
@@ -1242,6 +1249,40 @@ class DndLoggerApp(QMainWindow):
             if wizard.exec():
                 self._config = wizard.get_config()
                 self._refresh_config()
+
+    def _open_campaign_assistant(self):
+        """Open the AI-powered campaign Q&A dialog."""
+        from .campaign_assistant import CampaignAssistantDialog
+
+        cname = active_campaign_name(self._config)
+        if not cname:
+            return
+
+        journal_html = ""
+        quest_html = ""
+        jp = journal_path(self._config)
+        qp = quest_log_path(self._config)
+        if os.path.exists(jp):
+            with open(jp, "r", encoding="utf-8") as f:
+                journal_html = f.read()
+        if os.path.exists(qp):
+            with open(qp, "r", encoding="utf-8") as f:
+                quest_html = f.read()
+
+        # Reuse existing dialog or create a new one
+        if hasattr(self, "_assistant_dialog") and self._assistant_dialog is not None:
+            self._assistant_dialog.setWindowState(
+                self._assistant_dialog.windowState() & ~Qt.WindowState.WindowMinimized
+            )
+            self._assistant_dialog.raise_()
+            self._assistant_dialog.activateWindow()
+            return
+
+        self._assistant_dialog = CampaignAssistantDialog(journal_html, quest_html, self._config, self)
+        self._assistant_dialog.setWindowModality(Qt.WindowModality.NonModal)
+        self._assistant_dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        self._assistant_dialog.destroyed.connect(lambda: setattr(self, "_assistant_dialog", None))
+        self._assistant_dialog.show()
 
     def _open_settings(self):
         old_lang = self._config.get("language", "en")

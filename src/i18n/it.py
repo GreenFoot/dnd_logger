@@ -145,6 +145,8 @@ STRINGS: dict[str, str] = {
     "settings.prompts.hint.summary_system": "Variabili: nessuna (prompt di sistema fisso)",
     "settings.prompts.hint.condense": "Variabili: {text}",
     "settings.prompts.hint.quest_extraction": "Variabili: {campaign_name}, {current_quests}, {summary}",
+    "settings.prompts.campaign_assistant_label": "Assistente campagna",
+    "settings.prompts.hint.campaign_assistant": "Variabili: {language_name}, {quest_log_text}, {journal_text}",
     "settings.drive.account_group": "Account Google",
     "settings.drive.status_label": "Stato:",
     "settings.drive.not_connected": "Non connesso",
@@ -620,4 +622,31 @@ Riepilogo della sessione:
     "prompt.quest.giver": "Committente",
     "prompt.quest.resolution": "Risoluzione",
     "prompt.language_name": "italiano",
+    # ── campaign_assistant.py ────────────────────────────
+    "assistant.menu_action": "Chiedi sulla campagna...",
+    "assistant.dialog.title": "Chiedi sulla tua campagna",
+    "assistant.placeholder": "Fai una domanda sulla tua campagna...",
+    "assistant.btn_ask": "Chiedi",
+    "assistant.thinking": "Sto pensando...",
+    "assistant.error.no_api_key": "Configura la tua chiave API Mistral nelle Impostazioni.",
+    "assistant.error.generic": "Errore: {error}",
+    "assistant.error.no_campaign": "Nessuna campagna attiva selezionata.",
+    "prompt.campaign_assistant": """\
+Sei un assistente di campagna D&D. Rispondi alla domanda del DM basandoti \
+ESCLUSIVAMENTE sul diario di campagna e sul quest log forniti di seguito. \
+Sii specifico — cita le date delle sessioni e i nomi degli NPC quando pertinente. \
+Se l'informazione non e nel contesto fornito, dillo chiaramente.
+IMPORTANTE: NON usare alcuna conoscenza esterna su avventure D&D pubblicate, \
+moduli o ambientazioni di campagna. Fai riferimento solo a eventi, NPC e luoghi \
+che appaiono nel diario e nel quest log forniti. Questo e fondamentale per evitare \
+spoiler della campagna.
+Rispondi in {language_name}.
+Formatta la tua risposta in HTML con tag <p>, <strong>, <em>, <ul>/<li>.
+
+## Quest Log
+{quest_log_text}
+
+## Diario di campagna
+{journal_text}
+""",
 }

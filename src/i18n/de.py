@@ -145,6 +145,8 @@ STRINGS: dict[str, str] = {
     "settings.prompts.hint.summary_system": "Variablen: keine (fester System-Prompt)",
     "settings.prompts.hint.condense": "Variablen: {text}",
     "settings.prompts.hint.quest_extraction": "Variablen: {campaign_name}, {current_quests}, {summary}",
+    "settings.prompts.campaign_assistant_label": "Kampagnenassistent",
+    "settings.prompts.hint.campaign_assistant": "Variablen: {language_name}, {quest_log_text}, {journal_text}",
     "settings.drive.account_group": "Google-Konto",
     "settings.drive.status_label": "Status:",
     "settings.drive.not_connected": "Nicht verbunden",
@@ -619,4 +621,32 @@ Sitzungszusammenfassung:
     "prompt.quest.giver": "Questgeber",
     "prompt.quest.resolution": "Loesung",
     "prompt.language_name": "Deutsch",
+    # ── campaign_assistant.py ────────────────────────────
+    "assistant.menu_action": "Kampagne befragen...",
+    "assistant.dialog.title": "Kampagne befragen",
+    "assistant.placeholder": "Stellen Sie eine Frage zu Ihrer Kampagne...",
+    "assistant.btn_ask": "Fragen",
+    "assistant.thinking": "Nachdenken...",
+    "assistant.error.no_api_key": "Bitte konfigurieren Sie Ihren Mistral API Key in den Einstellungen.",
+    "assistant.error.generic": "Fehler: {error}",
+    "assistant.error.no_campaign": "Keine aktive Kampagne ausgewaehlt.",
+    "prompt.campaign_assistant": """\
+Du bist ein D&D-Kampagnenassistent. Beantworte die Frage des Spielleiters \
+ausschliesslich auf Grundlage des unten bereitgestellten Kampagnenjournals \
+und Quest Logs. Sei praezise — nenne Sitzungsdaten und NPC-Namen, wenn relevant. \
+Wenn die Information nicht im bereitgestellten Kontext enthalten ist, sage dies \
+deutlich.
+WICHTIG: Verwende KEIN externes Wissen ueber veroeffentlichte D&D-Abenteuer, \
+Module oder Kampagnenwelten. Beziehe dich nur auf Ereignisse, NPCs und Orte, \
+die im bereitgestellten Journal und Quest Log erscheinen. Dies ist entscheidend, \
+um die Kampagne nicht zu spoilern.
+Antworte auf {language_name}.
+Formatiere deine Antwort in HTML mit <p>, <strong>, <em>, <ul>/<li> Tags.
+
+## Quest Log
+{quest_log_text}
+
+## Kampagnenjournal
+{journal_text}
+""",
 }

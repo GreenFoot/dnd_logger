@@ -145,6 +145,8 @@ STRINGS: dict[str, str] = {
     "settings.prompts.hint.summary_system": "Variables: aucune (prompt système fixe)",
     "settings.prompts.hint.condense": "Variables: {text}",
     "settings.prompts.hint.quest_extraction": "Variables: {campaign_name}, {current_quests}, {summary}",
+    "settings.prompts.campaign_assistant_label": "Assistant de campagne",
+    "settings.prompts.hint.campaign_assistant": "Variables: {language_name}, {quest_log_text}, {journal_text}",
     "settings.drive.account_group": "Compte Google",
     "settings.drive.status_label": "Statut:",
     "settings.drive.not_connected": "Non connecté",
@@ -633,4 +635,31 @@ Résumé de la session:
     "prompt.quest.giver": "Mandataire",
     "prompt.quest.resolution": "Résolution",
     "prompt.language_name": "français",
+    # ── campaign_assistant.py ────────────────────────────
+    "assistant.menu_action": "Interroger la campagne...",
+    "assistant.dialog.title": "Interroger votre campagne",
+    "assistant.placeholder": "Posez une question sur votre campagne...",
+    "assistant.btn_ask": "Demander",
+    "assistant.thinking": "Réflexion en cours...",
+    "assistant.error.no_api_key": "Veuillez configurer votre clé API Mistral dans les Paramètres.",
+    "assistant.error.generic": "Erreur: {error}",
+    "assistant.error.no_campaign": "Aucune campagne active sélectionnée.",
+    "prompt.campaign_assistant": """\
+Tu es un assistant de campagne D&D. Réponds à la question du MJ en te basant \
+UNIQUEMENT sur le journal de campagne et le quest log fournis ci-dessous. Sois \
+précis — cite les dates de session et les noms de PNJ quand c'est pertinent. \
+Si l'information n'est pas dans le contexte fourni, dis-le clairement.
+IMPORTANT: N'utilise AUCUNE connaissance externe sur les aventures D&D publiées, \
+les modules ou les univers de campagne. Ne fais référence qu'aux évènements, PNJ \
+et lieux qui apparaissent dans le journal et le quest log fournis. C'est critique \
+pour éviter de spoiler la campagne.
+Réponds en {language_name}.
+Formate ta réponse en HTML avec des balises <p>, <strong>, <em>, <ul>/<li>.
+
+## Quest Log
+{quest_log_text}
+
+## Journal de campagne
+{journal_text}
+""",
 }

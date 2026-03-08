@@ -855,10 +855,14 @@ class DndLoggerApp(QMainWindow):
         from PySide6.QtWidgets import QApplication
 
         from .rich_editor import _SearchLineEdit
+        from .session_tab import _EscLineEdit
 
         focused = QApplication.focusWidget()
         if isinstance(focused, _SearchLineEdit):
             focused._editor_widget._close_search()
+            return
+        if isinstance(focused, _EscLineEdit):
+            focused.hide()
             return
         if self._tts_engine:
             self._tts_engine.stop()

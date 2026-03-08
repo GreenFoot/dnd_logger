@@ -272,6 +272,23 @@ QPushButton#btn_stop:hover {
     color: #a86a5a;
 }
 
+/* --- Buttons: Bookmark (gold accent, icon-only) --- */
+QPushButton#btn_bookmark {
+    background-color: #1e120a;
+    border: 2px solid #8a7a30;
+    color: #d4af37;
+    padding: 6px;
+    border-radius: 6px;
+    min-height: 24px;
+    max-width: 32px;
+}
+
+QPushButton#btn_bookmark:hover {
+    background-color: #2a1a0f;
+    border-color: #d4af37;
+    color: #e8c860;
+}
+
 /* --- Buttons: Primary (same as default, frost-blue accent) --- */
 QPushButton#btn_primary {
     background-color: #1e120a;

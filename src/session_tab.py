@@ -1,6 +1,7 @@
 """Session Tab — recording controls, transcript, and summary display."""
 
 import glob
+import json
 import os
 import shutil
 import time
@@ -8,7 +9,7 @@ from datetime import datetime
 
 import soundfile as sf
 from PySide6.QtCore import QRectF, QSize, Qt, QTimer
-from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtGui import QAction, QColor, QIcon, QKeySequence, QPainter, QPen, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -17,6 +18,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMenu,
@@ -125,6 +127,31 @@ def _make_tts_icon(size: int = 20) -> QIcon:
     return QIcon(pix)
 
 
+def _make_bookmark_icon(size: int = 20) -> QIcon:
+    """Draw a flag/pennant icon for the bookmark button."""
+    pix = QPixmap(size, size)
+    pix.fill(QColor(0, 0, 0, 0))
+    p = QPainter(pix)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    gold = QColor(212, 175, 55)
+    p.setPen(QPen(gold, 1.6))
+    # Flagpole
+    p.drawLine(5, 3, 5, 17)
+    # Flag (pennant shape)
+    from PySide6.QtGui import QPainterPath
+
+    flag = QPainterPath()
+    flag.moveTo(5, 3)
+    flag.lineTo(16, 6)
+    flag.lineTo(5, 10)
+    flag.closeSubpath()
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(gold)
+    p.drawPath(flag)
+    p.end()
+    return QIcon(pix)
+
+
 class PostRecordingDialog(QDialog):
     """Dialog shown after stopping recording with options."""
 
@@ -203,6 +230,17 @@ class _VerticalDotsButton(QToolButton):
         p.end()
 
 
+class _EscLineEdit(QLineEdit):
+    """QLineEdit that hides itself on Escape."""
+
+    def keyPressEvent(self, event):
+        """Hide on Escape, default behavior otherwise."""
+        if event.key() == Qt.Key.Key_Escape:
+            self.hide()
+            return
+        super().keyPressEvent(event)
+
+
 class SessionTab(QWidget):
     """Recording, transcription, and summarization UI."""
 
@@ -226,11 +264,16 @@ class SessionTab(QWidget):
         self._pulse_timer = None
         self._pulse_state = 0
 
+        # Bookmark state
+        self._bookmarks = []  # list of {"timestamp": int, "label": str}
+        self._bookmark_pending_ts = 0
+
         # Re-summarize past session state
         self._resummarize_heading = None  # heading text to replace in journal, or None to append
 
         # Live transcription state
-        self._live_transcript_parts = []
+        self._live_transcript_parts = []  # segment texts only (for counting)
+        self._live_ordered_parts = []  # segments + bookmark markers in chronological order
         self._last_live_transcription = 0.0
         self._live_tx_thread = None
         self._live_tx_worker = None
@@ -269,12 +312,20 @@ class SessionTab(QWidget):
         self.btn_stop.setObjectName("btn_stop")
         self.btn_stop.setEnabled(False)
 
+        self.btn_bookmark = QPushButton()
+        self.btn_bookmark.setIcon(_make_bookmark_icon())
+        self.btn_bookmark.setIconSize(QSize(18, 18))
+        self.btn_bookmark.setToolTip(tr("session.btn.bookmark_tooltip"))
+        self.btn_bookmark.setObjectName("btn_bookmark")
+        self.btn_bookmark.setEnabled(False)
+
         self.duration_label = QLabel("00:00:00")
         self.duration_label.setObjectName("duration_label")
         self.duration_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         rec_layout.addWidget(self.btn_record)
         rec_layout.addWidget(self.btn_stop)
+        rec_layout.addWidget(self.btn_bookmark)
         rec_layout.addWidget(self.duration_label)
         layout.addLayout(rec_layout)
 
@@ -285,6 +336,14 @@ class SessionTab(QWidget):
         self.vu_meter.setTextVisible(False)
         self.vu_meter.setMaximumHeight(12)
         layout.addWidget(self.vu_meter)
+
+        # Bookmark inline label input (hidden by default)
+        self._bookmark_input = _EscLineEdit()
+        self._bookmark_input.setPlaceholderText(tr("session.bookmark.placeholder"))
+        self._bookmark_input.setMaximumHeight(28)
+        self._bookmark_input.hide()
+        self._bookmark_input.returnPressed.connect(self._confirm_bookmark)
+        layout.addWidget(self._bookmark_input)
 
         # Status
         self.status_label = QLabel(tr("session.status.ready"))
@@ -395,6 +454,9 @@ class SessionTab(QWidget):
     def _connect_signals(self):
         self.btn_record.clicked.connect(self._on_record_btn_clicked)
         self.btn_stop.clicked.connect(self._stop_recording)
+        self.btn_bookmark.clicked.connect(self._add_bookmark)
+        self._bookmark_shortcut = QShortcut(QKeySequence(Qt.Key.Key_F2), self)
+        self._bookmark_shortcut.activated.connect(self._add_bookmark)
         self.btn_transcribe.clicked.connect(self._start_transcription)
         self.btn_add_journal.clicked.connect(self._add_to_journal)
         self.btn_update_quests.clicked.connect(self._start_quest_extraction)
@@ -466,13 +528,19 @@ class SessionTab(QWidget):
         self.btn_record.style().polish(self.btn_record)
         self.btn_record.setEnabled(True)
         self.btn_stop.setEnabled(True)
+        self.btn_bookmark.setEnabled(True)
         self.btn_transcribe.setEnabled(False)
         self.transcript_display.clear()
         self.status_label.setText(tr("session.status.recording"))
         self.status_label.setStyleSheet("color: #ff6b6b;")
 
+        # Reset bookmarks
+        self._bookmarks.clear()
+        self._bookmark_input.hide()
+
         # Reset live transcription state
         self._live_transcript_parts = []
+        self._live_ordered_parts = []
         self._last_live_transcription = 0.0
         self._live_tx_pending = False
         self._stop_after_current = False
@@ -490,6 +558,7 @@ class SessionTab(QWidget):
         self.btn_record.setObjectName("btn_resume")
         self.btn_record.style().unpolish(self.btn_record)
         self.btn_record.style().polish(self.btn_record)
+        self.btn_bookmark.setEnabled(False)
         self.status_label.setText(tr("session.status.paused"))
         self.status_label.setStyleSheet("color: #e8a824;")
 
@@ -505,6 +574,7 @@ class SessionTab(QWidget):
         self.btn_record.setObjectName("btn_pause")
         self.btn_record.style().unpolish(self.btn_record)
         self.btn_record.style().polish(self.btn_record)
+        self.btn_bookmark.setEnabled(True)
         self.status_label.setText(tr("session.status.recording"))
         self.status_label.setStyleSheet("color: #ff6b6b;")
 
@@ -522,8 +592,13 @@ class SessionTab(QWidget):
         self.btn_record.style().polish(self.btn_record)
         self.btn_record.setEnabled(True)
         self.btn_stop.setEnabled(False)
+        self.btn_bookmark.setEnabled(False)
+        self._bookmark_input.hide()
         self.vu_meter.setValue(0)
         self._current_wav_path = wav_path
+
+        # Save bookmarks
+        self._save_bookmarks()
 
         # Stop recording atmosphere
         self._pulse_timer.stop()
@@ -644,6 +719,64 @@ class SessionTab(QWidget):
         self._elapsed = seconds
         self.duration_label.setText(format_duration(seconds))
 
+    # --- Bookmarks ---
+
+    def _add_bookmark(self):
+        """Show the inline label input to create a bookmark at the current timestamp."""
+        if not self._recorder.is_recording or self._recorder.is_paused:
+            return
+        if self._bookmark_input.isVisible():
+            # Already entering a label — cancel it
+            self._bookmark_input.hide()
+            return
+        self._bookmark_pending_ts = self._elapsed
+        self._bookmark_input.clear()
+        self._bookmark_input.show()
+        self._bookmark_input.setFocus()
+
+    def _confirm_bookmark(self):
+        """Confirm the bookmark with the entered (or default) label."""
+        label = self._bookmark_input.text().strip()
+        if not label:
+            label = tr("session.bookmark.default_label", n=len(self._bookmarks) + 1)
+        ts = getattr(self, "_bookmark_pending_ts", self._elapsed)
+        bookmark = {"timestamp": ts, "label": label}
+        self._bookmarks.append(bookmark)
+        self._bookmark_input.hide()
+
+        # Write bookmark marker directly into the live transcript stream
+        marker = f"[Bookmark: {label}]"
+        self._live_ordered_parts.append(marker)
+        self.transcript_display.append(marker)
+
+        self._save_bookmarks()
+
+    def _save_bookmarks(self):
+        """Save bookmarks to bookmarks.json in the session folder."""
+        wav_path = self._current_wav_path or self._recorder.wav_path
+        if not wav_path or not self._bookmarks:
+            return
+        session_dir = os.path.dirname(wav_path)
+        path = os.path.join(session_dir, "bookmarks.json")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(self._bookmarks, f, ensure_ascii=False, indent=2)
+
+    def _inject_bookmarks_proportional(self, text: str) -> str:
+        """Insert bookmark markers at proportional positions in a batch transcript."""
+        if not self._bookmarks or not text or self._elapsed <= 0:
+            return text
+        total = self._elapsed
+        length = len(text)
+        for bm in sorted(self._bookmarks, key=lambda b: b["timestamp"], reverse=True):
+            ts = bm["timestamp"]
+            marker = f"\n[Bookmark: {bm['label']}]\n"
+            pos = min(int((ts / total) * length), length)
+            nl = text.rfind("\n", 0, pos + 1)
+            if nl == -1:
+                nl = 0
+            text = text[:nl] + marker + text[nl:]
+        return text
+
     # --- Transcription ---
 
     def _start_transcription(self):
@@ -712,6 +845,7 @@ class SessionTab(QWidget):
         self._live_tx_pending = False
         if text.strip():
             self._live_transcript_parts.append(text)
+            self._live_ordered_parts.append(text)
             self.transcript_display.append(text)
 
         if self._is_final_live_chunk:
@@ -741,8 +875,8 @@ class SessionTab(QWidget):
             self._do_final_live_transcription()
 
     def _finalize_live_transcription(self):
-        """Combine all live transcript parts into final transcript."""
-        full_text = "\n\n".join(self._live_transcript_parts)
+        """Combine all live transcript parts (with interleaved bookmarks) into final transcript."""
+        full_text = "\n\n".join(self._live_ordered_parts)
         self._current_transcript = full_text
         self.transcript_display.setPlainText(full_text)
 
@@ -773,6 +907,7 @@ class SessionTab(QWidget):
         self.transcript_display.append(text)
 
     def _on_transcription_done(self, full_text: str):
+        full_text = self._inject_bookmarks_proportional(full_text)
         self._current_transcript = full_text
         self.transcript_display.setPlainText(full_text)
         self.status_label.setText(tr("session.status.transcription_done"))
@@ -1022,6 +1157,8 @@ class SessionTab(QWidget):
         self.btn_record.setStyleSheet("")
         self.btn_record.setEnabled(True)
         self.btn_stop.setEnabled(False)
+        self.btn_bookmark.setEnabled(False)
+        self._bookmark_input.hide()
         has_audio = bool(self._current_wav_path or self._recorder.wav_path)
         self._update_action_button()
         self.btn_transcribe.setEnabled(has_audio or bool(self._current_transcript))
@@ -1088,6 +1225,7 @@ class SessionTab(QWidget):
         self._summary_label.setText(tr("session.label.summary"))
 
         # Placeholders
+        self._bookmark_input.setPlaceholderText(tr("session.bookmark.placeholder"))
         self.transcript_display.setPlaceholderText(tr("session.placeholder.transcript"))
         self.summary_display.setPlaceholderText(tr("session.placeholder.summary"))
 
@@ -1097,6 +1235,7 @@ class SessionTab(QWidget):
         self.btn_update_quests.setText(tr("session.btn.update_quests"))
 
         # Tooltips
+        self.btn_bookmark.setToolTip(tr("session.btn.bookmark_tooltip"))
         self.btn_tts.setToolTip(tr("session.btn.tts_tooltip"))
         self.btn_more.setToolTip(tr("session.btn.more_tooltip"))
 

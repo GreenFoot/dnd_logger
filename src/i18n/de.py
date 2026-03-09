@@ -317,6 +317,7 @@ werden hier fuer die Nachwelt festgehalten.</em></p>
     "recap.hint.read": "Leertaste: Vorlesen",
     "recap.hint.dismiss": "Esc: Schlie\u00dfen",
     "settings.advanced.show_recap": "Sitzungsr\u00fcckblick beim Start anzeigen",
+    "settings.advanced.notification_sounds": "Benachrichtigungston bei Abschluss abspielen",
     # ── tts_overlay.py ──────────────────────────────────────
     "tts.status.playing": "Wiedergabe\u2026",
     "tts.status.paused": "Pausiert",

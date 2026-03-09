@@ -317,6 +317,7 @@ seront consignés ici pour la postérité.</em></p>
     "recap.hint.read": "Espace : Lire",
     "recap.hint.dismiss": "\u00c9chap : Fermer",
     "settings.advanced.show_recap": "Afficher le r\u00e9cap de session au d\u00e9marrage",
+    "settings.advanced.notification_sounds": "Jouer un son de notification \u00e0 la fin du traitement",
     # ── tts_overlay.py ──────────────────────────────────────
     "tts.status.playing": "Lecture en cours\u2026",
     "tts.status.paused": "En pause",

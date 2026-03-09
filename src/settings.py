@@ -128,6 +128,9 @@ class SettingsDialog(QDialog):
         self.show_recap_check = QCheckBox(tr("settings.advanced.show_recap"))
         adv_layout.addRow(self.show_recap_check)
 
+        self.notification_sounds_check = QCheckBox(tr("settings.advanced.notification_sounds"))
+        adv_layout.addRow(self.notification_sounds_check)
+
         # Language selector
         self.language_combo = QComboBox()
         self.language_combo.addItem("English", "en")
@@ -276,6 +279,7 @@ class SettingsDialog(QDialog):
         self.auto_update_check.setChecked(self._config.get("auto_update_check", True))
         self.themed_cursors_check.setChecked(self._config.get("themed_cursors", True))
         self.show_recap_check.setChecked(self._config.get("show_session_recap", True))
+        self.notification_sounds_check.setChecked(self._config.get("notification_sounds_enabled", True))
         self.chunk_spin.setValue(self._config.get("chunk_duration_minutes", 150))
 
         bias = self._config.get("context_bias", [])
@@ -314,6 +318,7 @@ class SettingsDialog(QDialog):
         self._config["auto_update_check"] = self.auto_update_check.isChecked()
         self._config["themed_cursors"] = self.themed_cursors_check.isChecked()
         self._config["show_session_recap"] = self.show_recap_check.isChecked()
+        self._config["notification_sounds_enabled"] = self.notification_sounds_check.isChecked()
 
         bias_text = self.bias_edit.toPlainText().strip()
         self._config["context_bias"] = [line.strip() for line in bias_text.split("\n") if line.strip()]

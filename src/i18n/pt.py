@@ -317,6 +317,7 @@ serão aqui registados para a posteridade.</em></p>
     "recap.hint.read": "Espa\u00e7o: Ler",
     "recap.hint.dismiss": "Esc: Fechar",
     "settings.advanced.show_recap": "Mostrar resumo da sess\u00e3o ao iniciar",
+    "settings.advanced.notification_sounds": "Reproduzir som de notifica\u00e7\u00e3o ao concluir",
     # ── tts_overlay.py ──────────────────────────────────────
     "tts.status.playing": "A reproduzir\u2026",
     "tts.status.paused": "Em pausa",

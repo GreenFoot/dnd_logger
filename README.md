@@ -49,10 +49,14 @@ dnd_logger/
 │   ├── drive_auth.py          # Google OAuth2 flow, token persistence
 │   ├── drive_sync.py          # Google Drive sync engine (poll, upload, conflict detection)
 │   ├── sync_conflict_dialog.py # Conflict resolution UI (local vs remote vs merge)
-│   ├── tts_engine.py          # pyttsx3 TTS engine
+│   ├── tts_engine.py          # edge_tts TTS engine (Microsoft Edge TTS)
 │   ├── tts_overlay.py         # Animated TTS playback overlay (play/pause/stop)
 │   ├── snow_particles.py      # Snow/particle and aurora shimmer overlays
-│   ├── frost_overlay.py       # Gold filigree corner overlay
+│   ├── filigree_overlay.py    # Gold filigree corner overlay
+│   ├── campaign_assistant.py  # AI-powered Campaign Assistant
+│   ├── session_recap_overlay.py # Session recap overlay on startup
+│   ├── shortcuts_overlay.py   # Keyboard shortcuts overlay (F1)
+│   ├── themed_cursor.py       # Themed gauntlet cursor
 │   ├── i18n/                  # Internationalization module
 │   │   ├── __init__.py        # tr() lookup, set_language(), get_language()
 │   │   ├── en.py              # English translations (source of truth)
@@ -80,7 +84,7 @@ dnd_logger/
 ## Requirements
 
 - Python 3.11+
-- Windows (uses pyttsx3 SAPI5 driver, QWebEngine, Windows-specific paths)
+- Windows (uses edge_tts for speech synthesis, QWebEngine, Windows-specific paths)
 
 ### Python Dependencies
 
@@ -90,7 +94,7 @@ PySide6-WebEngine >= 6.6.0           # note: included via PySide6-Addons on some
 sounddevice >= 0.4.6
 soundfile >= 0.12.1
 mistralai >= 1.0.0
-pyttsx3 >= 2.90
+edge_tts
 numpy
 google-api-python-client >= 2.100.0   # optional, for Google Drive sync
 google-auth-httplib2 >= 0.1.1         # optional, for Google Drive sync

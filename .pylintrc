@@ -10,4 +10,4 @@ variable-naming-style=snake_case
 argument-naming-style=snake_case
 attr-naming-style=snake_case
 const-naming-style=UPPER_CASE
-good-names=i,j,k,_,eventFilter,paintEvent,closeEvent,sizeHint,mousePressEvent,mouseMoveEvent,leaveEvent,showEvent,keyPressEvent,interceptRequest,createWindow,javaScriptConsoleMessage
+good-names=i,j,k,_,eventFilter,paintEvent,closeEvent,sizeHint,mousePressEvent,mouseMoveEvent,leaveEvent,showEvent,keyPressEvent,interceptRequest,createWindow,javaScriptConsoleMessage,dragEnterEvent,dragLeaveEvent,dropEvent,resizeEvent

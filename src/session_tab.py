@@ -94,6 +94,45 @@ class _ThinDivider(QWidget):
         painter.end()
 
 
+class _DropOverlay(QWidget):
+    """Semi-transparent overlay shown when dragging audio files over the session tab."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+
+    def paintEvent(self, event):  # noqa: N802 — Qt override
+        """Draw the dashed-border drop zone overlay."""
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Semi-transparent dark background
+        painter.fillRect(self.rect(), QColor(0, 0, 0, 160))
+
+        # Dashed gold border
+        pen = QPen(QColor(212, 175, 55), 2, Qt.PenStyle.DashLine)
+        painter.setPen(pen)
+        margin = 12
+        painter.drawRoundedRect(margin, margin, self.width() - 2 * margin, self.height() - 2 * margin, 8, 8)
+
+        # Text
+        painter.setPen(QColor(230, 214, 170))
+        font = painter.font()
+        font.setPointSize(14)
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(self.rect().adjusted(0, -16, 0, 0), Qt.AlignmentFlag.AlignCenter, tr("session.drop.hint"))
+
+        font.setPointSize(10)
+        font.setBold(False)
+        painter.setFont(font)
+        painter.setPen(QColor(180, 165, 130))
+        painter.drawText(self.rect().adjusted(0, 20, 0, 0), Qt.AlignmentFlag.AlignCenter, tr("session.drop.formats"))
+
+        painter.end()
+
+
 def _make_divider() -> QWidget:
     """Create a thin gold divider widget (standalone helper)."""
     return _ThinDivider()
@@ -280,6 +319,9 @@ class SessionTab(QWidget):
         self._live_tx_pending = False
         self._stop_after_current = False
         self._is_final_live_chunk = False
+
+        self.setAcceptDrops(True)
+        self._drop_overlay = None
 
         self._build_ui()
         self._connect_signals()
@@ -651,9 +693,11 @@ class SessionTab(QWidget):
             "",
             tr("session.dialog.import_filter"),
         )
-        if not file_path:
-            return
+        if file_path:
+            self._import_audio_from_path(file_path)
 
+    def _import_audio_from_path(self, file_path):
+        """Import an audio file from the given path. Used by both file dialog and drag-and-drop."""
         # Create a session folder and copy the file there
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         session_folder = os.path.join(sessions_dir(self._config), f"session_{ts}_import")
@@ -675,6 +719,62 @@ class SessionTab(QWidget):
         size = os.path.getsize(dest_path)
         self.status_label.setText(tr("session.status.imported", name=dest_name, size=format_file_size(size)))
         self.status_label.setStyleSheet("color: #7ec8e3;")
+
+    # --- Drag-and-Drop Audio Import ---
+
+    _AUDIO_EXTENSIONS = {".flac", ".wav", ".mp3", ".ogg", ".m4a"}
+
+    def _is_audio_file(self, path):
+        """Return True if path has a supported audio extension."""
+        return os.path.splitext(path)[1].lower() in self._AUDIO_EXTENSIONS
+
+    def dragEnterEvent(self, event):
+        """Accept drag if it contains audio file URLs."""
+        if event.mimeData().hasUrls():
+            urls = event.mimeData().urls()
+            if any(self._is_audio_file(url.toLocalFile()) for url in urls):
+                event.acceptProposedAction()
+                self._show_drop_indicator()
+                return
+        event.ignore()
+
+    def dragLeaveEvent(self, event):
+        """Hide drop indicator when drag leaves."""
+        self._hide_drop_indicator()
+
+    def dropEvent(self, event):
+        """Import the first valid audio file from the drop."""
+        self._hide_drop_indicator()
+        if self._recorder.is_recording:
+            self.status_label.setText(tr("session.error.drop_while_recording"))
+            self.status_label.setStyleSheet("color: #ff6b6b;")
+            event.ignore()
+            return
+        urls = event.mimeData().urls()
+        for url in urls:
+            path = url.toLocalFile()
+            if self._is_audio_file(path):
+                self._import_audio_from_path(path)
+                break  # only import first valid file
+
+    def _show_drop_indicator(self):
+        """Show the drop zone overlay."""
+        if self._drop_overlay is None:
+            self._drop_overlay = _DropOverlay(self)
+        self._drop_overlay.setGeometry(self.rect())
+        self._drop_overlay.show()
+        self._drop_overlay.raise_()
+
+    def _hide_drop_indicator(self):
+        """Hide the drop zone overlay."""
+        if self._drop_overlay is not None:
+            self._drop_overlay.hide()
+
+    def resizeEvent(self, event):
+        """Keep drop overlay sized to widget."""
+        super().resizeEvent(event)
+        if self._drop_overlay is not None and self._drop_overlay.isVisible():
+            self._drop_overlay.setGeometry(self.rect())
 
     def _save_audio(self):
         """Save the audio as FLAC (converting from source if needed)."""

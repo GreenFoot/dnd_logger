@@ -46,6 +46,7 @@ from .quest_log import QuestLogWidget
 from .session_recap_overlay import SessionRecapOverlay
 from .session_tab import SessionTab
 from .settings import FirstRunWizard, SettingsDialog
+from .shortcuts_overlay import ShortcutsOverlay
 from .tts_engine import create_tts_thread
 from .tts_overlay import TTSOverlay
 from .updater import start_update_check, start_update_download
@@ -357,6 +358,7 @@ class DndLoggerApp(QMainWindow):
         self._init_tts()
         self._build_ui()
         self._init_tts_overlay()
+        self._init_shortcuts_overlay()
         self._init_sync_engine()
         self._add_decorative_overlays()
         # Defer background application so it runs after the window is shown —
@@ -858,6 +860,17 @@ class DndLoggerApp(QMainWindow):
         self._tts_overlay.pause_toggled.connect(self._toggle_tts_pause)
         self._tts_overlay.stop_requested.connect(self._stop_tts)
 
+    def _init_shortcuts_overlay(self):
+        """Create the keyboard shortcuts overlay (F1 shortcut is on the menu action)."""
+        self._shortcuts_overlay = ShortcutsOverlay(self.right_tabs)
+
+    def _toggle_shortcuts_overlay(self):
+        """Toggle the keyboard shortcuts overlay."""
+        if self._shortcuts_overlay.isVisible():
+            self._shortcuts_overlay.hide_overlay()
+        else:
+            self._shortcuts_overlay.show_overlay()
+
     def _init_session_recap(self):
         """Create the session recap overlay and wire signals."""
         self._recap_overlay = SessionRecapOverlay(self.right_tabs)
@@ -900,6 +913,9 @@ class DndLoggerApp(QMainWindow):
             return
         if isinstance(focused, _EscLineEdit):
             focused.hide()
+            return
+        if self._shortcuts_overlay and self._shortcuts_overlay.isVisible():
+            self._shortcuts_overlay.hide_overlay()
             return
         if self._tts_engine:
             self._tts_engine.stop()
@@ -1051,6 +1067,11 @@ class DndLoggerApp(QMainWindow):
         save_action.setShortcut(QKeySequence("Ctrl+S"))
         save_action.triggered.connect(self._save_active_editor)
         file_menu.addAction(save_action)
+
+        shortcuts_action = QAction(tr("app.menu.shortcuts"), self)
+        shortcuts_action.setShortcut(QKeySequence(Qt.Key.Key_F1))
+        shortcuts_action.triggered.connect(self._toggle_shortcuts_overlay)
+        file_menu.addAction(shortcuts_action)
 
         file_menu.addSeparator()
 

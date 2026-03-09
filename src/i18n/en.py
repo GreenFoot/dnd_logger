@@ -307,6 +307,13 @@ will be recorded here for posterity.</em></p>
     # ── themed_dialogs.py ───────────────────────────────────
     "dialog.btn_cancel": "Cancel",
     "dialog.btn_ok": "OK",
+    # ── session_recap_overlay.py ────────────────────────────
+    "recap.title": "Last time, in {campaign}\u2026",
+    "recap.btn.read_aloud": "Read Aloud",
+    "recap.btn.dismiss": "Dismiss",
+    "recap.hint.read": "Space: Read aloud",
+    "recap.hint.dismiss": "Esc: Dismiss",
+    "settings.advanced.show_recap": "Show session recap on startup",
     # ── tts_overlay.py ──────────────────────────────────────
     "tts.status.playing": "Playing\u2026",
     "tts.status.paused": "Paused",

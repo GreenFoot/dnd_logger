@@ -307,6 +307,13 @@ seront consignés ici pour la postérité.</em></p>
     # ── themed_dialogs.py ───────────────────────────────────
     "dialog.btn_cancel": "Annuler",
     "dialog.btn_ok": "OK",
+    # ── session_recap_overlay.py ────────────────────────────
+    "recap.title": "La derni\u00e8re fois, dans {campaign}\u2026",
+    "recap.btn.read_aloud": "Lire \u00e0 voix haute",
+    "recap.btn.dismiss": "Fermer",
+    "recap.hint.read": "Espace : Lire",
+    "recap.hint.dismiss": "\u00c9chap : Fermer",
+    "settings.advanced.show_recap": "Afficher le r\u00e9cap de session au d\u00e9marrage",
     # ── tts_overlay.py ──────────────────────────────────────
     "tts.status.playing": "Lecture en cours\u2026",
     "tts.status.paused": "En pause",

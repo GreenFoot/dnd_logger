@@ -125,6 +125,9 @@ class SettingsDialog(QDialog):
         self.themed_cursors_check = QCheckBox(tr("settings.advanced.themed_cursors"))
         adv_layout.addRow(self.themed_cursors_check)
 
+        self.show_recap_check = QCheckBox(tr("settings.advanced.show_recap"))
+        adv_layout.addRow(self.show_recap_check)
+
         # Language selector
         self.language_combo = QComboBox()
         self.language_combo.addItem("English", "en")
@@ -272,6 +275,7 @@ class SettingsDialog(QDialog):
         self.sample_rate_spin.setValue(self._config.get("sample_rate", 16000))
         self.auto_update_check.setChecked(self._config.get("auto_update_check", True))
         self.themed_cursors_check.setChecked(self._config.get("themed_cursors", True))
+        self.show_recap_check.setChecked(self._config.get("show_session_recap", True))
         self.chunk_spin.setValue(self._config.get("chunk_duration_minutes", 150))
 
         bias = self._config.get("context_bias", [])
@@ -309,6 +313,7 @@ class SettingsDialog(QDialog):
         self._config["chunk_duration_minutes"] = self.chunk_spin.value()
         self._config["auto_update_check"] = self.auto_update_check.isChecked()
         self._config["themed_cursors"] = self.themed_cursors_check.isChecked()
+        self._config["show_session_recap"] = self.show_recap_check.isChecked()
 
         bias_text = self.bias_edit.toPlainText().strip()
         self._config["context_bias"] = [line.strip() for line in bias_text.split("\n") if line.strip()]

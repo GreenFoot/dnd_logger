@@ -317,6 +317,7 @@ saranno registrati qui per i posteri.</em></p>
     "recap.hint.read": "Spazio: Leggi",
     "recap.hint.dismiss": "Esc: Chiudi",
     "settings.advanced.show_recap": "Mostra riepilogo sessione all\u2019avvio",
+    "settings.advanced.notification_sounds": "Riproduci suono di notifica al completamento",
     # ── tts_overlay.py ──────────────────────────────────────
     "tts.status.playing": "Riproduzione in corso\u2026",
     "tts.status.paused": "In pausa",

@@ -22,6 +22,7 @@ a = Analysis(
         ("assets/fonts", "assets/fonts"),
         ("assets/styles", "assets/styles"),
         ("assets/images", "assets/images"),
+        ("assets/sounds", "assets/sounds"),
     ]
     + webengine_datas
     + webengine_core_datas,

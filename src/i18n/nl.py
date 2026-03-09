@@ -317,6 +317,7 @@ worden hier voor het nageslacht vastgelegd.</em></p>
     "recap.hint.read": "Spatie: Voorlezen",
     "recap.hint.dismiss": "Esc: Sluiten",
     "settings.advanced.show_recap": "Sessieoverzicht tonen bij opstarten",
+    "settings.advanced.notification_sounds": "Meldingsgeluid afspelen bij voltooiing",
     # ── tts_overlay.py ──────────────────────────────────────
     "tts.status.playing": "Afspelen\u2026",
     "tts.status.paused": "Gepauzeerd",

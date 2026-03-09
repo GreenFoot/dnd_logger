@@ -8,8 +8,17 @@ import time
 from datetime import datetime
 
 import soundfile as sf
-from PySide6.QtCore import QRectF, QSize, Qt, QTimer
-from PySide6.QtGui import QAction, QColor, QIcon, QKeySequence, QPainter, QPen, QPixmap, QShortcut
+from PySide6.QtCore import QRectF, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import (
+    QAction,
+    QColor,
+    QIcon,
+    QKeySequence,
+    QPainter,
+    QPen,
+    QPixmap,
+    QShortcut,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -282,6 +291,10 @@ class _EscLineEdit(QLineEdit):
 
 class SessionTab(QWidget):
     """Recording, transcription, and summarization UI."""
+
+    transcription_completed = Signal()
+    summarization_completed = Signal()
+    operation_failed = Signal()
 
     def __init__(self, config: dict, journal_widget=None, quest_log_widget=None, tts_engine=None, parent=None):
         super().__init__(parent)
@@ -1014,6 +1027,7 @@ class SessionTab(QWidget):
         self.status_label.setStyleSheet("color: #d4af37;")
         self._update_action_button()
         self.btn_transcribe.setEnabled(True)
+        self.transcription_completed.emit()
 
     # --- Summarization ---
 
@@ -1059,6 +1073,7 @@ class SessionTab(QWidget):
         self._act_save_audio.setEnabled(bool(self._current_wav_path or self._recorder.wav_path))
         if self._tts_engine.is_available:
             self.btn_tts.setEnabled(True)
+        self.summarization_completed.emit()
 
     # --- Actions ---
 
@@ -1264,6 +1279,7 @@ class SessionTab(QWidget):
         self.btn_transcribe.setEnabled(has_audio or bool(self._current_transcript))
         self._act_save_audio.setEnabled(has_audio)
         self.btn_update_quests.setEnabled(bool(self._current_summary))
+        self.operation_failed.emit()
 
     def cleanup(self):
         """Clean up threads and temporary FLAC files on exit."""

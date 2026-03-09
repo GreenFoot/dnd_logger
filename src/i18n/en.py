@@ -317,6 +317,7 @@ will be recorded here for posterity.</em></p>
     "recap.hint.read": "Space: Read aloud",
     "recap.hint.dismiss": "Esc: Dismiss",
     "settings.advanced.show_recap": "Show session recap on startup",
+    "settings.advanced.notification_sounds": "Play notification sounds on completion",
     # ── tts_overlay.py ──────────────────────────────────────
     "tts.status.playing": "Playing\u2026",
     "tts.status.paused": "Paused",

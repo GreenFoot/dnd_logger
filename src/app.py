@@ -42,6 +42,7 @@ from . import themed_dialogs as dlg
 from .filigree_overlay import GoldFiligreeOverlay
 from .i18n import tr
 from .journal import JournalWidget
+from .notifications import NotificationSounds, flash_taskbar
 from .quest_log import QuestLogWidget
 from .session_recap_overlay import SessionRecapOverlay
 from .session_tab import SessionTab
@@ -373,8 +374,26 @@ class DndLoggerApp(QMainWindow):
         self._update_worker = None
         self._download_thread = None
         self._download_worker = None
+        self._notif_sounds = NotificationSounds()
+        self._connect_notifications()
         if self._config.get("auto_update_check", True):
             QTimer.singleShot(3000, self._check_for_updates)
+
+    # ── Notifications ────────────────────────────────────────
+
+    def _connect_notifications(self):
+        """Connect session tab completion signals to notification handler."""
+        self.session_tab.transcription_completed.connect(lambda: self._notify("transcription_done"))
+        self.session_tab.summarization_completed.connect(lambda: self._notify("summary_done"))
+        self.session_tab.operation_failed.connect(lambda: self._notify("error"))
+
+    def _notify(self, sound_name: str):
+        """Play notification sound; also flash taskbar when app is not active."""
+        if not self._config.get("notification_sounds_enabled", True):
+            return
+        self._notif_sounds.play(sound_name)
+        if not self.isActiveWindow():
+            flash_taskbar(int(self.winId()))
 
     # ── Migration: flat layout → campaigns/ ─────────────────
 
@@ -1053,9 +1072,11 @@ class DndLoggerApp(QMainWindow):
         file_menu = menu_bar.addMenu(tr("app.menu.file"))
 
         settings_action = QAction(tr("app.menu.settings"), self)
-        settings_action.setShortcut(QKeySequence("Ctrl+,"))
         settings_action.triggered.connect(self._open_settings)
         file_menu.addAction(settings_action)
+        QShortcut(QKeySequence("Ctrl+,"), self, activated=self._open_settings).setContext(
+            Qt.ShortcutContext.ApplicationShortcut
+        )
 
         update_action = QAction(tr("app.menu.check_updates"), self)
         update_action.triggered.connect(self._manual_update_check)
@@ -1064,21 +1085,25 @@ class DndLoggerApp(QMainWindow):
         file_menu.addSeparator()
 
         save_action = QAction(tr("app.menu.save"), self)
-        save_action.setShortcut(QKeySequence("Ctrl+S"))
         save_action.triggered.connect(self._save_active_editor)
         file_menu.addAction(save_action)
+        QShortcut(QKeySequence("Ctrl+S"), self, activated=self._save_active_editor).setContext(
+            Qt.ShortcutContext.ApplicationShortcut
+        )
 
         shortcuts_action = QAction(tr("app.menu.shortcuts"), self)
-        shortcuts_action.setShortcut(QKeySequence(Qt.Key.Key_F1))
         shortcuts_action.triggered.connect(self._toggle_shortcuts_overlay)
         file_menu.addAction(shortcuts_action)
+        QShortcut(QKeySequence(Qt.Key.Key_F1), self, activated=self._toggle_shortcuts_overlay).setContext(
+            Qt.ShortcutContext.ApplicationShortcut
+        )
 
         file_menu.addSeparator()
 
         quit_action = QAction(tr("app.menu.quit"), self)
-        quit_action.setShortcut(QKeySequence("Ctrl+Q"))
         quit_action.triggered.connect(self.close)
         file_menu.addAction(quit_action)
+        QShortcut(QKeySequence("Ctrl+Q"), self, activated=self.close).setContext(Qt.ShortcutContext.ApplicationShortcut)
 
         # Campaign menu
         self._campaign_menu = menu_bar.addMenu(tr("app.menu.campaign"))
@@ -1088,16 +1113,20 @@ class DndLoggerApp(QMainWindow):
         session_menu = menu_bar.addMenu(tr("app.menu.session"))
 
         record_action = QAction(tr("app.menu.record_stop"), self)
-        record_action.setShortcut(QKeySequence("Ctrl+R"))
         record_action.triggered.connect(self._toggle_recording)
         session_menu.addAction(record_action)
+        record_shortcut = QShortcut(QKeySequence("Ctrl+R"), self)
+        record_shortcut.setContext(Qt.ShortcutContext.ApplicationShortcut)
+        record_shortcut.activated.connect(self._toggle_recording)
 
         session_menu.addSeparator()
 
         assistant_action = QAction(tr("assistant.menu_action"), self)
-        assistant_action.setShortcut(QKeySequence("Ctrl+Shift+F"))
         assistant_action.triggered.connect(self._open_campaign_assistant)
         session_menu.addAction(assistant_action)
+        assistant_shortcut = QShortcut(QKeySequence("Ctrl+Shift+F"), self)
+        assistant_shortcut.setContext(Qt.ShortcutContext.ApplicationShortcut)
+        assistant_shortcut.activated.connect(self._open_campaign_assistant)
 
     def _rebuild_campaign_menu(self):
         """Rebuild the Campaign menu with current campaigns."""
@@ -1399,12 +1428,12 @@ class DndLoggerApp(QMainWindow):
         self.quest_log.retranslate_ui()
 
     def _toggle_recording(self):
-        """Toggle recording from keyboard shortcut."""
+        """Toggle recording from keyboard shortcut / menu."""
         rec = self.session_tab._recorder
         if rec.is_recording:
             self.session_tab._stop_recording()
         else:
-            self.session_tab._start_recording()
+            self.session_tab._on_record_btn_clicked()
         # Switch to Session tab
         self.right_tabs.setCurrentWidget(self.session_tab)
 

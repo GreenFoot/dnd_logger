@@ -37,6 +37,7 @@ _DEFAULT_CONFIG = {
     "auto_update_check": True,
     "themed_cursors": True,
     "show_session_recap": True,
+    "notification_sounds_enabled": True,
     "active_campaign": "",
     "campaigns": {},
     "prompt_summary_system": "",

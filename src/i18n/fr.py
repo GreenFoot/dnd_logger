@@ -244,6 +244,9 @@ STRINGS: dict[str, str] = {
     "session.error.copy_failed": "Erreur lors de la copie: {error}",
     "session.error.flac_failed": "Erreur de conversion FLAC: {error}",
     "session.error.save_failed": "Erreur de sauvegarde: {error}",
+    "session.error.drop_while_recording": "Impossible d'importer pendant l'enregistrement.",
+    "session.drop.hint": "Déposez un fichier audio ici",
+    "session.drop.formats": "Formats: FLAC, WAV, MP3, OGG, M4A",
     # ── rich_editor.py ──────────────────────────────────────
     "editor.tooltip.bold": "Gras (Ctrl+B)",
     "editor.tooltip.italic": "Italique (Ctrl+I)",

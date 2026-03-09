@@ -6,9 +6,7 @@ import sys
 
 # Set Windows App ID for proper taskbar icon grouping
 try:
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
-        "dndlogger.dnd.sessionlogger.1"
-    )
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("dndlogger.dnd.sessionlogger.1")
 except Exception:
     pass
 
@@ -22,8 +20,9 @@ if hasattr(sys, "_MEIPASS"):
 
 
 def main():
-    import traceback
+    """Application entry point — logging, splash screen, main window."""
     import logging
+    import traceback
     from logging.handlers import RotatingFileHandler
 
     from src.utils import project_root
@@ -43,8 +42,10 @@ def main():
     sys.excepthook = exception_hook
 
     try:
-        from PySide6.QtGui import QIcon
-        from PySide6.QtWidgets import QApplication
+        from PySide6.QtCore import QEvent, Qt, QTimer
+        from PySide6.QtGui import QIcon, QPixmap
+        from PySide6.QtWidgets import QApplication, QSplashScreen
+
         from src.app import DndLoggerApp
         from src.utils import resource_path
 
@@ -61,10 +62,58 @@ def main():
         if os.path.exists(icon_path):
             app.setWindowIcon(QIcon(icon_path))
 
+        # ── Splash screen (banner image) ───────────────────
+        banner_path = resource_path("assets/images/app/banner_dndlogger.png")
+        splash_pix = QPixmap(banner_path)
+        splash = QSplashScreen(splash_pix)
+        splash.setWindowFlags(Qt.WindowType.SplashScreen | Qt.WindowType.FramelessWindowHint)
+        # Block mouse clicks — QSplashScreen closes itself on click by default,
+        # which would break the startup flow.
+        splash.mousePressEvent = lambda e: e.accept()
+        splash.show()
+        app.processEvents()
+
         log.info("Application starting")
         window = DndLoggerApp()
-        window.show()
-        log.info("Window shown")
+
+        # Keep splash visible until the browser page has fully settled.
+        # D&D Beyond triggers sub-loads after the initial loadFinished, so we
+        # debounce: wait for a quiet period with no new loads before dismissing.
+        settle_ms = 1000  # quiet time required after last loadFinished
+        max_wait_ms = 20000  # hard cap — dismiss splash regardless
+
+        settle_timer = QTimer()
+        settle_timer.setSingleShot(True)
+        settle_timer.setInterval(settle_ms)
+
+        max_timer = QTimer()
+        max_timer.setSingleShot(True)
+        max_timer.setInterval(max_wait_ms)
+
+        def _dismiss_splash():
+            if not splash.isVisible():
+                return
+            settle_timer.stop()
+            max_timer.stop()
+            web = window.browser.web_view
+            web.loadFinished.disconnect(_on_load_finished)
+            web.loadStarted.disconnect(_on_load_started)
+            window.show()
+            splash.finish(window)
+            log.info("Window shown (browser settled)")
+
+        def _on_load_finished(ok):
+            settle_timer.start()
+
+        def _on_load_started():
+            settle_timer.stop()
+
+        settle_timer.timeout.connect(_dismiss_splash)
+        max_timer.timeout.connect(_dismiss_splash)
+
+        window.browser.web_view.loadFinished.connect(_on_load_finished)
+        window.browser.web_view.loadStarted.connect(_on_load_started)
+        max_timer.start()
 
         ret = app.exec()
         log.info("Application exited with code %d", ret)

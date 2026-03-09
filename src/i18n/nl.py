@@ -307,6 +307,13 @@ worden hier voor het nageslacht vastgelegd.</em></p>
     # ── themed_dialogs.py ───────────────────────────────────
     "dialog.btn_cancel": "Annuleren",
     "dialog.btn_ok": "OK",
+    # ── session_recap_overlay.py ────────────────────────────
+    "recap.title": "De vorige keer, in {campaign}\u2026",
+    "recap.btn.read_aloud": "Voorlezen",
+    "recap.btn.dismiss": "Sluiten",
+    "recap.hint.read": "Spatie: Voorlezen",
+    "recap.hint.dismiss": "Esc: Sluiten",
+    "settings.advanced.show_recap": "Sessieoverzicht tonen bij opstarten",
     # ── tts_overlay.py ──────────────────────────────────────
     "tts.status.playing": "Afspelen\u2026",
     "tts.status.paused": "Gepauzeerd",

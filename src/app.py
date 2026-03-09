@@ -43,6 +43,7 @@ from .filigree_overlay import GoldFiligreeOverlay
 from .i18n import tr
 from .journal import JournalWidget
 from .quest_log import QuestLogWidget
+from .session_recap_overlay import SessionRecapOverlay
 from .session_tab import SessionTab
 from .settings import FirstRunWizard, SettingsDialog
 from .tts_engine import create_tts_thread
@@ -364,6 +365,8 @@ class DndLoggerApp(QMainWindow):
         self._build_menu()
         self._restore_geometry()
         self._check_first_run()
+        self._init_session_recap()
+        QTimer.singleShot(500, self._show_recap_if_available)
         self._update_thread = None
         self._update_worker = None
         self._download_thread = None
@@ -855,6 +858,26 @@ class DndLoggerApp(QMainWindow):
         self._tts_overlay.pause_toggled.connect(self._toggle_tts_pause)
         self._tts_overlay.stop_requested.connect(self._stop_tts)
 
+    def _init_session_recap(self):
+        """Create the session recap overlay and wire signals."""
+        self._recap_overlay = SessionRecapOverlay(self.right_tabs)
+        self._recap_overlay.read_aloud_requested.connect(self._on_recap_read_aloud)
+        self._recap_overlay.dismissed.connect(self._mark_recap_shown)
+
+    def _show_recap_if_available(self):
+        """Show the 'Last time on...' recap card if a session exists."""
+        self._recap_overlay.show_recap(self._config)
+
+    def _on_recap_read_aloud(self, html: str):
+        """Forward recap text to TTS engine."""
+        self._tts_engine.speak_requested.emit(html)
+
+    def _mark_recap_shown(self):
+        """Store the heading of the shown recap to avoid re-showing."""
+        if self._recap_overlay._heading:
+            self._config["last_recap_heading"] = self._recap_overlay._heading
+            save_config(self._config)
+
     def _toggle_tts_pause(self):
         """Toggle TTS pause / resume."""
         if not self._tts_engine:
@@ -1253,6 +1276,9 @@ class DndLoggerApp(QMainWindow):
 
         # Rebuild menu
         self._rebuild_campaign_menu()
+
+        # Show recap for new campaign
+        QTimer.singleShot(500, self._show_recap_if_available)
 
     def _save_active_editor(self):
         """Save whichever editor tab is currently active."""

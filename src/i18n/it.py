@@ -307,6 +307,13 @@ saranno registrati qui per i posteri.</em></p>
     # ── themed_dialogs.py ───────────────────────────────────
     "dialog.btn_cancel": "Annulla",
     "dialog.btn_ok": "OK",
+    # ── session_recap_overlay.py ────────────────────────────
+    "recap.title": "L\u2019ultima volta, in {campaign}\u2026",
+    "recap.btn.read_aloud": "Leggi ad alta voce",
+    "recap.btn.dismiss": "Chiudi",
+    "recap.hint.read": "Spazio: Leggi",
+    "recap.hint.dismiss": "Esc: Chiudi",
+    "settings.advanced.show_recap": "Mostra riepilogo sessione all\u2019avvio",
     # ── tts_overlay.py ──────────────────────────────────────
     "tts.status.playing": "Riproduzione in corso\u2026",
     "tts.status.paused": "In pausa",

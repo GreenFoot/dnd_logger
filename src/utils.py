@@ -36,6 +36,7 @@ _DEFAULT_CONFIG = {
     "last_browser_url": "https://www.dndbeyond.com",
     "auto_update_check": True,
     "themed_cursors": True,
+    "show_session_recap": True,
     "active_campaign": "",
     "campaigns": {},
     "prompt_summary_system": "",

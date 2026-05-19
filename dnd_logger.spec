@@ -13,11 +13,13 @@ webengine_datas, webengine_binaries, webengine_hiddenimports = collect_all(
 webengine_core_datas, webengine_core_binaries, webengine_core_hiddenimports = collect_all(
     "PySide6.QtWebEngineCore"
 )
+mistralai_datas, mistralai_binaries, mistralai_hiddenimports = collect_all("mistralai")
+edge_tts_datas, edge_tts_binaries, edge_tts_hiddenimports = collect_all("edge_tts")
 
 a = Analysis(
     ["main.py"],
     pathex=[],
-    binaries=webengine_binaries + webengine_core_binaries,
+    binaries=webengine_binaries + webengine_core_binaries + mistralai_binaries + edge_tts_binaries,
     datas=[
         ("assets/fonts", "assets/fonts"),
         ("assets/styles", "assets/styles"),
@@ -25,15 +27,14 @@ a = Analysis(
         ("assets/sounds", "assets/sounds"),
     ]
     + webengine_datas
-    + webengine_core_datas,
+    + webengine_core_datas
+    + mistralai_datas
+    + edge_tts_datas,
     hiddenimports=[
         "sounddevice",
         "soundfile",
-        "mistralai",
-        "pyttsx3",
-        "pyttsx3.drivers",
-        "pyttsx3.drivers.sapi5",
         "numpy",
+        "requests",
         "googleapiclient",
         "googleapiclient.discovery",
         "google.auth",
@@ -42,7 +43,6 @@ a = Analysis(
         "google_auth_oauthlib",
         "google_auth_oauthlib.flow",
         "google_auth_httplib2",
-        "edge_tts",
         "src.i18n.en",
         "src.i18n.fr",
         "src.i18n.de",
@@ -52,7 +52,9 @@ a = Analysis(
         "src.i18n.pt",
     ]
     + webengine_hiddenimports
-    + webengine_core_hiddenimports,
+    + webengine_core_hiddenimports
+    + mistralai_hiddenimports
+    + edge_tts_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

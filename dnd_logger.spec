@@ -13,13 +13,12 @@ webengine_datas, webengine_binaries, webengine_hiddenimports = collect_all(
 webengine_core_datas, webengine_core_binaries, webengine_core_hiddenimports = collect_all(
     "PySide6.QtWebEngineCore"
 )
-mistralai_datas, mistralai_binaries, mistralai_hiddenimports = collect_all("mistralai")
 edge_tts_datas, edge_tts_binaries, edge_tts_hiddenimports = collect_all("edge_tts")
 
 a = Analysis(
     ["main.py"],
     pathex=[],
-    binaries=webengine_binaries + webengine_core_binaries + mistralai_binaries + edge_tts_binaries,
+    binaries=webengine_binaries + webengine_core_binaries + edge_tts_binaries,
     datas=[
         ("assets/fonts", "assets/fonts"),
         ("assets/styles", "assets/styles"),
@@ -28,11 +27,11 @@ a = Analysis(
     ]
     + webengine_datas
     + webengine_core_datas
-    + mistralai_datas
     + edge_tts_datas,
     hiddenimports=[
         "sounddevice",
         "soundfile",
+        "mistralai",
         "numpy",
         "requests",
         "googleapiclient",
@@ -53,7 +52,6 @@ a = Analysis(
     ]
     + webengine_hiddenimports
     + webengine_core_hiddenimports
-    + mistralai_hiddenimports
     + edge_tts_hiddenimports,
     hookspath=[],
     hooksconfig={},

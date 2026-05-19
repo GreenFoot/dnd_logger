@@ -383,6 +383,69 @@ TOEWIJZING VAN ACTIES AAN PERSONAGES:
   FOUT: "Elppa cast Eldritch Blast voor 14 schade." \
   (FOUT — we weten niet WIE er spreekt bij audiotranscriptie)
 
+CANONIEKE NAMEN — GEBRUIK VAN DE CONTEXT:
+- De REFERENTIECONTEXT bevat de canonieke spelling van gevestigde \
+  personages, plaatsen, voorwerpen en concepten. Hij is gezaghebbend.
+- Wanneer een naam in het TRANSCRIPT fonetisch dicht ligt bij een naam \
+  in de CONTEXT (waarschijnlijk STT-artefact), gebruik ALTIJD de vorm \
+  uit de CONTEXT.
+  VOORBEELDEN:
+    - Context: "Ythryn" / Transcript: "Itri", "Itrine" → schrijf "Ythryn"
+    - Context: "IJsmaagd" / Transcript: "Vierge de Glaise" → schrijf "IJsmaagd"
+- Als de gebruiker de spelling van een naam in de context heeft \
+  aangepast, krijgt die vorm voorrang — het is de expliciete keuze van \
+  de gebruiker, "corrigeer" deze niet.
+- Voor namen die NIET in de context staan (nieuwe NPC's, plaatsen uit \
+  deze sessie), behoud het transcript zoals het is, maar verzin NOOIT \
+  een naam uit een twijfelachtig fragment.
+
+VERBOD OM SPREUKEN TE VERZINNEN:
+- Noem een spreuk ALLEEN als deze EXPLICIET en CORRECT genoemd wordt in \
+  het transcript (bv. "Eldritch Blast", "Healing Word", "Fairy Fire").
+- Als je een effect waarneemt zonder bijbehorende spreuknaam, gebruik \
+  een NEUTRALE beschrijving: "een vorstspreuk doet 13 schade", \
+  "een genezingsspreuk herstelt 8 HP", "een illusie van een beer wordt \
+  opgeroepen".
+- VERBODEN: een spreuknaam raden of verzinnen op basis van een effect \
+  (bv. schrijf niet "Fire Bolt", "Frostbite", "Sacred Flame", "Cycle of \
+  Flames" als deze namen niet in het transcript staan).
+- PAS OP VOOR TWIJFELACHTIGE FRAGMENTEN: als het transcript een \
+  dubbelzinnig fragment bevat ("real frost", "cycle de flames", \
+  "sticking flame"), is het waarschijnlijk een STT-artefact. GEBRUIK \
+  HET NIET om een spreuk te benoemen.
+
+DETECTIE EN FILTERING VAN STT-ARTEFACTEN:
+- Het spraak-naar-tekst-model produceert regelmatig fragmenten die met \
+  NIETS overeenkomen in het D&D-universum of in de CONTEXT. Identificeer \
+  ze en NEGEER ze volledig. Typische artefactindicatoren:
+    * Moderne persoonsnamen ("Jean-Yves Faugard", "Marc Jansen")
+    * Moderne plaatsen ("de politiedeur", "het station", "het kantoor")
+    * Genrevreemde concepten ("donkere verbinding", "podcast", "WhatsApp")
+    * Geïsoleerde anderstalige zinnen ("It's a little bit", \
+      "I have two books", "Das ist viel besser")
+    * Woorden die met GEEN ENKELE entiteit uit de context overeenkomen \
+      EN buiten het fantasy/middeleeuwse register vallen
+- Beslisregel: als een term geen tegenhanger in de CONTEXT heeft en \
+  modern/hedendaags/genrevreemd klinkt, is het een artefact — LAAT WEG.
+- VERZIN GEEN NPC of plaats om een artefact te integreren.
+
+META-DISCUSSIES VS DIËGESE:
+- Spelers bespreken voortdurend BUITEN HET SPEL: regels, dobbelworpen, \
+  regelvergelijkingen, grappen, popcultuurreferenties, commentaar op de \
+  DM of andere spelers, uitstapjes naar het echte leven.
+- Deze META-discussies zijn NOOIT sessiegebeurtenissen. Neem in de \
+  samenvatting ALLEEN op wat zich AFSPEELT IN DE FICTIE.
+- Indicatoren: "de DM zegt", "het is een van de spelers", "het boek \
+  zegt", "Legacy vs 2024", echte voornamen van spelers.
+
+PSEUDONIEMEN EN IN-CHARACTER DIALOOG:
+- Als een PC tijdens een dialoog met een NPC een ANDERE naam opgeeft \
+  dan zijn canonieke naam (RP-pseudoniem, leugen), behandel het als een \
+  omstandig pseudoniem — maak GEEN nieuw personage aan.
+- Als een speler in een dialoog een naam uit D&D-literatuur (bv. \
+  Wulfgar, Drizzt) aanroept, is het meestal een RP-verwijzing, GEEN \
+  ontmoette NPC.
+
 CRUCIAAL ONDERSCHEID — ACTIES vs VERWIJZINGEN:
 - Spelers bespreken vaak EERDERE gebeurtenissen tijdens sessies: \
   samenvattingen, lore-herinneringen, planning op basis van kennis \
@@ -412,8 +475,25 @@ Algemene regels:
   ten koste van de nauwkeurigheid. Stijl dient het verhaal, niet de verzinning.
 - Houd ALLE D&D-termen in het Engels (Hit Points, Armor Class, Saving Throw, \
   Spell Slot, Short Rest, Long Rest, enz.), evenals spreuknamen.
-- Eigennamen (personages, plaatsen, wezens) blijven ongewijzigd.
+- Eigennamen (personages, plaatsen, wezens) blijven ongewijzigd, met \
+  respect voor de spelling van de REFERENTIECONTEXT wanneer deze bestaat \
+  (zie sectie CANONIEKE NAMEN).
 - Negeer off-topic discussies die niet gerelateerd zijn aan de campagne.
+
+VERPLICHTE DEKKING EN CHRONOLOGISCHE VOLGORDE:
+- Als de sessie meerdere verschillende scènes, beproevingen, plaatsen \
+  of ontmoetingen bevat, MOET je ze ALLEMAAL dekken in de CHRONOLOGISCHE \
+  volgorde van het transcript. SLA GEEN belangrijke scène over, ook \
+  niet als ze kort behandeld wordt.
+- Identificeer voor het schrijven mentaal de geordende lijst van \
+  scènes/plaatsen/overgangen, en zorg dan dat je samenvatting elke ervan \
+  in die volgorde dekt.
+- Als je merkt dat je samenvatting van scène A naar scène C springt en \
+  een tussenliggende scène B overslaat, vul deze aan. Als je een scène \
+  aan het einde plaatst terwijl ze in het midden van het transcript \
+  verschijnt, zet ze terug op de juiste plaats.
+- GROEPEER geen gebeurtenissen per thema (alle gevechten samen, alle \
+  dialogen samen) ten koste van de chronologie.
 
 Transcriptkwaliteit:
 - Het transcript komt van een spraak-naar-tekst-model dat artefacten kan \
@@ -529,6 +609,22 @@ ONDERSCHEID ACTIES vs VERWIJZINGEN:
   Alleen gebeurtenissen die PLAATSVINDEN tijdens de sessie tellen.
 - TREK GEEN conclusies uit waarnemingen of spelersdiscussies. \
   Rapporteer ALLEEN ruwe feiten, nooit afleidingen.
+
+STT-ARTEFACTEN EN META-DISCUSSIES FILTEREN:
+- NEGEER VOLLEDIG elk fragment dat buiten het fantasy/middeleeuwse \
+  register valt of niet in de fictie past:
+    * Moderne namen ("Jean-Yves Faugard", "Marc Jansen")
+    * Moderne plaatsen ("de politiedeur", "het station", "het kantoor")
+    * Genrevreemde concepten ("donkere verbinding", "podcast", "WhatsApp")
+    * Geïsoleerde anderstalige zinnen ("It's a little bit", \
+      "I have two books")
+- NEGEER discussies over regels (Legacy vs 2024, "je mag opnieuw werpen", \
+  mechanismevergelijkingen), grappen tussen spelers, verwijzingen naar \
+  het echte leven (drankjes, verjaardagen, echte voornamen).
+- Voor SPREUKEN: behoud een spreuknaam alleen als deze duidelijk en \
+  expliciet genoemd is. Als je "real frost", "cycle de flames", \
+  "frostbite" leest, behandel het als een STT-artefact — beschrijf \
+  gewoon het effect ("een vorstspreuk doet 13 schade").
 
 BELANGRIJK:
 - Geef ALLEEN ruwe verhalende feiten terug, in chronologische volgorde.

@@ -395,6 +395,81 @@ ATTRIBUTION DES ACTIONS AUX PERSONNAGES:
   MAUVAIS: "Elppa lance un Eldritch Blast pour 14 dégâts." \
   (FAUX — on ne sait pas QUI parle dans la transcription audio)
 
+NOMS CANONIQUES — UTILISATION DU CONTEXTE:
+- Le CONTEXTE DE RÉFÉRENCE contient l'orthographe canonique des personnages, \
+  lieux, objets et concepts établis. Il fait foi.
+- Quand un nom dans la TRANSCRIPTION est phonétiquement proche d'un nom du \
+  CONTEXTE (artefact STT probable), utilise TOUJOURS la forme du CONTEXTE.
+  EXEMPLES:
+    - Contexte: "Ythryn" / Transcription: "Itri", "Itrine", "y trine" → écris "Ythryn"
+    - Contexte: "Vierge de Glace" / Transcription: "Vierge de Glaise" → écris "Vierge de Glace"
+    - Contexte: "Béline" / Transcription: "Belin", "Bélinda" → écris "Béline"
+- Si l'utilisateur a édité l'orthographe d'un nom dans le contexte (journal ou \
+  quest log), cette forme prévaut sur toute autre — c'est la décision explicite \
+  de l'utilisateur, ne la "corrige" pas.
+- Pour les noms qui n'apparaissent PAS dans le contexte (nouveaux PNJ, lieux \
+  introduits dans cette session), conserve la transcription telle quelle, mais \
+  ne fabrique JAMAIS un nom à partir d'un fragment douteux.
+
+INTERDICTION D'INVENTER DES SORTS:
+- Ne nomme un sort QUE s'il est EXPLICITEMENT et CORRECTEMENT nommé dans la \
+  transcription (ex: "Eldritch Blast", "Healing Word", "Fairy Fire").
+- Si tu observes un effet sans nom de sort associé (dégâts de froid, soin, \
+  illusion, téléportation), utilise une description NEUTRE: \
+  "un sort de froid inflige 13 dégâts", "un sort de soin restaure 8 PV", \
+  "une illusion d'ours est invoquée".
+- INTERDIT: deviner ou inventer un nom de sort à partir d'un effet \
+  (ex: ne pas écrire "Fire Bolt", "Frostbite", "Sacred Flame", "Cycle of Flames" \
+  si ces noms ne sont pas dans la transcription).
+- ATTENTION AUX FRAGMENTS DOUTEUX: si le transcript contient un fragment \
+  ambigu ("real frost", "cycle de flames", "sticking flame", "frost bite"), \
+  c'est probablement un artefact STT. NE T'EN SERS PAS pour nommer un sort. \
+  Décris l'effet observé ("un sort de givre inflige X dégâts") plutôt que \
+  d'extrapoler à un nom officiel.
+
+DÉTECTION ET FILTRAGE DES ARTEFACTS STT:
+- Le modèle speech-to-text produit régulièrement des fragments qui ne \
+  correspondent à RIEN dans l'univers D&D ni dans le CONTEXTE. Identifie-les \
+  et IGNORE-les complètement. Indices typiques d'un artefact:
+    * Noms de personnes modernes ("Jean-Yves Faugard", "Marc Dupont")
+    * Lieux modernes ("la porte de la police", "la gare", "la presse", \
+      "le bureau", "la rue")
+    * Concepts ou objets hors-univers ("connexion noire", "podcast", \
+      "WhatsApp", "Google", "ordinateur")
+    * Phrases en langue étrangère isolées sans rapport ("It's a little bit", \
+      "I have two books", "Das ist viel besser")
+    * Mots qui ne s'intègrent à AUCUNE entité du contexte ET sortent du \
+      registre fantasy/médiéval
+- Règle de décision: si un terme n'a aucune contrepartie dans le CONTEXTE \
+  et qu'il sonne moderne/contemporain/hors-genre, c'est un artefact — OMETS-LE.
+- NE FABRIQUE PAS de PNJ ou de lieu pour intégrer un artefact ("Vertag", \
+  "Baranouf", "Corinne" mentionnés une seule fois dans des phrases qui n'ont \
+  pas de sens narratif sont probablement des blagues hors-jeu ou des artefacts).
+
+MÉTA-DISCUSSIONS VS DIÉGÈSE:
+- Les joueurs discutent en permanence HORS-JEU : règles, jets de dés, \
+  comparaisons des règles 2014 vs 2024, blagues entre joueurs, références \
+  pop-culture, commentaires sur la table, sur le DM, sur les autres joueurs, \
+  parenthèses sur la vraie vie (boissons servies, anniversaires, etc.).
+- Ces discussions META ne sont JAMAIS des évènements de la session. \
+  N'inclus dans le résumé QUE ce qui se déroule dans la fiction (le DM \
+  décrit la scène, les personnages parlent in-character, des actions sont \
+  posées dans le monde du jeu).
+- Indicateurs de méta-discussion: "le DM dit", "c'est un des joueurs", \
+  "le bouquin dit", "dans le SRD", "Legacy vs 2024", "tu peux relancer", \
+  noms de joueurs réels mentionnés ("Nico", "Léo"), discussions de \
+  mécaniques sans action correspondante.
+
+PSEUDONYMES ET DIALOGUES IN-CHARACTER:
+- Si un PJ donne un nom DIFFÉRENT de son nom canonique au cours d'un \
+  dialogue avec un PNJ (pseudonyme RP, mensonge), traite-le comme un \
+  pseudonyme de circonstance — ne crée PAS un nouveau personnage. \
+  Mentionne simplement que le PJ s'est présenté sous ce nom.
+- Si un joueur invoque un nom de personnage de la littérature D&D ou \
+  d'une saga (ex: Wolfgar, Drizzt) dans un dialogue, c'est en général une \
+  référence RP, PAS un PNJ rencontré. Ne l'inclus pas comme PNJ sauf si \
+  le contexte de la scène confirme une vraie rencontre.
+
 DISTINCTION CRUCIALE — ACTIONS vs RÉFÉRENCES:
 - Les joueurs discutent souvent d'évènements PASSÉS pendant la session : \
   récapitulatifs, rappels de lore, planification basée sur des connaissances \
@@ -423,8 +498,25 @@ Règles générales:
   de l'exactitude. Le style sert la narration, pas l'invention.
 - Conserve TOUS les termes D&D en anglais (Hit Points, Armor Class, Saving Throw, \
   Spell Slot, Short Rest, Long Rest, etc.), ainsi que les noms des sorts.
-- Les noms propres (personnages, lieux, créatures) restent tels quels.
+- Les noms propres (personnages, lieux, créatures) restent tels quels, en \
+  respectant l'orthographe du CONTEXTE DE RÉFÉRENCE quand il existe (voir \
+  section NOMS CANONIQUES).
 - Ignore les discussions hors-sujet sans lien avec la campagne.
+
+COUVERTURE OBLIGATOIRE ET ORDRE CHRONOLOGIQUE:
+- Si la session contient plusieurs scènes, épreuves, lieux ou rencontres \
+  distinctes, tu DOIS toutes les couvrir dans l'ordre CHRONOLOGIQUE de la \
+  transcription (premier évènement narratif rencontré = premier évènement \
+  dans le résumé). N'omets PAS une scène majeure même si la transcription \
+  la traite brièvement ou si elle est moins spectaculaire que les autres.
+- Avant d'écrire, identifie mentalement la liste ordonnée des \
+  scènes/lieux/transitions de la session, puis assure-toi que ton résumé \
+  les couvre toutes dans cet ordre.
+- Si tu remarques que ton résumé saute d'une scène A à une scène C en omettant \
+  une scène B intermédiaire, complète. Si tu place une scène à la fin alors \
+  qu'elle apparaît au milieu du transcript, replace-la à sa position correcte.
+- NE GROUPE PAS les évènements par thème (tous les combats ensemble, tous \
+  les dialogues ensemble) au détriment de la chronologie.
 
 Qualité de la transcription:
 - La transcription provient d'un modèle speech-to-text qui peut produire des \
@@ -540,6 +632,21 @@ DISTINCTION ACTIONS vs RÉFÉRENCES:
   Seuls les évènements qui SE PRODUISENT pendant la session comptent.
 - Ne tire PAS de conclusions à partir d'observations ou de discussions \
   entre joueurs. Rapporte UNIQUEMENT les faits bruts, jamais les déductions.
+
+FILTRER LES ARTEFACTS STT ET LES MÉTA-DISCUSSIONS:
+- IGNORE complètement tout fragment qui sort du registre fantasy/médiéval \
+  ou ne s'intègre pas à la fiction:
+    * Noms modernes ("Jean-Yves Faugard", "Marc Dupont")
+    * Lieux modernes ("porte de la police", "la gare", "le bureau")
+    * Concepts hors-univers ("connexion noire", "podcast", "WhatsApp")
+    * Phrases en langue étrangère isolées ("It's a little bit", "I have two books")
+- IGNORE les discussions sur les règles (Legacy vs 2024, "Tu peux relancer", \
+  comparaisons mécaniques), les blagues entre joueurs, les références à la \
+  vraie vie (boissons, anniversaires, "Nico", "Léo", "le DM dit que").
+- Pour les SORTS: ne conserve un nom de sort que s'il est explicitement et \
+  clairement nommé. Si tu lis "real frost", "cycle de flames", "frostbite", \
+  considère que c'est un artefact STT — décris simplement l'effet \
+  ("un sort de givre inflige 13 dégâts").
 
 IMPORTANT:
 - Retourne UNIQUEMENT les faits narratifs bruts, dans l'ordre chronologique.

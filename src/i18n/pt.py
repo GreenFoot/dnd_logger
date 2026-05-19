@@ -382,6 +382,68 @@ ATRIBUIÇÃO DE AÇÕES A PERSONAGENS:
   MAU: "Elppa lança Eldritch Blast causando 14 de dano." \
   (ERRADO — não sabemos QUEM está a falar numa transcrição áudio)
 
+NOMES CANÓNICOS — USO DO CONTEXTO:
+- O CONTEXTO DE REFERÊNCIA contém a grafia canónica de personagens, \
+  locais, objectos e conceitos estabelecidos. É autoritário.
+- Quando um nome no TRANSCRIPT é foneticamente próximo de um nome no \
+  CONTEXTO (provável artefacto STT), usa SEMPRE a forma do CONTEXTO.
+  EXEMPLOS:
+    - Contexto: "Ythryn" / Transcript: "Itri", "Itrine" → escreve "Ythryn"
+    - Contexto: "Donzela do Gelo" / Transcript: "Vierge de Glaise" → escreve "Donzela do Gelo"
+- Se o utilizador editou a grafia de um nome no contexto (diário ou \
+  registo de missões), essa forma prevalece — é a decisão explícita do \
+  utilizador, não a "corrijas".
+- Para nomes que NÃO estão no contexto (novos PNJ, locais introduzidos \
+  nesta sessão), conserva o transcript tal qual, mas NUNCA fabriques \
+  um nome a partir de um fragmento duvidoso.
+
+PROIBIÇÃO DE INVENTAR SPELLS:
+- Apenas nomeia um spell se estiver EXPLÍCITA e CORRECTAMENTE nomeado \
+  no transcript (ex: "Eldritch Blast", "Healing Word", "Fairy Fire").
+- Se observas um efeito sem nome de spell associado (dano de frio, cura, \
+  ilusão, teletransporte), usa uma descrição NEUTRA: "um spell de gelo \
+  causa 13 de dano", "um spell de cura restaura 8 HP", "uma ilusão de \
+  urso é invocada".
+- PROIBIDO: adivinhar ou inventar um nome de spell a partir de um efeito \
+  (ex: não escrevas "Fire Bolt", "Frostbite", "Sacred Flame", "Cycle of \
+  Flames" se estes nomes não estão no transcript).
+- CUIDADO COM FRAGMENTOS DUVIDOSOS: se o transcript contém um fragmento \
+  ambíguo ("real frost", "cycle de flames", "sticking flame"), é \
+  provavelmente um artefacto STT. NÃO O USES para nomear um spell. \
+  Descreve o efeito observado.
+
+DETECÇÃO E FILTRAGEM DE ARTEFACTOS STT:
+- O modelo speech-to-text produz regularmente fragmentos que não \
+  correspondem a NADA no universo D&D nem no CONTEXTO. Identifica-os \
+  e IGNORA-OS por completo. Indícios típicos:
+    * Nomes modernos ("Jean-Yves Faugard", "Marco Silva")
+    * Locais modernos ("a porta da polícia", "a estação", "o escritório")
+    * Conceitos fora de género ("conexão obscura", "podcast", "WhatsApp")
+    * Frases em língua estrangeira isoladas e sem relação \
+      ("It's a little bit", "I have two books", "Das ist viel besser")
+    * Palavras que não correspondem a NENHUMA entidade do contexto E \
+      caem fora do registo fantasy/medieval
+- Regra de decisão: se um termo não tem contrapartida no CONTEXTO e \
+  soa moderno/contemporâneo/fora de género, é um artefacto — OMITE-O.
+- NÃO FABRIQUES um PNJ ou local para integrar um artefacto.
+
+META-DISCUSSÕES VS DIEGESE:
+- Os jogadores discutem constantemente FORA-DE-JOGO: regras, \
+  lançamentos de dados, comparações de regras 2014 vs 2024, piadas \
+  entre jogadores, referências pop, comentários sobre o DM ou outros \
+  jogadores, parênteses da vida real.
+- Estas discussões META NUNCA são eventos da sessão. Inclui no resumo \
+  APENAS o que acontece NA FICÇÃO.
+- Indicadores: "o DM diz", "é um dos jogadores", "o livro diz", \
+  "Legacy vs 2024", "podes voltar a lançar", nomes reais de jogadores.
+
+PSEUDÓNIMOS E DIÁLOGO IN-CHARACTER:
+- Se um PJ dá um nome DIFERENTE do seu nome canónico durante um diálogo \
+  com um PNJ (pseudónimo RP, mentira), trata-o como um pseudónimo \
+  circunstancial — NÃO crias uma nova personagem.
+- Se um jogador invoca um nome da literatura D&D (ex: Wulfgar, Drizzt) \
+  num diálogo, é geralmente uma referência RP, NÃO um PNJ encontrado.
+
 DISTINÇÃO CRUCIAL — AÇÕES vs REFERÊNCIAS:
 - Os jogadores frequentemente discutem EVENTOS PASSADOS durante as sessões: \
   recapitulações, lembretes de lore, planeamento baseado em conhecimento \
@@ -410,8 +472,23 @@ Regras gerais:
   da precisão. O estilo serve a narração, não a invenção.
 - Mantém TODOS os termos de D&D em inglês (Hit Points, Armor Class, Saving Throw, \
   Spell Slot, Short Rest, Long Rest, etc.), assim como os nomes de spells.
-- Os nomes próprios (personagens, locais, criaturas) permanecem tal como são.
+- Os nomes próprios (personagens, locais, criaturas) permanecem tal \
+  como são, respeitando a grafia do CONTEXTO DE REFERÊNCIA quando \
+  existe (ver secção NOMES CANÓNICOS).
 - Ignora discussões fora do tema que não estejam relacionadas com a campanha.
+
+COBERTURA OBRIGATÓRIA E ORDEM CRONOLÓGICA:
+- Se a sessão contém várias cenas, provas, locais ou encontros \
+  distintos, DEVES cobri-los TODOS na ordem CRONOLÓGICA do transcript. \
+  NÃO omitas uma cena importante mesmo que seja tratada brevemente.
+- Antes de escrever, identifica mentalmente a lista ordenada de \
+  cenas/locais/transições, e assegura-te de que o teu resumo cobre \
+  cada uma nessa ordem.
+- Se notas que o teu resumo salta da cena A para a cena C omitindo uma \
+  cena B intermédia, completa-a. Se colocas uma cena no fim quando ela \
+  aparece a meio do transcript, recoloca-a na posição correcta.
+- NÃO AGRUPES os eventos por tema (todos os combates juntos, todos os \
+  diálogos juntos) em prejuízo da cronologia.
 
 Qualidade da transcrição:
 - A transcrição provém de um modelo de reconhecimento de fala que pode produzir \
@@ -527,6 +604,22 @@ DISTINÇÃO AÇÕES vs REFERÊNCIAS:
   Apenas eventos que ACONTECEM durante a sessão contam.
 - NÃO tires conclusões a partir de observações ou discussões dos jogadores. \
   Relata APENAS factos brutos, nunca deduções.
+
+FILTRAR ARTEFACTOS STT E META-DISCUSSÕES:
+- IGNORA por completo qualquer fragmento que caia fora do registo \
+  fantasy/medieval ou não se integre na ficção:
+    * Nomes modernos ("Jean-Yves Faugard", "Marco Silva")
+    * Locais modernos ("a porta da polícia", "a estação", "o escritório")
+    * Conceitos fora de género ("conexão obscura", "podcast", "WhatsApp")
+    * Frases em língua estrangeira isoladas ("It's a little bit", \
+      "I have two books")
+- IGNORA discussões sobre regras (Legacy vs 2024, "podes voltar a \
+  lançar", comparações mecânicas), piadas entre jogadores, referências \
+  à vida real (bebidas, aniversários, nomes reais de jogadores).
+- Para os SPELLS: conserva um nome de spell apenas se estiver clara e \
+  explicitamente nomeado. Se lês "real frost", "cycle de flames", \
+  "frostbite", trata-o como um artefacto STT — descreve simplesmente \
+  o efeito ("um spell de gelo causa 13 de dano").
 
 IMPORTANTE:
 - Devolve APENAS factos narrativos brutos, em ordem cronológica.

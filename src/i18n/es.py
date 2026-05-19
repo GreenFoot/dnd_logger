@@ -382,6 +382,67 @@ ATRIBUCIÓN DE ACCIONES A PERSONAJES:
   MAL: "Elppa lanza un Eldritch Blast por 14 de daño." \
   (INCORRECTO — no sabemos QUIÉN habla en la transcripción de audio)
 
+NOMBRES CANÓNICOS — USO DEL CONTEXTO:
+- El CONTEXTO DE REFERENCIA contiene la ortografía canónica de personajes, \
+  lugares, objetos y conceptos establecidos. Es autorizado.
+- Cuando un nombre en la TRANSCRIPCIÓN es fonéticamente cercano a uno del \
+  CONTEXTO (probable artefacto STT), usa SIEMPRE la forma del CONTEXTO.
+  EJEMPLOS:
+    - Contexto: "Ythryn" / Transcripción: "Itri", "Itrine" → escribe "Ythryn"
+    - Contexto: "Doncella de Hielo" / Transcripción: "Vierge de Glaise" → escribe "Doncella de Hielo"
+- Si el usuario ha editado la ortografía de un nombre en el contexto, \
+  esa forma prevalece — es la decisión explícita del usuario, no la \
+  "corrijas".
+- Para nombres que NO están en el contexto (nuevos PNJ, lugares \
+  introducidos esta sesión), conserva la transcripción tal cual, pero \
+  NUNCA fabriques un nombre a partir de un fragmento dudoso.
+
+PROHIBICIÓN DE INVENTAR HECHIZOS:
+- Solo nombra un hechizo si está EXPLÍCITA y CORRECTAMENTE nombrado en \
+  la transcripción (ej: "Eldritch Blast", "Healing Word", "Fairy Fire").
+- Si observas un efecto sin nombre de hechizo asociado, usa una \
+  descripción NEUTRA: "un hechizo de escarcha inflige 13 de daño", \
+  "un hechizo de curación restaura 8 HP", "se invoca una ilusión de oso".
+- PROHIBIDO: adivinar o inventar un nombre de hechizo a partir de un \
+  efecto (ej: no escribas "Fire Bolt", "Frostbite", "Sacred Flame", \
+  "Cycle of Flames" si estos nombres no están en la transcripción).
+- CUIDADO CON FRAGMENTOS DUDOSOS: si la transcripción contiene un \
+  fragmento ambiguo ("real frost", "cycle de flames", "sticking flame"), \
+  probablemente es un artefacto STT. NO LO USES para nombrar un hechizo.
+
+DETECCIÓN Y FILTRADO DE ARTEFACTOS STT:
+- El modelo speech-to-text produce regularmente fragmentos que no \
+  corresponden a NADA en el universo D&D ni en el CONTEXTO. \
+  Identifícalos e IGNÓRALOS por completo. Indicios típicos:
+    * Nombres modernos ("Jean-Yves Faugard", "Marc Pérez")
+    * Lugares modernos ("la puerta de la policía", "la estación", "la oficina")
+    * Conceptos fuera de género ("conexión oscura", "podcast", "WhatsApp")
+    * Frases en idioma extranjero aisladas y sin relación \
+      ("It's a little bit", "I have two books", "Das ist viel besser")
+    * Palabras que no coinciden con NINGUNA entidad del contexto Y caen \
+      fuera del registro fantasy/medieval
+- Regla de decisión: si un término no tiene contrapartida en el CONTEXTO \
+  y suena moderno/contemporáneo/fuera de género, es un artefacto — \
+  OMÍTELO.
+- NO FABRIQUES un PNJ o lugar para integrar un artefacto.
+
+META-DISCUSIONES VS DIÉGESIS:
+- Los jugadores discuten constantemente FUERA DE JUEGO: reglas, tiradas, \
+  comparaciones de reglas, bromas, referencias pop, comentarios sobre el \
+  DM o sobre otros jugadores, paréntesis de la vida real.
+- Estas discusiones META NUNCA son eventos de la sesión. Incluye en el \
+  resumen SOLO lo que sucede EN LA FICCIÓN.
+- Indicadores: "el DM dice", "es uno de los jugadores", "el libro dice", \
+  "Legacy vs 2024", "puedes relanzar", nombres reales de jugadores.
+
+SEUDÓNIMOS Y DIÁLOGO IN-CHARACTER:
+- Si un PJ da un nombre DIFERENTE de su nombre canónico durante un \
+  diálogo (seudónimo de RP, mentira), trátalo como un seudónimo \
+  circunstancial — NO crees un nuevo personaje.
+- Si un jugador invoca un nombre de la literatura D&D (ej: Wulfgar, \
+  Drizzt) en un diálogo, generalmente es una referencia RP, NO un PNJ \
+  encontrado.
+
 DISTINCIÓN CRUCIAL — ACCIONES vs REFERENCIAS:
 - Los jugadores a menudo discuten eventos PASADOS durante la sesión: \
   recapitulaciones, recordatorios de lore, planificación basada en conocimientos \
@@ -410,8 +471,23 @@ Reglas generales:
   de la exactitud. El estilo sirve a la narración, no a la invención.
 - Conserva TODOS los términos D&D en inglés (Hit Points, Armor Class, Saving Throw, \
   Spell Slot, Short Rest, Long Rest, etc.), así como los nombres de hechizos.
-- Los nombres propios (personajes, lugares, criaturas) se mantienen tal cual.
+- Los nombres propios (personajes, lugares, criaturas) se mantienen tal \
+  cual, respetando la ortografía del CONTEXTO DE REFERENCIA cuando \
+  existe (ver sección NOMBRES CANÓNICOS).
 - Ignora las discusiones fuera de tema sin relación con la campaña.
+
+COBERTURA OBLIGATORIA Y ORDEN CRONOLÓGICO:
+- Si la sesión contiene varias escenas, pruebas, lugares o encuentros \
+  distintos, DEBES cubrirlos TODOS en el orden CRONOLÓGICO de la \
+  transcripción. NO omitas una escena importante aunque sea breve.
+- Antes de escribir, identifica mentalmente la lista ordenada de \
+  escenas/lugares/transiciones, luego asegúrate de que tu resumen las \
+  cubra todas en ese orden.
+- Si notas que tu resumen salta de una escena A a una escena C omitiendo \
+  una intermedia B, complétala. Si colocas una escena al final cuando \
+  aparece en medio del transcript, devuélvela a su posición correcta.
+- NO AGRUPES los eventos por tema (todos los combates juntos, todos los \
+  diálogos juntos) a expensas de la cronología.
 
 Calidad de la transcripción:
 - La transcripción proviene de un modelo speech-to-text que puede producir \
@@ -527,6 +603,22 @@ DISTINCIÓN ACCIONES vs REFERENCIAS:
   Solo los eventos que OCURREN durante la sesión cuentan.
 - NO saques conclusiones a partir de observaciones o discusiones \
   entre jugadores. Informa ÚNICAMENTE los hechos brutos, nunca las deducciones.
+
+FILTRAR ARTEFACTOS STT Y META-DISCUSIONES:
+- IGNORA por completo cualquier fragmento que caiga fuera del registro \
+  fantasy/medieval o no se integre con la ficción:
+    * Nombres modernos ("Jean-Yves Faugard", "Marc Pérez")
+    * Lugares modernos ("la puerta de la policía", "la estación", "la oficina")
+    * Conceptos fuera de género ("conexión oscura", "podcast", "WhatsApp")
+    * Frases en idioma extranjero aisladas ("It's a little bit", \
+      "I have two books")
+- IGNORA discusiones sobre reglas (Legacy vs 2024, "puedes relanzar", \
+  comparaciones mecánicas), bromas entre jugadores, referencias a la \
+  vida real (bebidas, cumpleaños, nombres reales de jugadores).
+- Para los HECHIZOS: conserva un nombre de hechizo solo si está clara y \
+  explícitamente nombrado. Si lees "real frost", "cycle de flames", \
+  "frostbite", trátalo como un artefacto STT — describe simplemente el \
+  efecto ("un hechizo de escarcha inflige 13 de daño").
 
 IMPORTANTE:
 - Devuelve ÚNICAMENTE los hechos narrativos brutos, en orden cronológico.

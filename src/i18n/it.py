@@ -382,6 +382,69 @@ ATTRIBUZIONE DELLE AZIONI AI PERSONAGGI:
   SBAGLIATO: "Elppa lancia un Eldritch Blast per 14 danni." \
   (ERRATO — non sappiamo CHI sta parlando nella trascrizione audio)
 
+NOMI CANONICI — USO DEL CONTESTO:
+- Il CONTESTO DI RIFERIMENTO contiene l'ortografia canonica di personaggi, \
+  luoghi, oggetti e concetti stabiliti. E' autorevole.
+- Quando un nome nella TRASCRIZIONE e foneticamente vicino a un nome del \
+  CONTESTO (probabile artefatto STT), usa SEMPRE la forma del CONTESTO.
+  ESEMPI:
+    - Contesto: "Ythryn" / Trascrizione: "Itri", "Itrine" → scrivi "Ythryn"
+    - Contesto: "Fanciulla del Gelo" / Trascrizione: "Vierge de Glaise" → scrivi "Fanciulla del Gelo"
+- Se l'utente ha modificato l'ortografia di un nome nel contesto (diario \
+  o registro delle missioni), quella forma prevale — e la decisione \
+  esplicita dell'utente, non "correggerla".
+- Per nomi NON presenti nel contesto (nuovi PNG, luoghi introdotti in \
+  questa sessione), conserva la trascrizione cosi com'e, ma NON \
+  fabbricare MAI un nome a partire da un frammento dubbio.
+
+DIVIETO DI INVENTARE INCANTESIMI:
+- Nomina un incantesimo SOLO se e ESPLICITAMENTE e CORRETTAMENTE nominato \
+  nella trascrizione (es: "Eldritch Blast", "Healing Word", "Fairy Fire").
+- Se osservi un effetto senza nome di incantesimo associato (danni da \
+  freddo, cura, illusione, teletrasporto), usa una descrizione NEUTRA: \
+  "un incantesimo di gelo infligge 13 danni", "un incantesimo di cura \
+  ripristina 8 HP", "viene evocata un'illusione di orso".
+- VIETATO: indovinare o inventare un nome di incantesimo a partire da \
+  un effetto (es: non scrivere "Fire Bolt", "Frostbite", "Sacred Flame", \
+  "Cycle of Flames" se questi nomi non sono nella trascrizione).
+- ATTENZIONE AI FRAMMENTI DUBBI: se la trascrizione contiene un frammento \
+  ambiguo ("real frost", "cycle de flames", "sticking flame"), e \
+  probabilmente un artefatto STT. NON USARLO per nominare un incantesimo. \
+  Descrivi l'effetto osservato.
+
+RILEVAMENTO E FILTRAGGIO DEGLI ARTEFATTI STT:
+- Il modello speech-to-text produce regolarmente frammenti che non \
+  corrispondono a NULLA nell'universo D&D ne nel CONTESTO. \
+  Identificali e IGNORALI completamente. Indizi tipici di artefatto:
+    * Nomi moderni ("Jean-Yves Faugard", "Marco Rossi")
+    * Luoghi moderni ("la porta della polizia", "la stazione", "l'ufficio")
+    * Concetti fuori genere ("connessione oscura", "podcast", "WhatsApp")
+    * Frasi in lingua straniera isolate senza relazione \
+      ("It's a little bit", "I have two books", "Das ist viel besser")
+    * Parole che non corrispondono ad ALCUNA entita del contesto E sono \
+      al di fuori del registro fantasy/medievale
+- Regola di decisione: se un termine non ha controparte nel CONTESTO e \
+  suona moderno/contemporaneo/fuori genere, e un artefatto — OMETTILO.
+- NON FABBRICARE un PNG o luogo per integrare un artefatto.
+
+META-DISCUSSIONI VS DIEGESI:
+- I giocatori discutono costantemente FUORI DAL GIOCO: regole, tiri di \
+  dadi, confronti di regole 2014 vs 2024, scherzi tra giocatori, \
+  riferimenti pop, commenti sul DM, sugli altri giocatori, parentesi \
+  della vita reale.
+- Queste discussioni META NON sono MAI eventi della sessione. Includi \
+  nel riassunto SOLO cio che avviene NELLA FINZIONE.
+- Indicatori: "il DM dice", "e uno dei giocatori", "il libro dice", \
+  "Legacy vs 2024", "puoi rilanciare", nomi reali di giocatori.
+
+PSEUDONIMI E DIALOGO IN-CHARACTER:
+- Se un PG da un nome DIVERSO dal suo nome canonico durante un dialogo \
+  con un PNG (pseudonimo RP, bugia), trattalo come uno pseudonimo \
+  circostanziale — NON creare un nuovo personaggio.
+- Se un giocatore invoca un nome dalla letteratura D&D (es: Wulfgar, \
+  Drizzt) in un dialogo, generalmente e un riferimento RP, NON un PNG \
+  incontrato.
+
 DISTINZIONE CRUCIALE — AZIONI vs RIFERIMENTI:
 - I giocatori discutono spesso di eventi PASSATI durante la sessione: \
   riepiloghi, promemoria di lore, pianificazione basata su conoscenze \
@@ -410,8 +473,24 @@ Regole generali:
   dell'accuratezza. Lo stile serve la narrazione, non l'invenzione.
 - Mantieni TUTTI i termini D&D in inglese (Hit Points, Armor Class, Saving Throw, \
   Spell Slot, Short Rest, Long Rest, ecc.), cosi come i nomi degli incantesimi.
-- I nomi propri (personaggi, luoghi, creature) rimangono invariati.
+- I nomi propri (personaggi, luoghi, creature) rimangono invariati, \
+  rispettando l'ortografia del CONTESTO DI RIFERIMENTO quando esiste \
+  (vedi sezione NOMI CANONICI).
 - Ignora le discussioni fuori tema non legate alla campagna.
+
+COPERTURA OBBLIGATORIA E ORDINE CRONOLOGICO:
+- Se la sessione contiene piu scene, prove, luoghi o incontri distinti, \
+  DEVI coprirli TUTTI nell'ordine CRONOLOGICO della trascrizione. NON \
+  omettere una scena importante anche se trattata brevemente.
+- Prima di scrivere, identifica mentalmente l'elenco ordinato delle \
+  scene/luoghi/transizioni, poi assicurati che il tuo riassunto le copra \
+  tutte in quell'ordine.
+- Se noti che il tuo riassunto salta da una scena A a una scena C \
+  omettendo una scena B intermedia, completala. Se posizioni una scena \
+  alla fine mentre appare a meta del transcript, riportala alla \
+  posizione corretta.
+- NON RAGGRUPPARE gli eventi per tema (tutti i combattimenti insieme, \
+  tutti i dialoghi insieme) a scapito della cronologia.
 
 Qualita della trascrizione:
 - La trascrizione proviene da un modello speech-to-text che puo produrre \
@@ -527,6 +606,23 @@ DISTINZIONE AZIONI vs RIFERIMENTI:
   Solo gli eventi che ACCADONO durante la sessione contano.
 - NON trarre conclusioni da osservazioni o discussioni \
   tra giocatori. Riporta SOLO i fatti grezzi, mai le deduzioni.
+
+FILTRARE ARTEFATTI STT E META-DISCUSSIONI:
+- IGNORA completamente qualsiasi frammento che esca dal registro \
+  fantasy/medievale o non si integri con la finzione:
+    * Nomi moderni ("Jean-Yves Faugard", "Marco Rossi")
+    * Luoghi moderni ("la porta della polizia", "la stazione", "l'ufficio")
+    * Concetti fuori genere ("connessione oscura", "podcast", "WhatsApp")
+    * Frasi in lingua straniera isolate ("It's a little bit", \
+      "I have two books")
+- IGNORA discussioni sulle regole (Legacy vs 2024, "puoi rilanciare", \
+  confronti meccanici), scherzi tra giocatori, riferimenti alla vita \
+  reale (bevande, compleanni, nomi reali di giocatori).
+- Per gli INCANTESIMI: conserva un nome di incantesimo solo se \
+  chiaramente ed esplicitamente nominato. Se leggi "real frost", \
+  "cycle de flames", "frostbite", trattalo come un artefatto STT — \
+  descrivi semplicemente l'effetto ("un incantesimo di gelo infligge \
+  13 danni").
 
 IMPORTANTE:
 - Restituisci SOLO i fatti narrativi grezzi, in ordine cronologico.

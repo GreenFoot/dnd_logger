@@ -55,6 +55,19 @@ class AudioChunker:
         return chunks
 
 
+def _strip_stt_artifacts(text: str, min_repeats: int = 5, min_words: int = 2, max_words: int = 15) -> str:
+    """Collapse consecutive repetitions of a phrase that Voxtral sometimes emits in loops.
+
+    A phrase of N words (min_words <= N <= max_words) repeated min_repeats times or more in
+    immediate succession is reduced to two occurrences (kept rather than one to preserve
+    legitimate doublings like "non, non").
+    """
+    for nwords in range(min_words, max_words + 1):
+        pattern = re.compile(r"((?:\b\S+\b[^\w]*){" + str(nwords) + r"})(\1){" + str(min_repeats - 1) + r",}")
+        text = pattern.sub(r"\1\1", text)
+    return text
+
+
 def _transcribe_file(client, chunk_path: str, config: dict, retries: int = 3) -> str:
     """Transcribe a single audio file using Mistral Voxtral API with retry logic."""
     _BIAS_VALID = re.compile(r"^[a-zA-Z0-9_-]+$")  # pylint: disable=invalid-name
@@ -145,6 +158,7 @@ class TranscriptionWorker(QObject):
                 self.chunk_completed.emit(i, text)
 
             full_text = "\n\n".join(full_text_parts)
+            full_text = _strip_stt_artifacts(full_text)
 
             # Save transcript
             session_dir = os.path.dirname(self._wav_path)
@@ -181,6 +195,7 @@ class LiveTranscriptionWorker(QObject):
 
             client = Mistral(api_key=api_key)
             text = _transcribe_file(client, self._flac_path, self._config)
+            text = _strip_stt_artifacts(text)
 
             # Clean up temp FLAC file
             try:

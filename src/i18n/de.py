@@ -382,6 +382,81 @@ ZUORDNUNG VON CHARAKTERHANDLUNGEN:
   SCHLECHT: "Elppa wirkt Eldritch Blast fuer 14 Schaden." \
   (FALSCH — wir wissen nicht, WER bei der Audio-Transkription spricht)
 
+KANONISCHE NAMEN — VERWENDUNG DES KONTEXTS:
+- Der REFERENZKONTEXT enthaelt die kanonische Schreibweise von etablierten \
+  Charakteren, Orten, Gegenstaenden und Konzepten. Er ist massgeblich.
+- Wenn ein Name im TRANSKRIPT phonetisch nahe an einem Namen im KONTEXT \
+  liegt (wahrscheinliches STT-Artefakt), verwende IMMER die Form aus dem \
+  KONTEXT.
+  BEISPIELE:
+    - Kontext: "Ythryn" / Transkript: "Itri", "Itrine" → schreibe "Ythryn"
+    - Kontext: "Frost Maiden" / Transkript: "Frost May Den" → schreibe "Frost Maiden"
+- Wenn der Benutzer die Schreibweise eines Namens im Kontext (Journal \
+  oder Quest-Log) bearbeitet hat, hat diese Form Vorrang — es ist die \
+  explizite Entscheidung des Benutzers, "korrigiere" sie nicht.
+- Fuer Namen, die NICHT im Kontext stehen (neue NPCs, Orte aus dieser \
+  Sitzung), behalte das Transkript wie es ist, aber FABRIZIERE NIEMALS \
+  einen Namen aus einem zweifelhaften Fragment.
+
+VERBOT, ZAUBERSPRUECHE ZU ERFINDEN:
+- Benenne einen Zauberspruch NUR, wenn er im Transkript AUSDRUECKLICH und \
+  KORREKT genannt wird (z.B. "Eldritch Blast", "Healing Word", "Fairy Fire").
+- Wenn du einen Effekt ohne zugehoerigen Zauberspruchnamen beobachtest \
+  (Kaelteschaden, Heilung, Illusion, Teleportation), verwende eine \
+  NEUTRALE Beschreibung: "ein Frostzauber verursacht 13 Schaden", \
+  "ein Heilzauber stellt 8 HP wieder her", "eine Baerenillusion wird beschworen".
+- VERBOTEN: einen Zauberspruchnamen aus einem Effekt zu erraten oder zu \
+  erfinden (z.B. schreibe nicht "Fire Bolt", "Frostbite", "Sacred Flame", \
+  "Cycle of Flames", wenn diese Namen nicht im Transkript stehen).
+- VORSICHT BEI ZWEIFELHAFTEN FRAGMENTEN: wenn das Transkript ein \
+  mehrdeutiges Fragment enthaelt ("real frost", "cycle de flames", \
+  "sticking flame"), ist es wahrscheinlich ein STT-Artefakt. VERWENDE \
+  ES NICHT, um einen Zauberspruch zu benennen. Beschreibe den \
+  beobachteten Effekt.
+
+ERKENNEN UND FILTERN VON STT-ARTEFAKTEN:
+- Das Speech-to-Text-Modell produziert regelmaessig Fragmente, die NICHTS \
+  im D&D-Universum oder im KONTEXT entsprechen. Identifiziere sie und \
+  IGNORIERE sie vollstaendig. Typische Artefakt-Hinweise:
+    * Moderne Personennamen ("Jean-Yves Faugard", "Marc Schmidt")
+    * Moderne Orte ("die Polizeituer", "der Bahnhof", "das Buero")
+    * Genre-fremde Konzepte ("dunkle Verbindung", "Podcast", "WhatsApp", \
+      "Computer")
+    * Isolierte fremdsprachige Saetze ohne Bezug ("It's a little bit", \
+      "I have two books", "Das ist viel besser")
+    * Woerter, die KEINE Entitaet im Kontext finden UND ausserhalb des \
+      Fantasy/mittelalterlichen Registers liegen
+- Entscheidungsregel: wenn ein Begriff keine Entsprechung im KONTEXT hat \
+  und modern/zeitgenoessisch/genre-fremd klingt, ist es ein Artefakt — \
+  LASSE IHN WEG.
+- FABRIZIERE KEINEN NPC oder Ort, um ein Artefakt zu integrieren (Namen, \
+  die nur einmal in Saetzen ohne narrativen Sinn erwaehnt werden, sind \
+  wahrscheinlich Witze ausserhalb des Spiels oder Artefakte).
+
+META-DISKUSSIONEN VS DIEGESE:
+- Spieler diskutieren staendig AUSSERHALB DES SPIELS: Regeln, Wuerfe, \
+  2014-vs-2024-Regelvergleiche, Witze zwischen Spielern, Pop-Kultur-\
+  Verweise, Kommentare zum Tisch, zum DM, zu anderen Spielern, \
+  Bemerkungen zum echten Leben (servierte Getraenke, Geburtstage usw.).
+- Diese META-Diskussionen sind NIEMALS Sitzungsereignisse. Beziehe in \
+  die Zusammenfassung NUR ein, was in der Fiktion geschieht (DM \
+  beschreibt die Szene, Charaktere sprechen in-character, Handlungen \
+  werden in der Spielwelt vorgenommen).
+- Indikatoren fuer Meta-Diskussionen: "der DM sagt", "das ist einer der \
+  Spieler", "das Buch sagt", "im SRD", "Legacy vs 2024", "du kannst \
+  neu wuerfeln", echte Spielervornamen, Mechanikdiskussionen ohne \
+  entsprechende Aktion.
+
+PSEUDONYME UND IN-CHARACTER-DIALOG:
+- Wenn ein PC waehrend eines Dialogs mit einem NPC einen ANDEREN Namen \
+  als seinen kanonischen Namen angibt (RP-Pseudonym, Luege), behandle \
+  es als situatives Pseudonym — erzeuge KEINEN neuen Charakter. Erwaehne \
+  einfach, dass der PC sich unter diesem Namen vorgestellt hat.
+- Wenn ein Spieler im Dialog einen Namen aus D&D-Literatur oder einer \
+  Saga aufruft (z.B. Wulfgar, Drizzt), ist es im Allgemeinen ein \
+  RP-Verweis, KEIN angetroffener NPC. Schliesse es nur dann als NPC ein, \
+  wenn der Szenenkontext eine echte Begegnung bestaetigt.
+
 ENTSCHEIDENDE UNTERSCHEIDUNG — AKTIONEN vs VERWEISE:
 - Spieler diskutieren waehrend der Sitzungen oft VERGANGENE Ereignisse: \
   Rueckblicke, Erinnerungen an Hintergrundwissen, Planung basierend auf \
@@ -410,8 +485,26 @@ Allgemeine Regeln:
   der Genauigkeit. Stil dient der Erzaehlung, nicht der Erfindung.
 - Behalte ALLE D&D-Begriffe auf Englisch (Hit Points, Armor Class, Saving Throw, \
   Spell Slot, Short Rest, Long Rest usw.) sowie Zauberspruchnamen.
-- Eigennamen (Charaktere, Orte, Kreaturen) bleiben unveraendert.
+- Eigennamen (Charaktere, Orte, Kreaturen) bleiben unveraendert und \
+  respektieren die Schreibweise des REFERENZKONTEXTS, wenn er existiert \
+  (siehe Abschnitt KANONISCHE NAMEN).
 - Ignoriere themenfremde Diskussionen, die nicht mit der Kampagne zusammenhaengen.
+
+PFLICHTABDECKUNG UND CHRONOLOGISCHE REIHENFOLGE:
+- Wenn die Sitzung mehrere unterschiedliche Szenen, Pruefungen, Orte oder \
+  Begegnungen enthaelt, MUSST du sie ALLE in der CHRONOLOGISCHEN \
+  Reihenfolge des Transkripts abdecken (erstes narratives Ereignis = \
+  erstes Ereignis in der Zusammenfassung). LASSE keine wichtige Szene \
+  weg, auch wenn sie kurz behandelt wird.
+- Identifiziere vor dem Schreiben mental die geordnete Liste der \
+  Szenen/Orte/Uebergaenge, dann stelle sicher, dass deine Zusammenfassung \
+  jede in dieser Reihenfolge abdeckt.
+- Wenn du bemerkst, dass deine Zusammenfassung von Szene A zu Szene C \
+  springt und eine Zwischenszene B auslaesst, fuelle sie aus. Wenn du \
+  eine Szene ans Ende setzt, obwohl sie in der Mitte des Transkripts \
+  erscheint, verschiebe sie an die korrekte Position.
+- GRUPPIERE keine Ereignisse nach Thema (alle Kaempfe zusammen, alle \
+  Dialoge zusammen) auf Kosten der Chronologie.
 
 Transkriptqualitaet:
 - Das Transkript stammt von einem Speech-to-Text-Modell, das Artefakte \
@@ -527,6 +620,23 @@ UNTERSCHEIDUNG AKTIONEN vs VERWEISE:
   Nur Ereignisse, die WAEHREND der Sitzung STATTFINDEN, zaehlen.
 - ZIEHE KEINE Schluesse aus Beobachtungen oder Spielerdiskussionen. \
   Berichte NUR rohe Fakten, niemals Schlussfolgerungen.
+
+STT-ARTEFAKTE UND META-DISKUSSIONEN FILTERN:
+- IGNORIERE vollstaendig jedes Fragment, das ausserhalb des \
+  Fantasy/mittelalterlichen Registers liegt oder sich nicht in die \
+  Fiktion einfuegt:
+    * Moderne Namen ("Jean-Yves Faugard", "Marc Schmidt")
+    * Moderne Orte ("die Polizeituer", "der Bahnhof", "das Buero")
+    * Genre-fremde Konzepte ("dunkle Verbindung", "Podcast", "WhatsApp")
+    * Isolierte fremdsprachige Saetze ("It's a little bit", \
+      "I have two books")
+- IGNORIERE Regelnachfragen (Legacy vs 2024, "du kannst neu wuerfeln", \
+  Mechanikvergleiche), Witze zwischen Spielern, Bezuege zum echten Leben \
+  (Getraenke, Geburtstage, echte Spielervornamen, "der DM sagt, dass").
+- Fuer ZAUBERSPRUECHE: behalte einen Zauberspruchnamen nur, wenn er klar \
+  und ausdruecklich genannt wird. Wenn du "real frost", "cycle de flames", \
+  "frostbite" liest, betrachte es als STT-Artefakt — beschreibe einfach \
+  den Effekt ("ein Frostzauber verursacht 13 Schaden").
 
 WICHTIG:
 - Gib NUR rohe narrative Fakten zurueck, in chronologischer Reihenfolge.

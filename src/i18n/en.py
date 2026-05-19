@@ -395,6 +395,78 @@ CHARACTER ACTION ATTRIBUTION:
   BAD: "Elppa casts Eldritch Blast for 14 damage." \
   (WRONG — we don't know WHO is speaking in audio transcription)
 
+CANONICAL NAMES — USING THE CONTEXT:
+- The REFERENCE CONTEXT contains the canonical spelling of established \
+  characters, places, items, and concepts. It is authoritative.
+- When a name in the TRANSCRIPT is phonetically close to a name in the \
+  CONTEXT (likely STT artifact), ALWAYS use the form from the CONTEXT.
+  EXAMPLES:
+    - Context: "Ythryn" / Transcript: "Itri", "Itrine" → write "Ythryn"
+    - Context: "Frost Maiden" / Transcript: "Frost May Den" → write "Frost Maiden"
+    - Context: "Beline" / Transcript: "Belin", "Belinda" → write "Beline"
+- If the user has edited a name's spelling in the context (journal or \
+  quest log), that form takes precedence — it is the user's explicit \
+  decision, do not "correct" it.
+- For names NOT in the context (new NPCs, locations introduced this \
+  session), keep the transcript as-is, but NEVER fabricate a name from \
+  a doubtful fragment.
+
+PROHIBITION ON INVENTING SPELLS:
+- Only name a spell if it is EXPLICITLY and CORRECTLY named in the \
+  transcript (e.g., "Eldritch Blast", "Healing Word", "Fairy Fire").
+- If you observe an effect without an associated spell name (cold damage, \
+  healing, illusion, teleportation), use a NEUTRAL description: \
+  "a frost spell deals 13 damage", "a healing spell restores 8 HP", \
+  "an illusion of a bear is conjured".
+- FORBIDDEN: guessing or inventing a spell name from an effect \
+  (e.g., do not write "Fire Bolt", "Frostbite", "Sacred Flame", \
+  "Cycle of Flames" if these names are not in the transcript).
+- BEWARE OF DOUBTFUL FRAGMENTS: if the transcript contains an ambiguous \
+  fragment ("real frost", "cycle de flames", "sticking flame"), it is \
+  probably an STT artifact. DO NOT use it to name a spell. Describe \
+  the observed effect rather than extrapolating to an official name.
+
+DETECTING AND FILTERING STT ARTIFACTS:
+- The speech-to-text model regularly produces fragments that correspond \
+  to NOTHING in the D&D universe or in the CONTEXT. Identify and IGNORE \
+  them completely. Typical artifact indicators:
+    * Modern person names ("Jean-Yves Faugard", "Marc Smith")
+    * Modern places ("the police door", "the train station", "the office")
+    * Out-of-genre concepts ("dark connection", "podcast", "WhatsApp", \
+      "computer")
+    * Isolated foreign-language phrases unrelated to the scene \
+      ("It's a little bit", "I have two books", "Das ist viel besser")
+    * Words that match NO entity in the context AND fall outside the \
+      fantasy/medieval register
+- Decision rule: if a term has no counterpart in the CONTEXT and sounds \
+  modern/contemporary/out-of-genre, it is an artifact — OMIT IT.
+- DO NOT FABRICATE an NPC or location to integrate an artifact (names \
+  mentioned only once in sentences that make no narrative sense are \
+  likely out-of-game jokes or artifacts).
+
+META-DISCUSSIONS VS DIEGESIS:
+- Players constantly discuss OUT-OF-GAME: rules, dice rolls, \
+  2014 vs 2024 rules comparisons, jokes between players, pop-culture \
+  references, comments about the table, about the DM, about other \
+  players, real-life asides (drinks served, birthdays, etc.).
+- These META discussions are NEVER session events. Only include in the \
+  summary what happens IN FICTION (DM describes the scene, characters \
+  speak in-character, actions are taken in the game world).
+- Meta-discussion indicators: "the DM says", "it is one of the players", \
+  "the book says", "in the SRD", "Legacy vs 2024", "you can reroll", \
+  real player first names, mechanic discussions without corresponding \
+  action.
+
+PSEUDONYMS AND IN-CHARACTER DIALOGUE:
+- If a PC gives a name DIFFERENT from their canonical name during a \
+  dialogue with an NPC (RP pseudonym, lie), treat it as a circumstantial \
+  pseudonym — do NOT create a new character. Simply mention that the PC \
+  introduced themselves under that name.
+- If a player invokes a name from D&D literature or a saga (e.g., \
+  Wulfgar, Drizzt) in dialogue, it is generally an RP reference, NOT \
+  an encountered NPC. Do not include it as an NPC unless the scene \
+  context confirms a real encounter.
+
 CRUCIAL DISTINCTION — ACTIONS vs REFERENCES:
 - Players often discuss PAST events during sessions: \
   recaps, lore reminders, planning based on knowledge \
@@ -423,8 +495,25 @@ General rules:
   of accuracy. Style serves narration, not invention.
 - Keep ALL D&D terms in English (Hit Points, Armor Class, Saving Throw, \
   Spell Slot, Short Rest, Long Rest, etc.), as well as spell names.
-- Proper nouns (characters, places, creatures) remain as-is.
+- Proper nouns (characters, places, creatures) remain as-is, respecting \
+  the spelling of the REFERENCE CONTEXT when it exists (see section \
+  CANONICAL NAMES).
 - Ignore off-topic discussions unrelated to the campaign.
+
+MANDATORY COVERAGE AND CHRONOLOGICAL ORDER:
+- If the session contains multiple distinct scenes, trials, locations, \
+  or encounters, you MUST cover them ALL in the CHRONOLOGICAL order of \
+  the transcript (first narrative event encountered = first event in \
+  the summary). DO NOT omit a major scene even if briefly described.
+- Before writing, mentally identify the ordered list of \
+  scenes/locations/transitions, then ensure your summary covers each one \
+  in that order.
+- If you notice your summary jumps from scene A to scene C while \
+  skipping an intermediate scene B, fill it in. If you place a scene \
+  at the end while it appears in the middle of the transcript, move it \
+  to its correct position.
+- DO NOT GROUP events by theme (all combats together, all dialogues \
+  together) at the expense of chronology.
 
 Transcript quality:
 - The transcript comes from a speech-to-text model that may produce \
@@ -540,6 +629,22 @@ DISTINCTION ACTIONS vs REFERENCES:
   Only events that HAPPEN during the session count.
 - DO NOT draw conclusions from observations or player discussions. \
   Report ONLY raw facts, never deductions.
+
+FILTERING STT ARTIFACTS AND META-DISCUSSIONS:
+- COMPLETELY IGNORE any fragment that falls outside the fantasy/medieval \
+  register or does not integrate with the fiction:
+    * Modern names ("Jean-Yves Faugard", "Marc Smith")
+    * Modern places ("the police door", "the train station", "the office")
+    * Out-of-genre concepts ("dark connection", "podcast", "WhatsApp")
+    * Isolated foreign-language phrases ("It's a little bit", \
+      "I have two books")
+- IGNORE rules discussions (Legacy vs 2024, "you can reroll", mechanic \
+  comparisons), jokes between players, real-life references (drinks, \
+  birthdays, real player first names, "the DM says that").
+- For SPELLS: only keep a spell name if clearly and explicitly stated. \
+  If you read "real frost", "cycle de flames", "frostbite", treat it \
+  as an STT artifact — just describe the effect ("a frost spell deals \
+  13 damage").
 
 IMPORTANT:
 - Return ONLY raw narrative facts, in chronological order.

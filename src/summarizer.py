@@ -111,7 +111,7 @@ class SummarizerWorker(QObject):
     def run(self):
         """Execute summarization."""
         try:
-            from mistralai import Mistral
+            from mistralai.client import Mistral
 
             api_key = self._config.get("api_key", "")
             if not api_key:

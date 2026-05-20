@@ -2,7 +2,7 @@
 """PyInstaller spec for DnD Logger."""
 
 import sys
-from PyInstaller.utils.hooks import collect_all
+from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 block_cipher = None
 
@@ -14,6 +14,15 @@ webengine_core_datas, webengine_core_binaries, webengine_core_hiddenimports = co
     "PySide6.QtWebEngineCore"
 )
 edge_tts_datas, edge_tts_binaries, edge_tts_hiddenimports = collect_all("edge_tts")
+
+# Speakeasy-generated mistralai uses star imports in __init__.py, which PyInstaller's
+# modulegraph does not follow. Explicitly pull the SDK entry point plus every model
+# submodule so Mistral and the typed response models survive freezing.
+mistralai_hiddenimports = [
+    "mistralai",
+    "mistralai.sdk",
+    "mistralai.sdkconfiguration",
+] + collect_submodules("mistralai.models")
 
 a = Analysis(
     ["main.py"],
@@ -31,7 +40,6 @@ a = Analysis(
     hiddenimports=[
         "sounddevice",
         "soundfile",
-        "mistralai",
         "numpy",
         "requests",
         "googleapiclient",
@@ -52,7 +60,8 @@ a = Analysis(
     ]
     + webengine_hiddenimports
     + webengine_core_hiddenimports
-    + edge_tts_hiddenimports,
+    + edge_tts_hiddenimports
+    + mistralai_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

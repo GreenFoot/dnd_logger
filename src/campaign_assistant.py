@@ -71,7 +71,7 @@ class AssistantWorker(QObject):
     def run(self):
         """Execute the campaign assistant query."""
         try:
-            from mistralai import Mistral
+            from mistralai.client import Mistral
 
             api_key = self._config.get("api_key", "")
             if not api_key:

@@ -50,7 +50,7 @@ class QuestExtractorWorker(QObject):
     def run(self):
         """Call Mistral API to extract quest updates from the session summary."""
         try:
-            from mistralai import Mistral
+            from mistralai.client import Mistral
 
             api_key = self._config.get("api_key", "")
             if not api_key:

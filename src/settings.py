@@ -531,7 +531,7 @@ class SettingsDialog(QDialog):
             self.api_status.setStyleSheet("color: #ff6b6b;")
             return
         try:
-            from mistralai import Mistral
+            from mistralai.client import Mistral
 
             client = Mistral(api_key=key)
             client.models.list()

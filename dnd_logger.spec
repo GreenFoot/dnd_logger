@@ -15,14 +15,11 @@ webengine_core_datas, webengine_core_binaries, webengine_core_hiddenimports = co
 )
 edge_tts_datas, edge_tts_binaries, edge_tts_hiddenimports = collect_all("edge_tts")
 
-# Speakeasy-generated mistralai uses star imports in __init__.py, which PyInstaller's
-# modulegraph does not follow. Explicitly pull the SDK entry point plus every model
-# submodule so Mistral and the typed response models survive freezing.
-mistralai_hiddenimports = [
-    "mistralai",
-    "mistralai.sdk",
-    "mistralai.sdkconfiguration",
-] + collect_submodules("mistralai.models")
+# Speakeasy-generated mistralai uses star imports and importlib.import_module for
+# lazy attribute access, neither of which PyInstaller's modulegraph follows.
+# collect_submodules pulls every mistralai.* module name (no data files / metadata,
+# so it avoids the optional-dep breakage that collect_all caused in v1.3.1).
+mistralai_hiddenimports = collect_submodules("mistralai")
 
 a = Analysis(
     ["main.py"],

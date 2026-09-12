@@ -1,4 +1,4 @@
-"""AI quest extraction from session summaries via Mistral API."""
+"""AI quest extraction from session summaries via the configured AI backend."""
 
 import re
 
@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QTextEdit, QVBo
 
 from .diff_utils import apply_inline_diff, extract_html_without_deleted
 from .i18n import tr
-from .summarizer import _resolve_prompt
+from .summarizer import _resolve_prompt, build_backend
 
 
 def _get_extraction_prompt() -> str:
@@ -35,7 +35,7 @@ def _strip_model_artifacts(text: str) -> str:
 
 
 class QuestExtractorWorker(QObject):
-    """Extracts quest updates from a session summary via Mistral API."""
+    """Extracts quest updates from a session summary via the configured AI backend."""
 
     completed = Signal(str)  # quest update HTML
     error = Signal(str)
@@ -48,17 +48,13 @@ class QuestExtractorWorker(QObject):
         self._campaign_name = campaign_name
 
     def run(self):
-        """Call Mistral API to extract quest updates from the session summary."""
+        """Call the configured AI backend to extract quest updates from the session summary."""
         try:
-            from mistralai.client import Mistral
-
-            api_key = self._config.get("api_key", "")
-            if not api_key:
+            try:
+                backend = build_backend(self._config)
+            except RuntimeError:
                 self.error.emit(tr("quest_extractor.error.no_api_key"))
                 return
-
-            client = Mistral(api_key=api_key)
-            model = self._config.get("summary_model", "mistral-large-latest")
 
             extraction_template = self._config.get("prompt_quest_extraction") or _get_extraction_prompt()
             prompt = extraction_template.format(
@@ -67,14 +63,7 @@ class QuestExtractorWorker(QObject):
                 summary=self._summary,
             )
 
-            response = client.chat.complete(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.1,
-                max_tokens=16000,
-            )
-
-            result = _strip_model_artifacts(response.choices[0].message.content)
+            result = _strip_model_artifacts(backend.complete("", prompt, temperature=0.1, max_tokens=16000))
             self.completed.emit(result)
 
         except Exception as e:

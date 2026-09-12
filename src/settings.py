@@ -28,6 +28,7 @@ from .audio_recorder import AudioRecorder
 from .campaign_assistant import get_default_campaign_assistant
 from .filigree_overlay import GoldFiligreeOverlay
 from .i18n import set_language, tr
+from .mistral_compat import mistral_class
 from .quest_extractor import get_default_quest_extraction
 from .summarizer import (
     PROVIDER_CLAUDE_CLI,
@@ -618,9 +619,8 @@ class SettingsDialog(QDialog):
             self.api_status.setStyleSheet("color: #ff6b6b;")
             return
         try:
-            from mistralai.sdk import Mistral
-
-            client = Mistral(api_key=key)
+            mistral_cls = mistral_class()
+            client = mistral_cls(api_key=key)
             client.models.list()
             self.api_status.setText(tr("settings.api.test_success"))
             self.api_status.setStyleSheet("color: #7ec83a;")

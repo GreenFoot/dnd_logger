@@ -21,6 +21,7 @@ if hasattr(sys, "_MEIPASS"):
 
 def main():
     """Application entry point — logging, splash screen, main window."""
+    import faulthandler
     import logging
     import traceback
     from logging.handlers import RotatingFileHandler
@@ -32,6 +33,14 @@ def main():
     handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
     logging.basicConfig(level=logging.DEBUG, handlers=[handler])
     log = logging.getLogger("dndlogger")
+
+    # Under pythonw there is no console, so a native crash (a Qt abort, a segfault in
+    # an extension) would otherwise vanish without a trace. faulthandler writes the
+    # C+Python stack of every thread to this file instead.
+    crash_file = open(  # pylint: disable=consider-using-with
+        os.path.join(project_root(), "dnd_logger_crash.log"), "a", encoding="utf-8"
+    )
+    faulthandler.enable(file=crash_file, all_threads=True)
 
     def exception_hook(exc_type, exc_value, exc_tb):
         msg = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))

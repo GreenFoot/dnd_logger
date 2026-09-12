@@ -2,6 +2,7 @@
 
 import glob
 import json
+import logging
 import os
 import shutil
 import time
@@ -39,12 +40,18 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .audio_order_dialog import AudioOrderDialog
 from .audio_recorder import AudioRecorder
+from .freeze_watchdog import FreezeWatchdog
 from .i18n import tr
 from .quest_extractor import QuestProposalDialog, start_quest_extraction
 from .snow_particles import AuroraShimmerOverlay, SnowParticleOverlay
 from .summarizer import start_summarization
-from .transcriber import start_live_transcription, start_transcription
+from .transcriber import (
+    is_transcript_file,
+    start_live_transcription,
+    start_transcription,
+)
 from .utils import (
     active_campaign_name,
     ensure_dir,
@@ -52,6 +59,8 @@ from .utils import (
     format_file_size,
     sessions_dir,
 )
+
+log = logging.getLogger("dndlogger.session")
 
 
 class _ThinDivider(QWidget):
@@ -309,12 +318,20 @@ class SessionTab(QWidget):
         self._summary_worker = None
         self._quest_thread = None
         self._quest_worker = None
+        # (thread, worker) pairs kept alive until QThread.finished fires
+        self._active_threads = []
         self._current_wav_path = None
+        # Every audio file of the current session, in transcription order. Holds a single
+        # path for a recording, and one or more paths when audio files are imported.
+        self._audio_paths = []
+        self._import_folder = None  # session folder holding imported copies, if any
+        self._transcribing_file_label = ""  # "file 2/3" prefix while a batch is transcribed
         self._current_transcript = ""
         self._current_summary = ""
         self._elapsed = 0
         self._pulse_timer = None
         self._pulse_state = 0
+        self._freeze_watchdog = None
 
         # Bookmark state
         self._bookmarks = []  # list of {"timestamp": int, "label": str}
@@ -551,6 +568,10 @@ class SessionTab(QWidget):
         self._aurora_overlay = AuroraShimmerOverlay(self)
         self._aurora_overlay.hide()
 
+        # Watches the GUI thread for the whole of a recording — a freeze there is
+        # invisible to logging, because logging itself never gets to run.
+        self._freeze_watchdog = FreezeWatchdog(self)
+
         # Pulse glow timer for record button (slow breathing)
         self._pulse_timer = QTimer(self)
         self._pulse_timer.setInterval(1500)
@@ -586,6 +607,10 @@ class SessionTab(QWidget):
         self.btn_bookmark.setEnabled(True)
         self.btn_transcribe.setEnabled(False)
         self.transcript_display.clear()
+
+        # A new recording replaces any previously imported audio batch
+        self._audio_paths = []
+        self._import_folder = None
         self.status_label.setText(tr("session.status.recording"))
         self.status_label.setStyleSheet("color: #ff6b6b;")
 
@@ -600,6 +625,8 @@ class SessionTab(QWidget):
         self._live_tx_pending = False
         self._stop_after_current = False
         self._is_final_live_chunk = False
+
+        self._freeze_watchdog.start("recording")
 
         # Start recording atmosphere
         self._pulse_state = 0
@@ -651,9 +678,12 @@ class SessionTab(QWidget):
         self._bookmark_input.hide()
         self.vu_meter.setValue(0)
         self._current_wav_path = wav_path
+        self._audio_paths = [wav_path]
 
         # Save bookmarks
         self._save_bookmarks()
+
+        self._freeze_watchdog.stop()
 
         # Stop recording atmosphere
         self._pulse_timer.stop()
@@ -699,53 +729,113 @@ class SessionTab(QWidget):
         self.btn_record.setStyleSheet(f"QPushButton#{obj} {{ border: 2px solid {color}; }}")
 
     def _import_audio(self):
-        """Import an existing audio file for transcription."""
-        file_path, _ = QFileDialog.getOpenFileName(
+        """Import one or more existing audio files for transcription."""
+        file_paths, _ = QFileDialog.getOpenFileNames(
             self,
             tr("session.dialog.import_title"),
             "",
             tr("session.dialog.import_filter"),
         )
-        if file_path:
-            self._import_audio_from_path(file_path)
+        if file_paths:
+            self._import_audio_from_paths(file_paths)
 
     def _import_audio_from_path(self, file_path):
-        """Import an audio file from the given path. Used by both file dialog and drag-and-drop."""
-        # Create a session folder and copy the file there
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        session_folder = os.path.join(sessions_dir(self._config), f"session_{ts}_import")
-        ensure_dir(session_folder)
+        """Import a single audio file from the given path."""
+        self._import_audio_from_paths([file_path])
 
-        dest_name = os.path.basename(file_path)
-        dest_path = os.path.join(session_folder, dest_name)
-        try:
-            shutil.copy2(file_path, dest_path)
-        except OSError as e:
-            self._on_error(tr("session.error.copy_failed", error=e))
+    def _import_audio_from_paths(self, file_paths):
+        """Import audio files, letting the user set their order when there are several.
+
+        Files already imported for the current session are kept and offered in the
+        ordering dialog, so audio can be added in several passes. All files end up in
+        the same session folder and are transcribed back to back in the listed order.
+
+        Args:
+            file_paths: Newly picked or dropped audio file paths.
+        """
+        candidates = list(self._audio_paths) if self._import_folder else []
+        candidates += [p for p in file_paths if p not in candidates]
+
+        if len(candidates) > 1:
+            dlg = AudioOrderDialog(candidates, self)
+            if dlg.exec() != QDialog.DialogCode.Accepted:
+                return
+            candidates = dlg.ordered_paths()
+        if not candidates:
             return
 
-        self._current_wav_path = dest_path
+        # Reuse the import folder when adding to an existing import, else create one
+        session_folder = self._import_folder
+        if not session_folder:
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            session_folder = os.path.join(sessions_dir(self._config), f"session_{ts}_import")
+        ensure_dir(session_folder)
+
+        dest_paths = []
+        for src in candidates:
+            if os.path.dirname(os.path.abspath(src)) == os.path.abspath(session_folder):
+                dest_paths.append(src)  # already imported
+                continue
+            dest_path = self._unique_dest(session_folder, os.path.basename(src))
+            try:
+                shutil.copy2(src, dest_path)
+            except OSError as e:
+                self._on_error(tr("session.error.copy_failed", error=e))
+                return
+            dest_paths.append(dest_path)
+
+        self._import_folder = session_folder
+        self._audio_paths = dest_paths
+        # Bookmarks, "save audio" and FLAC cleanup only make sense for real audio
+        self._current_wav_path = next((p for p in dest_paths if not is_transcript_file(p)), None)
         self._update_action_button()
         self.btn_transcribe.setEnabled(True)
-        self._act_save_audio.setEnabled(True)
+        self._act_save_audio.setEnabled(self._current_wav_path is not None)
 
-        size = os.path.getsize(dest_path)
-        self.status_label.setText(tr("session.status.imported", name=dest_name, size=format_file_size(size)))
+        total_size = sum(os.path.getsize(p) for p in dest_paths if os.path.exists(p))
+        if len(dest_paths) == 1:
+            key = (
+                "session.status.imported_transcript" if is_transcript_file(dest_paths[0]) else "session.status.imported"
+            )
+            self.status_label.setText(tr(key, name=os.path.basename(dest_paths[0]), size=format_file_size(total_size)))
+        else:
+            self.status_label.setText(
+                tr("session.status.imported_multi", count=len(dest_paths), size=format_file_size(total_size))
+            )
         self.status_label.setStyleSheet("color: #7ec8e3;")
+
+    @staticmethod
+    def _unique_dest(folder, name):
+        """Return a path in folder for name, suffixed if a different file already uses it."""
+        dest = os.path.join(folder, name)
+        # transcript.txt is where the combined transcript is written — never import onto it
+        if not os.path.exists(dest) and name.lower() != "transcript.txt":
+            return dest
+        stem, ext = os.path.splitext(name)
+        i = 2
+        while os.path.exists(os.path.join(folder, f"{stem}_{i}{ext}")):
+            i += 1
+        return os.path.join(folder, f"{stem}_{i}{ext}")
 
     # --- Drag-and-Drop Audio Import ---
 
-    _AUDIO_EXTENSIONS = {".flac", ".wav", ".mp3", ".ogg", ".m4a"}
+    _AUDIO_EXTENSIONS = {".flac", ".wav", ".mp3", ".ogg", ".m4a", ".wma"}
+    _TRANSCRIPT_EXTENSIONS = {".txt", ".md", ".text"}
 
     def _is_audio_file(self, path):
         """Return True if path has a supported audio extension."""
         return os.path.splitext(path)[1].lower() in self._AUDIO_EXTENSIONS
 
+    def _is_importable_file(self, path):
+        """Return True if path is an audio file or an already-written transcript."""
+        ext = os.path.splitext(path)[1].lower()
+        return ext in self._AUDIO_EXTENSIONS or ext in self._TRANSCRIPT_EXTENSIONS
+
     def dragEnterEvent(self, event):
         """Accept drag if it contains audio file URLs."""
         if event.mimeData().hasUrls():
             urls = event.mimeData().urls()
-            if any(self._is_audio_file(url.toLocalFile()) for url in urls):
+            if any(self._is_importable_file(url.toLocalFile()) for url in urls):
                 event.acceptProposedAction()
                 self._show_drop_indicator()
                 return
@@ -756,19 +846,21 @@ class SessionTab(QWidget):
         self._hide_drop_indicator()
 
     def dropEvent(self, event):
-        """Import the first valid audio file from the drop."""
+        """Import every valid audio or transcript file from the drop."""
         self._hide_drop_indicator()
         if self._recorder.is_recording:
             self.status_label.setText(tr("session.error.drop_while_recording"))
             self.status_label.setStyleSheet("color: #ff6b6b;")
             event.ignore()
             return
-        urls = event.mimeData().urls()
-        for url in urls:
-            path = url.toLocalFile()
-            if self._is_audio_file(path):
-                self._import_audio_from_path(path)
-                break  # only import first valid file
+        # Drop order is not guaranteed by the OS — sort by name; the ordering dialog
+        # shown for multiple files lets the user fix it.
+        paths = sorted(
+            (url.toLocalFile() for url in event.mimeData().urls() if self._is_importable_file(url.toLocalFile())),
+            key=lambda p: os.path.basename(p).lower(),
+        )
+        if paths:
+            self._import_audio_from_paths(paths)
 
     def _show_drop_indicator(self):
         """Show the drop zone overlay."""
@@ -893,22 +985,59 @@ class SessionTab(QWidget):
     # --- Transcription ---
 
     def _start_transcription(self):
-        wav_path = self._current_wav_path or self._recorder.wav_path
-        if not wav_path or not os.path.exists(wav_path):
-            self._on_error(tr("session.error.no_audio"))
-            return
+        paths = [p for p in self._audio_paths if os.path.exists(p)]
+        if not paths:
+            wav_path = self._current_wav_path or self._recorder.wav_path
+            if not wav_path or not os.path.exists(wav_path):
+                self._on_error(tr("session.error.no_audio"))
+                return
+            paths = [wav_path]
 
         self.status_label.setText(tr("session.status.transcribing"))
         self.status_label.setStyleSheet("color: #d4af37;")
         self.btn_transcribe.setEnabled(False)
         self.transcript_display.clear()
+        self._transcribing_file_label = ""
+        self._freeze_watchdog.start("transcription")
 
-        self._transcription_thread, self._transcription_worker = start_transcription(wav_path, self._config)
+        self._transcription_thread, self._transcription_worker = start_transcription(paths, self._config)
+        self._transcription_worker.file_started.connect(self._on_transcription_file_started)
         self._transcription_worker.progress.connect(self._on_transcription_progress)
         self._transcription_worker.chunk_completed.connect(self._on_chunk_completed)
         self._transcription_worker.completed.connect(self._on_transcription_done)
         self._transcription_worker.error.connect(self._on_error)
+        self._track_thread(self._transcription_thread, self._transcription_worker)
         self._transcription_thread.start()
+
+    # --- Stall watchdog ---
+
+    # --- Worker thread lifetime ---
+
+    def _track_thread(self, thread, worker):
+        """Keep a worker thread and its worker alive until the thread has stopped.
+
+        A QThread held only by an attribute is destroyed as soon as that attribute
+        is rebound for the next run. When the previous thread has not finished yet,
+        Qt aborts the whole process, which is what froze the app on the second live
+        transcription chunk. Holding the pair in a list and dropping it from
+        QThread.finished (delivered on the main thread) makes the lifetime explicit.
+
+        Args:
+            thread: The QThread to track.
+            worker: The worker object living in that thread.
+        """
+        entry = (thread, worker)
+        self._active_threads.append(entry)
+        thread.finished.connect(lambda e=entry: self._retire_thread(e))
+
+    def _retire_thread(self, entry):
+        """Drop a finished thread/worker pair once the thread has fully stopped."""
+        thread, _worker = entry
+        thread.wait()  # safe: called from the main thread on an already-finished thread
+        try:
+            self._active_threads.remove(entry)
+        except ValueError:
+            pass
 
     # --- Live transcription (during recording) ---
 
@@ -922,17 +1051,18 @@ class SessionTab(QWidget):
         if now - self._last_live_transcription < 60:
             return  # respect 60s cooldown
 
-        flac_path = self._recorder.flush_pending_audio()
-        if not flac_path:
+        pending = self._recorder.take_pending_audio()
+        if not pending:
             return
 
         self._last_live_transcription = now
         self._live_tx_pending = True
         self._is_final_live_chunk = False
 
-        self._live_tx_thread, self._live_tx_worker = start_live_transcription(flac_path, self._config)
+        self._live_tx_thread, self._live_tx_worker = start_live_transcription(pending, self._config)
         self._live_tx_worker.completed.connect(self._on_live_tx_done)
         self._live_tx_worker.error.connect(self._on_live_tx_error)
+        self._track_thread(self._live_tx_thread, self._live_tx_worker)
         self._live_tx_thread.start()
 
         count = len(self._live_transcript_parts) + 1
@@ -941,7 +1071,7 @@ class SessionTab(QWidget):
 
     def _do_final_live_transcription(self):
         """Transcribe remaining audio after recording stopped."""
-        remaining = self._recorder.flush_pending_audio()
+        remaining = self._recorder.take_pending_audio()
         if remaining:
             self._is_final_live_chunk = True
             self._live_tx_pending = True
@@ -949,6 +1079,7 @@ class SessionTab(QWidget):
             self._live_tx_thread, self._live_tx_worker = start_live_transcription(remaining, self._config)
             self._live_tx_worker.completed.connect(self._on_live_tx_done)
             self._live_tx_worker.error.connect(self._on_live_tx_error)
+            self._track_thread(self._live_tx_thread, self._live_tx_worker)
             self._live_tx_thread.start()
         else:
             self._finalize_live_transcription()
@@ -1013,13 +1144,26 @@ class SessionTab(QWidget):
 
     # --- Batch transcription (post-recording) ---
 
+    def _on_transcription_file_started(self, index: int, count: int, name: str):
+        """Remember which file of the batch is being transcribed, for the status line."""
+        log.info("[ui] file_started %d/%d %s", index, count, name)
+        self._transcribing_file_label = tr("session.status.transcribing_file", index=index, count=count, name=name)
+        self.status_label.setText(self._transcribing_file_label)
+
     def _on_transcription_progress(self, current: int, total: int):
-        self.status_label.setText(tr("session.status.transcribing_chunk", current=current, total=total))
+        text = tr("session.status.transcribing_chunk", current=current, total=total)
+        if self._transcribing_file_label:
+            text = f"{self._transcribing_file_label} — {text}"
+        self.status_label.setText(text)
 
     def _on_chunk_completed(self, index: int, text: str):
+        log.info("[ui] chunk_completed idx=%d, %d chars", index, len(text))
         self.transcript_display.append(text)
+        log.info("[ui] chunk %d appended", index)
 
     def _on_transcription_done(self, full_text: str):
+        log.info("[ui] transcription_done, %d chars", len(full_text))
+        self._freeze_watchdog.stop()
         full_text = self._inject_bookmarks_proportional(full_text)
         self._current_transcript = full_text
         self.transcript_display.setPlainText(full_text)
@@ -1058,6 +1202,7 @@ class SessionTab(QWidget):
         )
         self._summary_worker.completed.connect(self._on_summary_done)
         self._summary_worker.error.connect(self._on_error)
+        self._track_thread(self._summary_thread, self._summary_worker)
         self._summary_thread.start()
 
     def _on_summary_done(self, summary_html: str):
@@ -1118,6 +1263,7 @@ class SessionTab(QWidget):
         )
         self._quest_worker.completed.connect(self._on_quest_extraction_done)
         self._quest_worker.error.connect(self._on_error)
+        self._track_thread(self._quest_thread, self._quest_worker)
         self._quest_thread.start()
 
     def _on_quest_extraction_done(self, proposed_html: str):
@@ -1274,9 +1420,10 @@ class SessionTab(QWidget):
         self.btn_stop.setEnabled(False)
         self.btn_bookmark.setEnabled(False)
         self._bookmark_input.hide()
+        self._freeze_watchdog.stop()
         has_audio = bool(self._current_wav_path or self._recorder.wav_path)
         self._update_action_button()
-        self.btn_transcribe.setEnabled(has_audio or bool(self._current_transcript))
+        self.btn_transcribe.setEnabled(has_audio or bool(self._audio_paths) or bool(self._current_transcript))
         self._act_save_audio.setEnabled(has_audio)
         self.btn_update_quests.setEnabled(bool(self._current_summary))
         self.operation_failed.emit()
@@ -1287,6 +1434,8 @@ class SessionTab(QWidget):
         self._cleanup_flac_files()
 
         # Stop recording effects
+        if self._freeze_watchdog:
+            self._freeze_watchdog.stop()
         if self._pulse_timer:
             self._pulse_timer.stop()
         if self._snow_overlay:
@@ -1311,10 +1460,15 @@ class SessionTab(QWidget):
     def _cleanup_flac_files(self):
         """Remove temporary FLAC files from the current session directory."""
         wav_path = self._current_wav_path or getattr(self._recorder, "wav_path", None)
-        if not wav_path:
+        session_dir = os.path.dirname(wav_path) if wav_path else self._import_folder
+        if not session_dir:
             return
-        session_dir = os.path.dirname(wav_path)
+        sources = {os.path.abspath(p) for p in self._audio_paths}
+        if wav_path:
+            sources.add(os.path.abspath(wav_path))
         for flac_file in glob.glob(os.path.join(session_dir, "*.flac")):
+            if os.path.abspath(flac_file) in sources:
+                continue  # an imported FLAC is the source audio, not a temporary chunk
             try:
                 os.remove(flac_file)
             except OSError:

@@ -92,6 +92,8 @@ class CampaignAssistantDialog(QDialog):
         self._config = config
         self._thread = None
         self._worker = None
+        # (thread, worker) pairs kept alive until QThread.finished fires
+        self._active_threads = []
         self.setWindowTitle(tr("assistant.dialog.title"))
         self.setMinimumSize(600, 400)
         self._build_ui()
@@ -149,7 +151,22 @@ class CampaignAssistantDialog(QDialog):
         self._worker.error.connect(self._on_error)
         self._worker.answer_ready.connect(self._thread.quit)
         self._worker.error.connect(self._thread.quit)
+        # Keep the pair referenced: rebinding the attributes on the next question
+        # would otherwise destroy a QThread that has not finished yet, which aborts
+        # the process.
+        entry = (self._thread, self._worker)
+        self._active_threads.append(entry)
+        self._thread.finished.connect(lambda e=entry: self._retire_thread(e))
         self._thread.start()
+
+    def _retire_thread(self, entry):
+        """Drop a finished thread/worker pair once the thread has fully stopped."""
+        thread, _worker = entry
+        thread.wait()
+        try:
+            self._active_threads.remove(entry)
+        except ValueError:
+            pass
 
     def _on_answer(self, answer: str):
         self._answer.setHtml(answer)

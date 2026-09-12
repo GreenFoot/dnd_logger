@@ -201,24 +201,29 @@ class AudioRecorder(QObject):
         self.recording_stopped.emit(path)
         return path
 
-    def flush_pending_audio(self) -> str | None:
-        """Write accumulated pending audio to a temp FLAC file.
+    def take_pending_audio(self) -> tuple | None:
+        """Detach the pending live-transcription buffer without encoding it.
 
-        Returns the FLAC file path, or None if no pending audio.
+        Only the buffer hand-off happens here, because this runs on the GUI thread.
+        Concatenating and FLAC-encoding the samples is left to the caller's worker
+        thread: the buffer keeps growing for as long as a live chunk is in flight,
+        so encoding it here would block the UI for longer the slower the API gets.
+
+        Returns:
+            A ``(blocks, samplerate, flac_path)`` triple to hand to a worker, or
+            None when no audio is pending.
         """
         with self._pending_lock:
             if not self._pending_audio:
                 return None
-            audio_data = np.concatenate(self._pending_audio)
-            self._pending_audio.clear()
+            blocks = self._pending_audio
+            self._pending_audio = []
             self._pending_samples = 0
 
         sr = self._config.get("sample_rate", 16000)
         session_dir = os.path.dirname(self._wav_path)
         ts = datetime.now().strftime("%H%M%S_%f")
-        flac_path = os.path.join(session_dir, f"live_chunk_{ts}.flac")
-        sf.write(flac_path, audio_data, sr, format="FLAC")
-        return flac_path
+        return blocks, sr, os.path.join(session_dir, f"live_chunk_{ts}.flac")
 
     def _audio_callback(self, indata, frames, time_info, status):
         """Called by PortAudio in its own thread — just enqueue data."""

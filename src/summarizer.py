@@ -8,6 +8,7 @@ from PySide6.QtCore import QObject, QThread, Signal
 
 from . import claude_cli
 from .i18n import tr
+from .mistral_compat import mistral_class
 
 log = logging.getLogger(__name__)
 
@@ -107,9 +108,8 @@ class _MistralBackend:
     """Chat completions through the Mistral API."""
 
     def __init__(self, api_key: str, model: str):
-        from mistralai.sdk import Mistral
-
-        self._client = Mistral(api_key=api_key)
+        mistral_cls = mistral_class()
+        self._client = mistral_cls(api_key=api_key)
         self._model = model
 
     def complete(self, system_prompt: str, user_prompt: str, temperature: float, max_tokens: int) -> str:

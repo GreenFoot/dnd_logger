@@ -22,6 +22,11 @@ _FALLBACK_MODELS = list(_ALIASES)
 
 _CLI_TIMEOUT = 900  # seconds — summaries of long transcripts can take a while
 
+# Windows caps a whole command line at 32767 characters; a system prompt that
+# embeds the quest log and journal blows past that and CreateProcess fails with
+# WinError 206. Anything longer than this goes in on stdin instead.
+_MAX_SYSTEM_PROMPT_ARG = 2000
+
 _cached_path: str | None = None
 _path_resolved = False
 
@@ -148,7 +153,8 @@ def complete(prompt: str, system_prompt: str = "", model: str = "", timeout: int
     """Run a one-shot prompt through the Claude CLI and return its answer.
 
     The prompt is passed on stdin so transcript-sized inputs do not hit the
-    Windows command-line length limit. Tools and MCP servers are disabled so the
+    Windows command-line length limit; a long system prompt is folded into that
+    stdin payload for the same reason. Tools and MCP servers are disabled so the
     CLI behaves like a plain chat completion.
 
     Args:
@@ -171,7 +177,10 @@ def complete(prompt: str, system_prompt: str = "", model: str = "", timeout: int
     if model:
         cmd += ["--model", model]
     if system_prompt:
-        cmd += ["--system-prompt", system_prompt]
+        if len(system_prompt) <= _MAX_SYSTEM_PROMPT_ARG:
+            cmd += ["--system-prompt", system_prompt]
+        else:
+            prompt = system_prompt + "\n\n---\n\n" + prompt
 
     try:
         result = subprocess.run(

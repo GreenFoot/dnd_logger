@@ -1,7 +1,6 @@
-"""Campaign Assistant — AI-powered Q&A about the campaign using Mistral."""
+"""Campaign Assistant — AI-powered Q&A about the campaign via the configured AI backend."""
 
 import re
-import time
 
 from PySide6.QtCore import QObject, QThread, Signal
 from PySide6.QtWidgets import (
@@ -16,7 +15,7 @@ from PySide6.QtWidgets import (
 
 from .filigree_overlay import GoldFiligreeOverlay
 from .i18n import tr
-from .summarizer import _strip_code_fences
+from .summarizer import _strip_code_fences, build_backend
 
 
 def _strip_html(html: str) -> str:
@@ -43,18 +42,6 @@ def get_default_campaign_assistant() -> str:
     return _get_default_system_prompt()
 
 
-def _call_with_retry(fn, retries=3, base_delay=15):
-    """Call fn() with retry and exponential backoff on 429 rate limit."""
-    for attempt in range(retries):
-        try:
-            return fn()
-        except Exception as e:
-            if "429" in str(e) and attempt < retries - 1:
-                time.sleep(base_delay * (2**attempt))
-                continue
-            raise
-
-
 class AssistantWorker(QObject):
     """Runs the AI query in a background thread."""
 
@@ -71,15 +58,11 @@ class AssistantWorker(QObject):
     def run(self):
         """Execute the campaign assistant query."""
         try:
-            from mistralai.client import Mistral
-
-            api_key = self._config.get("api_key", "")
-            if not api_key:
+            try:
+                backend = build_backend(self._config)
+            except RuntimeError:
                 self.error.emit(tr("assistant.error.no_api_key"))
                 return
-
-            client = Mistral(api_key=api_key)
-            model = self._config.get("summary_model", "mistral-large-latest")
 
             journal_text = _strip_html(self._journal_html)
             quest_log_text = _strip_html(self._quest_log_html)
@@ -91,19 +74,7 @@ class AssistantWorker(QObject):
                 journal_text=journal_text,
             )
 
-            response = _call_with_retry(
-                lambda: client.chat.complete(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": self._question},
-                    ],
-                    temperature=0.2,
-                    max_tokens=4000,
-                )
-            )
-
-            answer = response.choices[0].message.content
+            answer = backend.complete(system_prompt, self._question, temperature=0.2, max_tokens=4000)
             answer = _strip_code_fences(answer)
             self.answer_ready.emit(answer)
 

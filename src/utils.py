@@ -31,6 +31,10 @@ _DEFAULT_CONFIG = {
     "chunk_duration_minutes": 60,
     "transcription_model": "voxtral-mini-latest",
     "summary_model": "mistral-large-latest",
+    # Summarization backend: "mistral" or "claude_cli". Personal (not shared):
+    # the Claude CLI is a per-machine install, other players may not have it.
+    "summary_provider": "mistral",
+    "claude_model": "",
     "language": "en",
     "diarize": False,
     "last_browser_url": "https://www.dndbeyond.com",

@@ -1,11 +1,18 @@
-"""Summarization via Mistral chat API with epic fantasy style."""
+"""Summarization with epic fantasy style, via the Mistral chat API or the Claude CLI."""
 
+import logging
 import re
 import time
 
 from PySide6.QtCore import QObject, QThread, Signal
 
+from . import claude_cli
 from .i18n import tr
+
+log = logging.getLogger(__name__)
+
+PROVIDER_MISTRAL = "mistral"
+PROVIDER_CLAUDE_CLI = "claude_cli"
 
 
 def _strip_code_fences(text: str) -> str:
@@ -96,8 +103,69 @@ def _call_with_retry(fn, retries=3, base_delay=15):
             raise
 
 
+class _MistralBackend:
+    """Chat completions through the Mistral API."""
+
+    def __init__(self, api_key: str, model: str):
+        from mistralai.sdk import Mistral
+
+        self._client = Mistral(api_key=api_key)
+        self._model = model
+
+    def complete(self, system_prompt: str, user_prompt: str, temperature: float, max_tokens: int) -> str:
+        """Return the model's answer for the given prompts."""
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": user_prompt})
+        response = _call_with_retry(
+            lambda: self._client.chat.complete(
+                model=self._model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        )
+        return response.choices[0].message.content
+
+
+class _ClaudeCliBackend:
+    """Chat completions through a locally installed Claude CLI."""
+
+    def __init__(self, model: str):
+        self._model = model
+
+    def complete(self, system_prompt: str, user_prompt: str, temperature: float, max_tokens: int) -> str:
+        """Return the model's answer for the given prompts.
+
+        The CLI exposes no temperature or token-budget knobs, so those arguments
+        are accepted for interface parity and ignored.
+        """
+        return claude_cli.complete(user_prompt, system_prompt=system_prompt, model=self._model)
+
+
+def build_backend(config: dict):
+    """Create the summarization backend selected in config.
+
+    Falls back to Mistral when the Claude CLI is selected but not installed.
+
+    Raises:
+        RuntimeError: If no backend can be built (e.g. no Mistral API key).
+    """
+    provider = config.get("summary_provider", PROVIDER_MISTRAL)
+    if provider == PROVIDER_CLAUDE_CLI:
+        if claude_cli.is_available(refresh=True):
+            return _ClaudeCliBackend(config.get("claude_model", ""))
+        log.warning("Claude CLI not found, falling back to the Mistral API for summarization")
+
+    api_key = config.get("api_key", "")
+    if not api_key:
+        raise RuntimeError(tr("summarizer.error.no_api_key"))
+    return _MistralBackend(api_key, config.get("summary_model", "mistral-large-latest"))
+
+
 class SummarizerWorker(QObject):
-    """Runs summarization in a QThread via Mistral chat API."""
+    """Runs summarization in a QThread via the configured AI backend."""
 
     completed = Signal(str)  # summary HTML
     error = Signal(str)
@@ -111,21 +179,17 @@ class SummarizerWorker(QObject):
     def run(self):
         """Execute summarization."""
         try:
-            from mistralai.client import Mistral
-
-            api_key = self._config.get("api_key", "")
-            if not api_key:
-                self.error.emit(tr("summarizer.error.no_api_key"))
+            try:
+                backend = build_backend(self._config)
+            except RuntimeError as e:
+                self.error.emit(str(e))
                 return
-
-            client = Mistral(api_key=api_key)
-            model = self._config.get("summary_model", "mistral-large-latest")
 
             transcript = self._transcript
 
             # Two-stage: condense first if very long
             if len(transcript) > 28000:
-                transcript = self._condense(client, model, transcript)
+                transcript = self._condense(backend, transcript)
 
             user_template = _get_user_template()
             user_msg = user_template.format(
@@ -135,19 +199,7 @@ class SummarizerWorker(QObject):
 
             system_prompt = self._config.get("prompt_summary_system") or _get_system_prompt()
 
-            response = _call_with_retry(
-                lambda: client.chat.complete(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_msg},
-                    ],
-                    temperature=0.2,
-                    max_tokens=8000,
-                )
-            )
-
-            summary = response.choices[0].message.content
+            summary = backend.complete(system_prompt, user_msg, temperature=0.2, max_tokens=8000)
             # Strip markdown code fences the model sometimes wraps around HTML
             summary = _strip_code_fences(summary)
             self.completed.emit(summary)
@@ -157,22 +209,14 @@ class SummarizerWorker(QObject):
 
     _CHUNK_SIZE = 40_000  # chars per condensation chunk
 
-    def _condense(self, client, model: str, text: str) -> str:
+    def _condense(self, backend, text: str) -> str:
         """Condense a long transcript in chunks before final summarization."""
         condense_template = self._config.get("prompt_condense") or _get_condense_prompt()
         chunks = [text[i : i + self._CHUNK_SIZE] for i in range(0, len(text), self._CHUNK_SIZE)]
         condensed_parts = []
         for chunk in chunks:
             prompt = condense_template.format(text=chunk)
-            response = _call_with_retry(
-                lambda: client.chat.complete(
-                    model=model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.0,
-                    max_tokens=12000,
-                )
-            )
-            condensed_parts.append(response.choices[0].message.content)
+            condensed_parts.append(backend.complete("", prompt, temperature=0.0, max_tokens=12000))
         return "\n\n".join(condensed_parts)
 
 

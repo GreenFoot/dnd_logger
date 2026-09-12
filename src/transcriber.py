@@ -138,7 +138,7 @@ class TranscriptionWorker(QObject):
     def run(self):
         """Execute transcription pipeline."""
         try:
-            from mistralai.client import Mistral
+            from mistralai.sdk import Mistral
 
             api_key = self._config.get("api_key", "")
             if not api_key:
@@ -186,7 +186,7 @@ class LiveTranscriptionWorker(QObject):
     def run(self):
         """Transcribe a single audio chunk and emit the result."""
         try:
-            from mistralai.client import Mistral
+            from mistralai.sdk import Mistral
 
             api_key = self._config.get("api_key", "")
             if not api_key:

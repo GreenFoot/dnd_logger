@@ -22,13 +22,19 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from . import claude_cli
 from . import themed_dialogs as dlg
 from .audio_recorder import AudioRecorder
 from .campaign_assistant import get_default_campaign_assistant
 from .filigree_overlay import GoldFiligreeOverlay
 from .i18n import set_language, tr
 from .quest_extractor import get_default_quest_extraction
-from .summarizer import get_default_condense, get_default_summary_system
+from .summarizer import (
+    PROVIDER_CLAUDE_CLI,
+    PROVIDER_MISTRAL,
+    get_default_condense,
+    get_default_summary_system,
+)
 from .utils import (
     active_campaign_name,
     campaign_drive_config,
@@ -60,9 +66,13 @@ class SettingsDialog(QDialog):
 
         self.tabs = QTabWidget()
 
-        # === API Tab ===
-        api_tab = QWidget()
-        api_layout = QFormLayout(api_tab)
+        # === AI Tab ===
+        ai_tab = QWidget()
+        ai_layout = QVBoxLayout(ai_tab)
+
+        # Mistral group — the API key is always required (transcription)
+        mistral_group = QGroupBox(tr("settings.ai.mistral_group"))
+        api_layout = QFormLayout(mistral_group)
 
         self.api_key_edit = QLineEdit()
         self.api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
@@ -77,11 +87,45 @@ class SettingsDialog(QDialog):
         self.api_status = QLabel("")
         api_layout.addRow("", self.api_status)
 
+        # Also used for quest extraction and the campaign assistant
         self.summary_model_edit = QLineEdit()
         self.summary_model_edit.setPlaceholderText("mistral-large-latest")
-        api_layout.addRow(tr("settings.api.model_label"), self.summary_model_edit)
+        api_layout.addRow(tr("settings.ai.mistral_model_label"), self.summary_model_edit)
 
-        self.tabs.addTab(api_tab, tr("settings.tab.api"))
+        transcription_note = QLabel(tr("settings.ai.transcription_note"))
+        transcription_note.setStyleSheet("color: #8899aa; font-size: 11px;")
+        transcription_note.setWordWrap(True)
+        api_layout.addRow("", transcription_note)
+
+        ai_layout.addWidget(mistral_group)
+
+        # Summary generation group — pick the backend used for the epic summary
+        summary_group = QGroupBox(tr("settings.ai.summary_group"))
+        summary_layout = QFormLayout(summary_group)
+
+        self.provider_combo = QComboBox()
+        self.provider_combo.addItem(tr("settings.ai.provider_mistral"), PROVIDER_MISTRAL)
+        self.provider_combo.addItem(tr("settings.ai.provider_claude"), PROVIDER_CLAUDE_CLI)
+        self.provider_combo.currentIndexChanged.connect(self._on_provider_changed)
+        summary_layout.addRow(tr("settings.ai.provider_label"), self.provider_combo)
+
+        claude_row = QHBoxLayout()
+        self.claude_model_combo = QComboBox()
+        self.btn_refresh_claude = QPushButton(tr("settings.ai.btn_refresh_models"))
+        self.btn_refresh_claude.clicked.connect(self._refresh_claude_models)
+        claude_row.addWidget(self.claude_model_combo, stretch=1)
+        claude_row.addWidget(self.btn_refresh_claude)
+        summary_layout.addRow(tr("settings.ai.claude_model_label"), claude_row)
+
+        self.claude_status = QLabel("")
+        self.claude_status.setWordWrap(True)
+        self.claude_status.setStyleSheet("font-size: 11px;")
+        summary_layout.addRow("", self.claude_status)
+
+        ai_layout.addWidget(summary_group)
+        ai_layout.addStretch()
+
+        self.tabs.addTab(ai_tab, tr("settings.tab.ai"))
 
         # === Audio Tab ===
         audio_tab = QWidget()
@@ -239,9 +283,8 @@ class SettingsDialog(QDialog):
         self.drive_folder_id_label.setReadOnly(True)
         self.drive_folder_id_label.setPlaceholderText(tr("settings.drive.no_folder"))
         self.btn_copy_folder_id = QPushButton(tr("settings.drive.btn_copy"))
-        self.btn_copy_folder_id.setFixedWidth(100)
         self.btn_copy_folder_id.clicked.connect(self._copy_folder_id)
-        folder_row.addWidget(self.drive_folder_id_label)
+        folder_row.addWidget(self.drive_folder_id_label, stretch=1)
         folder_row.addWidget(self.btn_copy_folder_id)
         campaign_form.addRow(tr("settings.drive.folder_id_label"), folder_row)
 
@@ -267,6 +310,13 @@ class SettingsDialog(QDialog):
         """Fill fields from config."""
         self.api_key_edit.setText(self._config.get("api_key", ""))
         self.summary_model_edit.setText(self._config.get("summary_model", "mistral-large-latest"))
+
+        # Summary backend
+        provider = self._config.get("summary_provider", PROVIDER_MISTRAL)
+        provider_idx = self.provider_combo.findData(provider)
+        self.provider_combo.setCurrentIndex(provider_idx if provider_idx >= 0 else 0)
+        self._refresh_claude_models()
+        self._on_provider_changed()
 
         # Device
         dev = self._config.get("audio_device")
@@ -312,6 +362,8 @@ class SettingsDialog(QDialog):
         """Save settings to config and close."""
         self._config["api_key"] = self.api_key_edit.text().strip()
         self._config["summary_model"] = self.summary_model_edit.text().strip() or "mistral-large-latest"
+        self._config["summary_provider"] = self.provider_combo.currentData()
+        self._config["claude_model"] = self.claude_model_combo.currentData() or ""
         self._config["audio_device"] = self.device_combo.currentData()
         self._config["sample_rate"] = self.sample_rate_spin.value()
         self._config["chunk_duration_minutes"] = self.chunk_spin.value()
@@ -523,6 +575,41 @@ class SettingsDialog(QDialog):
 
             QApplication.clipboard().setText(folder_id)
 
+    # ── AI backend ──────────────────────────────────────────
+
+    def _refresh_claude_models(self, _checked: bool = False):
+        """Detect the Claude CLI and repopulate the model list."""
+        current = self.claude_model_combo.currentData() or self._config.get("claude_model", "")
+        self.claude_model_combo.clear()
+
+        if not claude_cli.is_available(refresh=True):
+            self.claude_status.setText(tr("settings.ai.claude_not_found"))
+            self.claude_status.setStyleSheet("color: #ff6b6b; font-size: 11px;")
+            self.claude_model_combo.setEnabled(False)
+            if current:
+                self.claude_model_combo.addItem(current, current)
+            return
+
+        self.claude_model_combo.setEnabled(True)
+        for name in claude_cli.list_models():
+            self.claude_model_combo.addItem(name, name)
+        if current:
+            idx = self.claude_model_combo.findData(current)
+            if idx < 0:
+                # A model saved earlier that this account no longer lists
+                self.claude_model_combo.insertItem(0, current, current)
+                idx = 0
+            self.claude_model_combo.setCurrentIndex(idx)
+        version = claude_cli.get_version()
+        self.claude_status.setText(tr("settings.ai.claude_detected", version=version or "?"))
+        self.claude_status.setStyleSheet("color: #7ec83a; font-size: 11px;")
+
+    def _on_provider_changed(self, _index: int = 0):
+        """Show only the fields relevant to the selected summary provider."""
+        uses_claude = self.provider_combo.currentData() == PROVIDER_CLAUDE_CLI
+        self.claude_model_combo.setEnabled(uses_claude and claude_cli.is_available())
+        self.btn_refresh_claude.setEnabled(uses_claude)
+
     def _test_api(self):
         """Test the Mistral API connection."""
         key = self.api_key_edit.text().strip()
@@ -531,7 +618,7 @@ class SettingsDialog(QDialog):
             self.api_status.setStyleSheet("color: #ff6b6b;")
             return
         try:
-            from mistralai.client import Mistral
+            from mistralai.sdk import Mistral
 
             client = Mistral(api_key=key)
             client.models.list()

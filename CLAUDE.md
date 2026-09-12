@@ -41,6 +41,7 @@ There are no tests in this project.
 - Recording: sounddevice InputStream → callback queue → writer thread → WAV (constant memory)
 - Transcription: WAV→FLAC conversion, chunking if >2.5h, Mistral Voxtral file-upload API
 - Summarization: Mistral chat with epic fantasy style. Two-stage condensation if transcript >28k chars
+- Summary backend is pluggable (`summary_provider` config key): Mistral chat API, or a locally installed Claude CLI via `src/claude_cli.py` (`claude --print`, model picked in Settings > AI). Falls back to Mistral when the CLI is missing. Transcription always uses Mistral.
 
 **Quest extraction (`src/quest_extractor.py`):** AI extracts quests from summaries, shows inline diff preview before applying to quest log.
 

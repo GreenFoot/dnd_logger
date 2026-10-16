@@ -5,6 +5,7 @@ import sys
 from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 block_cipher = None
+IS_MAC = sys.platform == "darwin"
 
 # Collect all Qt WebEngine data
 webengine_datas, webengine_binaries, webengine_hiddenimports = collect_all(
@@ -80,14 +81,14 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=not IS_MAC,  # UPX corrupts macOS binaries
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon="assets/images/app/icon.ico",
+    icon="assets/images/app/icon.icns" if IS_MAC else "assets/images/app/icon.ico",
 )
 
 coll = COLLECT(
@@ -96,7 +97,27 @@ coll = COLLECT(
     a.zipfiles,
     a.datas,
     strip=False,
-    upx=True,
+    upx=not IS_MAC,
     upx_exclude=[],
     name="DnD Logger",
 )
+
+if IS_MAC:
+    # Version is injected into src/__init__.py by CI before the build
+    sys.path.insert(0, SPECPATH)
+    from src import __version__
+
+    app = BUNDLE(
+        coll,
+        name="DnD Logger.app",
+        icon="assets/images/app/icon.icns",
+        bundle_identifier="com.dndlogger.app",
+        version=__version__,
+        info_plist={
+            "CFBundleDisplayName": "DnD Logger",
+            "CFBundleShortVersionString": __version__,
+            "NSHighResolutionCapable": True,
+            # Without this, macOS silently denies microphone access to the app
+            "NSMicrophoneUsageDescription": "DnD Logger records your D&D sessions to transcribe them.",
+        },
+    )

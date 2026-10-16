@@ -549,11 +549,15 @@ class SessionTab(QWidget):
         self._recorder.error_occurred.connect(self._on_error)
         self._recorder.silence_detected.connect(self._on_silence_detected)
 
+    def _on_tts_finished(self):
+        """Re-enable the TTS button (bound method so it runs on the main thread)."""
+        self.btn_tts.setEnabled(True)
+
     def _init_tts(self):
         """Wire up the shared TTS engine signals."""
         if self._tts_engine:
             self._tts_engine.available.connect(self._on_tts_available)
-            self._tts_engine.finished.connect(lambda: self.btn_tts.setEnabled(True))
+            self._tts_engine.finished.connect(self._on_tts_finished)
             # Engine may already be initialized if thread started before us
             if self._tts_engine.is_available:
                 self._on_tts_available(True)

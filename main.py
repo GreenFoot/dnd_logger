@@ -5,10 +5,11 @@ import os
 import sys
 
 # Set Windows App ID for proper taskbar icon grouping
-try:
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("dndlogger.dnd.sessionlogger.1")
-except Exception:
-    pass
+if sys.platform == "win32":
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("dndlogger.dnd.sessionlogger.1")
+    except Exception:
+        pass
 
 # PyInstaller: QWebEngine needs explicit paths to resources in frozen builds.
 if hasattr(sys, "_MEIPASS"):
@@ -62,6 +63,14 @@ def main():
         app.setApplicationName("DnD Logger")
         app.setOrganizationName("DnDLogger")
         app.setApplicationDisplayName("DnD Logger")
+
+        if sys.platform == "darwin":
+            # The native macOS style ignores parts of the QSS themes (tabs, combos,
+            # scrollbars, dialogs); Fusion renders them as on Windows.
+            app.setStyle("Fusion")
+            # All themes are dark: give the title bar and native popups a dark appearance.
+            if hasattr(app.styleHints(), "setColorScheme"):
+                app.styleHints().setColorScheme(Qt.ColorScheme.Dark)
 
         # Set app-wide icon (taskbar + all windows)
         # Prefer PNG — QIcon handles it more reliably than ICO in frozen builds

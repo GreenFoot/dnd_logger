@@ -140,7 +140,8 @@ class TTSOverlay(QWidget):
 
         # Control hints
         p.setPen(QColor(160, 155, 145))
-        hf = QFont("Segoe UI", 9)
+        hf = QFont()
+        hf.setPointSize(9)
         p.setFont(hf)
         pause_hint = tr("tts.hint.resume") if self._paused else tr("tts.hint.pause")
         hints = f"{pause_hint}  |  {tr('tts.hint.stop')}"

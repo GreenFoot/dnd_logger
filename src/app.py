@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 
 from PySide6.QtCore import QSettings, Qt, QTimer
 from PySide6.QtGui import (
@@ -42,6 +43,7 @@ from . import themed_dialogs as dlg
 from .filigree_overlay import GoldFiligreeOverlay
 from .i18n import tr
 from .journal import JournalWidget
+from .mac_titlebar import set_title_bar_color
 from .notifications import NotificationSounds, flash_taskbar
 from .quest_log import QuestLogWidget
 from .session_recap_overlay import SessionRecapOverlay
@@ -393,7 +395,10 @@ class DndLoggerApp(QMainWindow):
             return
         self._notif_sounds.play(sound_name)
         if not self.isActiveWindow():
-            flash_taskbar(int(self.winId()))
+            if sys.platform == "win32":
+                flash_taskbar(int(self.winId()))
+            else:
+                QApplication.alert(self)
 
     # ── Migration: flat layout → campaigns/ ─────────────────
 
@@ -749,6 +754,7 @@ class DndLoggerApp(QMainWindow):
                 with open(qss_path, "r", encoding="utf-8") as f:
                     self.setStyleSheet(f.read())
                 self._current_theme_id = theme_id
+                set_title_bar_color(themes[theme_id].get("palette", {}).get("bg_main", "#0a0f14"))
                 return
 
         # Fallback: use icewind_dale.qss
@@ -757,6 +763,7 @@ class DndLoggerApp(QMainWindow):
             with open(qss_path, "r", encoding="utf-8") as f:
                 self.setStyleSheet(f.read())
         self._current_theme_id = theme_id or "icewind_dale"
+        set_title_bar_color(themes.get("_fallback", {}).get("palette", {}).get("bg_main", "#0a0f14"))
 
     def _show_theme_picker(self) -> str | None:
         """Show a dialog to pick a theme. Returns theme_id or None."""
@@ -1454,13 +1461,9 @@ class DndLoggerApp(QMainWindow):
         self._update_thread, self._update_worker = start_update_check()
         self._update_worker.update_available.connect(self._on_update_available)
         self._update_worker.no_update.connect(self._on_no_update)
-        self._update_worker.error.connect(
-            lambda msg: dlg.warning(
-                self,
-                tr("app.update.title"),
-                tr("app.update.check_error", msg=msg),
-            )
-        )
+        # Bound method, not a lambda: a lambda would run in the worker thread,
+        # and macOS aborts when a dialog is created off the main thread.
+        self._update_worker.error.connect(self._on_manual_update_check_error)
         self._update_worker.no_update.connect(self._on_update_thread_done)
         self._update_worker.error.connect(self._on_update_thread_done)
         self._update_thread.start()
@@ -1532,6 +1535,9 @@ class DndLoggerApp(QMainWindow):
             tr("app.update.no_update", version=__version__),
         )
 
+    def _on_manual_update_check_error(self, msg):
+        dlg.warning(self, tr("app.update.title"), tr("app.update.check_error", msg=msg))
+
     def _on_update_check_error(self, msg):
         log = logging.getLogger(__name__)
         log.warning("Update check failed: %s", msg)
@@ -1584,13 +1590,17 @@ class DndLoggerApp(QMainWindow):
             tr("app.update.title"),
             tr("app.update.download_done"),
         ):
-            create_new_process_group = 0x00000200
-            detached_process = 0x00000008
-            subprocess.Popen(
-                [path, "/SILENT", "/RESTARTAPPLICATIONS"],
-                creationflags=detached_process | create_new_process_group,
-                close_fds=True,
-            )
+            if sys.platform == "darwin":
+                # Mount the disk image; the user drags the new app into Applications.
+                subprocess.Popen(["open", path], close_fds=True)
+            else:
+                create_new_process_group = 0x00000200
+                detached_process = 0x00000008
+                subprocess.Popen(
+                    [path, "/SILENT", "/RESTARTAPPLICATIONS"],
+                    creationflags=detached_process | create_new_process_group,
+                    close_fds=True,
+                )
             self.close()
 
     def _on_download_error(self, msg):

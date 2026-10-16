@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-D&D Logger is a PySide6 desktop app (Windows-only) for recording, transcribing, and summarizing D&D sessions. It uses the Mistral API for AI features and includes an embedded D&D Beyond browser, quest log, journal, and Google Drive sync.
+D&D Logger is a PySide6 desktop app (Windows and macOS) for recording, transcribing, and summarizing D&D sessions. It uses the Mistral API for AI features and includes an embedded D&D Beyond browser, quest log, journal, and Google Drive sync.
 
 ## Commands
 

@@ -224,6 +224,33 @@ To distribute the app, share **one** of the following:
 - **Installer (recommended):** `installer_output/DnDLogger_Setup.exe` -- single file, handles installation and shortcuts
 - **Portable:** the entire `dist/DnD Logger/` folder -- run `DnD Logger.exe` directly, no installation needed
 
+## macOS
+
+### Installing the release
+
+Download `DnDLogger_<version>_macOS.dmg` from the GitHub release (Apple Silicon Macs), open it and drag **DnD Logger** into **Applications**.
+
+The app is not signed with an Apple Developer ID, so macOS blocks the first launch. Open it once, then go to **System Settings > Privacy & Security** and click **Open Anyway**. Alternatively, run:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/DnD Logger.app"
+```
+
+On the first recording, macOS asks for microphone access: allow it, otherwise recordings are silent.
+
+User data lives in `~/Library/Application Support/DnD Logger/`.
+
+### Building on macOS
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt pyinstaller
+.venv/bin/python main.py                                  # run from source
+.venv/bin/pyinstaller dnd_logger.spec --noconfirm         # builds dist/DnD Logger.app
+```
+
+The release workflow builds the `.dmg` on a macOS runner alongside the Windows installer.
+
 ## Audio Pipeline
 
 1. **Recording:** `sounddevice` InputStream captures audio via PortAudio callback into a queue, a writer thread writes to WAV in real time (constant memory usage)

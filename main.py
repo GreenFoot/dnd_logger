@@ -12,7 +12,8 @@ if sys.platform == "win32":
         pass
 
 # PyInstaller: QWebEngine needs explicit paths to resources in frozen builds.
-if hasattr(sys, "_MEIPASS"):
+# On macOS, PyInstaller's PySide6 hooks lay out the QtWebEngine framework themselves.
+if hasattr(sys, "_MEIPASS") and sys.platform == "win32":
     _pyside_dir = os.path.join(sys._MEIPASS, "PySide6")
     os.environ["QTWEBENGINE_RESOURCES_PATH"] = os.path.join(_pyside_dir, "resources")
     os.environ["QTWEBENGINE_LOCALES_PATH"] = os.path.join(_pyside_dir, "translations", "qtwebengine_locales")

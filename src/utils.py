@@ -97,11 +97,15 @@ def resource_path(relative_path: str) -> str:
 def _data_dir() -> str:
     """Return the user-writable data directory for the app.
 
-    - PyInstaller exe: %APPDATA%/DnD Logger
+    - Frozen build on Windows: %APPDATA%/DnD Logger
+    - Frozen build on macOS: ~/Library/Application Support/DnD Logger
     - Dev mode: repo root (where main.py lives)
     """
     if hasattr(sys, "_MEIPASS"):
-        appdata = os.environ.get("APPDATA", os.path.expanduser("~"))
+        if sys.platform == "darwin":
+            appdata = os.path.expanduser("~/Library/Application Support")
+        else:
+            appdata = os.environ.get("APPDATA", os.path.expanduser("~"))
         return os.path.join(appdata, _APP_NAME)
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import sys
 import tempfile
 import urllib.error
 import urllib.request
@@ -15,6 +16,9 @@ from .i18n import tr
 log = logging.getLogger(__name__)
 
 _API_URL = "https://api.github.com/repos/GreenFoot/dnd_logger/releases/latest"
+
+# Release asset extension of the installer for this platform
+_INSTALLER_EXT = ".dmg" if sys.platform == "darwin" else ".exe"
 
 
 def parse_version(s: str) -> tuple[int, ...]:
@@ -61,10 +65,10 @@ class UpdateCheckWorker(QObject):
                 self.no_update.emit()
                 return
 
-            # Find the .exe installer asset
+            # Find the installer asset for this platform
             download_url = ""
             for asset in data.get("assets", []):
-                if asset.get("name", "").lower().endswith(".exe"):
+                if asset.get("name", "").lower().endswith(_INSTALLER_EXT):
                     download_url = asset["browser_download_url"]
                     break
 
@@ -109,7 +113,7 @@ class UpdateDownloadWorker(QObject):
             )
             with urllib.request.urlopen(req, timeout=30) as resp:
                 total = int(resp.headers.get("Content-Length", 0))
-                tmp = tempfile.NamedTemporaryFile(suffix=".exe", delete=False, dir=tempfile.gettempdir())
+                tmp = tempfile.NamedTemporaryFile(suffix=_INSTALLER_EXT, delete=False, dir=tempfile.gettempdir())
                 self._tmp_path = tmp.name
 
                 downloaded = 0

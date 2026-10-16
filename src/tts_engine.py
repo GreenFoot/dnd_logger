@@ -2,7 +2,10 @@
 
 Splits text into sentences and pipelines generation with playback:
 sentence N+1 is generated in a background thread while sentence N plays,
-so the only gap between sentences is the MCI open/play overhead (~10ms).
+so the only gap between sentences is the player open/play overhead.
+
+Playback backend is platform-specific: Windows MCI (winmm) on Windows,
+the built-in ``afplay`` command on macOS.
 """
 
 import asyncio
@@ -10,6 +13,10 @@ import ctypes
 import html
 import os
 import re
+import shutil
+import signal
+import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -17,6 +24,90 @@ import time
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 
 from .i18n import tr
+
+
+class _MciPlayer:
+    """Plays an MP3 file through Windows MCI (winmm).
+
+    MCI aliases are thread-local, so every method must be called from the same thread.
+    """
+
+    def __init__(self):
+        self._winmm = ctypes.windll.winmm
+
+    def _send(self, command: str) -> str:
+        buf = ctypes.create_unicode_buffer(256)
+        self._winmm.mciSendStringW(command, buf, 256, None)
+        return buf.value
+
+    def play(self, path: str):
+        """Open and start playing a file."""
+        self._send(f'open "{path}" type mpegvideo alias tts_clip')
+        self._send("play tts_clip")
+
+    def pause(self):
+        """Pause the current clip."""
+        self._send("pause tts_clip")
+
+    def resume(self):
+        """Resume the current clip."""
+        self._send("resume tts_clip")
+
+    def is_done(self) -> bool:
+        """Return whether the current clip has finished playing."""
+        return self._send("status tts_clip mode") in ("stopped", "")
+
+    def close(self):
+        """Stop and release the current clip."""
+        self._send("stop tts_clip")
+        self._send("close tts_clip")
+
+
+class _AfplayPlayer:
+    """Plays an MP3 file through macOS ``afplay``, pausing with SIGSTOP/SIGCONT."""
+
+    def __init__(self):
+        if not shutil.which("afplay"):
+            raise OSError("afplay not found")
+        self._proc = None
+
+    def play(self, path: str):
+        """Start playing a file."""
+        self._proc = subprocess.Popen(["afplay", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def pause(self):
+        """Pause the current clip."""
+        if self._proc and self._proc.poll() is None:
+            self._proc.send_signal(signal.SIGSTOP)
+
+    def resume(self):
+        """Resume the current clip."""
+        if self._proc and self._proc.poll() is None:
+            self._proc.send_signal(signal.SIGCONT)
+
+    def is_done(self) -> bool:
+        """Return whether the current clip has finished playing."""
+        return self._proc is None or self._proc.poll() is not None
+
+    def close(self):
+        """Stop the current clip."""
+        if self._proc and self._proc.poll() is None:
+            self._proc.send_signal(signal.SIGCONT)
+            self._proc.terminate()
+            try:
+                self._proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                self._proc.kill()
+        self._proc = None
+
+
+def _create_player():
+    """Return an audio player for the current platform."""
+    if sys.platform == "win32":
+        return _MciPlayer()
+    if sys.platform == "darwin":
+        return _AfplayPlayer()
+    raise OSError(f"No TTS playback backend for {sys.platform}")
 
 
 class TTSEngine(QObject):
@@ -45,7 +136,7 @@ class TTSEngine(QObject):
         self._playing = False
         self._paused = False
         self._stop_requested = False
-        self._winmm = None
+        self._player = None
         self.speak_requested.connect(self._on_speak)
 
     def init_engine(self):
@@ -53,7 +144,7 @@ class TTSEngine(QObject):
         try:
             import edge_tts  # noqa: F401
 
-            self._winmm = ctypes.windll.winmm
+            self._player = _create_player()
             self._is_available = True
             self.available.emit(True)
         except Exception:
@@ -180,27 +271,24 @@ class TTSEngine(QObject):
 
                 # Play current sentence (non-blocking + poll)
                 self._playing = True
-                self._mci(f'open "{current_path}" type mpegvideo alias tts_clip')
-                self._mci("play tts_clip")
+                self._player.play(current_path)
 
                 _was_paused = False
                 while not self._stop_requested:
                     # Handle pause/resume from the worker thread
                     # (MCI aliases are thread-local on Windows)
                     if self._paused and not _was_paused:
-                        self._mci("pause tts_clip")
+                        self._player.pause()
                         _was_paused = True
                     elif not self._paused and _was_paused:
-                        self._mci("resume tts_clip")
+                        self._player.resume()
                         _was_paused = False
 
-                    mode = self._mci_query("status tts_clip mode")
-                    if mode in ("stopped", ""):
+                    if self._player.is_done():
                         break
                     time.sleep(0.02)
 
-                self._mci("stop tts_clip")
-                self._mci("close tts_clip")
+                self._player.close()
                 self._playing = False
                 self._safe_unlink(current_path)
 
@@ -229,27 +317,14 @@ class TTSEngine(QObject):
             else:
                 self.finished.emit()
 
-    def _mci(self, command: str):
-        """Send an MCI command string."""
-        if self._winmm:
-            self._winmm.mciSendStringW(command, None, 0, None)
-
-    def _mci_query(self, command: str) -> str:
-        """Send an MCI query and return the result string."""
-        if self._winmm:
-            buf = ctypes.create_unicode_buffer(256)
-            self._winmm.mciSendStringW(command, buf, 256, None)
-            return buf.value
-        return ""
-
     def pause(self):
-        """Request pause. The worker thread applies the MCI command."""
+        """Request pause. The worker thread applies it to the player."""
         if self._playing and not self._paused:
             self._paused = True
             self.paused.emit()
 
     def resume(self):
-        """Request resume. The worker thread applies the MCI command."""
+        """Request resume. The worker thread applies it to the player."""
         if self._paused:
             self._paused = False
             self.resumed.emit()

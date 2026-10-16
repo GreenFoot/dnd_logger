@@ -3,6 +3,8 @@
 import ctypes
 import os
 import queue
+import subprocess
+import sys
 import threading
 from datetime import datetime
 
@@ -43,6 +45,7 @@ class AudioRecorder(QObject):
         self._queue = queue.Queue()
         self._writer_thread = None
         self._wav_path = None
+        self._caffeinate = None
         self._is_recording = False
         self._is_paused = False
         self._elapsed = 0
@@ -282,7 +285,10 @@ class AudioRecorder(QObject):
         self._keep_screen_awake(False)
 
     def _keep_screen_awake(self, keep_awake: bool):
-        """Prevent or allow the display to sleep using Windows API."""
+        """Prevent or allow the system and display to sleep while recording."""
+        if sys.platform == "darwin":
+            self._caffeinate_mac(keep_awake)
+            return
         try:
             if keep_awake:
                 flags = self._ES_CONTINUOUS | self._ES_SYSTEM_REQUIRED | self._ES_DISPLAY_REQUIRED
@@ -291,6 +297,19 @@ class AudioRecorder(QObject):
             ctypes.windll.kernel32.SetThreadExecutionState(flags)
         except Exception:
             pass
+
+    def _caffeinate_mac(self, keep_awake: bool):
+        """Run ``caffeinate`` tied to this process for as long as recording lasts."""
+        if self._caffeinate and self._caffeinate.poll() is None:
+            if keep_awake:
+                return
+            self._caffeinate.terminate()
+        self._caffeinate = None
+        if keep_awake:
+            try:
+                self._caffeinate = subprocess.Popen(["caffeinate", "-dims", "-w", str(os.getpid())])
+            except OSError:
+                pass
 
     @staticmethod
     def list_devices() -> list[dict]:

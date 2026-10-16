@@ -200,7 +200,7 @@ class ShortcutsOverlay(QWidget):
                 for part in _split_combo(key_combo):
                     kbd = QLabel(part)
                     kbd.setStyleSheet(
-                        "font-family: Consolas; font-size: 10px; color: #c8e6f0;"
+                        "font-family: Consolas, Menlo, monospace; font-size: 10px; color: #c8e6f0;"
                         " background-color: #1e2d3d; border: 1px solid #35506a;"
                         " border-radius: 3px; padding: 1px 5px;"
                     )

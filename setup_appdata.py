@@ -10,7 +10,10 @@ import shutil
 import sys
 
 SRC = os.path.dirname(os.path.abspath(__file__))
-DEST = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "DnDLogger")
+if sys.platform == "darwin":
+    DEST = os.path.expanduser("~/Library/Application Support/DnD Logger")
+else:
+    DEST = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "DnDLogger")
 
 FILES = ("config.json",)
 DIRS = ["campaigns"]
